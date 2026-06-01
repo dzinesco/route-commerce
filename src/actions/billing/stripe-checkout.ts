@@ -82,16 +82,19 @@ export async function createStripeCheckoutSession(
 
 export async function createPlanUpgradeCheckout(
   brandId: string,
-  planTier: string
+  planTier: string,
+  billingPeriod?: "monthly" | "annual"
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   if (!["starter", "farm", "enterprise"].includes(planTier)) {
     return { success: false, error: "Invalid plan tier" };
   }
+  const annual = billingPeriod === "annual";
   return createStripeCheckoutSession(
     brandId,
     planTier,
     "/admin/settings/billing",
-    "/admin/settings/billing"
+    "/admin/settings/billing",
+    annual
   );
 }
 

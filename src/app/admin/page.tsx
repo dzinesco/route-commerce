@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { getBrandPlanInfo } from "@/actions/billing/stripe-portal";
+import DashboardHeader from "@/components/admin/DashboardHeader";
 
 const TUXEDO_BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
 
@@ -247,25 +248,11 @@ export default async function AdminPage() {
     <main className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-7xl space-y-10">
         {/* Header */}
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-2">Control Center</p>
-            <h1 className="text-4xl font-semibold tracking-tight text-stone-950">{brandDisplayName}</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/admin/settings/billing" className="text-sm font-medium text-stone-500 hover:text-stone-700 transition-colors">
-              Billing →
-            </Link>
-            {planTier === "starter" && (
-              <Link
-                href="/admin/settings/billing"
-                className="rounded-full bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition-all shadow-sm"
-              >
-                Upgrade Plan
-              </Link>
-            )}
-          </div>
-        </div>
+        <DashboardHeader
+          brandId={adminUser?.brand_id ?? null}
+          brandName={brandDisplayName}
+          planTier={planTier}
+        />
 
         {/* Usage bar */}
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -309,7 +296,7 @@ export default async function AdminPage() {
           return (
             <div key={key}>
               <div className="flex items-center gap-4 mb-5">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-500 flex-shrink-0">{label}</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-600 flex-shrink-0">{label}</p>
                 <div className="h-px flex-1 bg-gradient-to-r from-stone-300 to-transparent" />
               </div>
               <div className={`grid ${cols} gap-4`}>
@@ -340,24 +327,24 @@ export default async function AdminPage() {
                             ? "bg-stone-100 text-stone-400"
                             : isProminent
                             ? "bg-emerald-100 text-emerald-600"
-                            : "bg-blue-100 text-blue-600"
+                            : "bg-violet-100 text-violet-600"
                         }`}>
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
                         {isAddon && !isEnabled && (
-                          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+                          <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2.5 py-0.5">
                             Add-on
                           </span>
                         )}
                         {isAddon && isEnabled && (
-                          <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5">
+                          <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5">
                             Active
                           </span>
                         )}
                         {isProminent && (
-                          <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5">
+                          <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5">
                             Core
                           </span>
                         )}
@@ -368,13 +355,13 @@ export default async function AdminPage() {
                       </h3>
 
                       <p className={`mt-2 text-sm leading-relaxed ${
-                        isAddon && !isEnabled ? "text-stone-400" : "text-stone-500"
+                        isAddon && !isEnabled ? "text-stone-500" : "text-stone-600"
                       }`}>
                         {section.description}
                       </p>
 
                       {isAddon && !isEnabled && section.upgradeText && (
-                        <p className="mt-3 text-xs text-amber-600 font-medium">{section.upgradeText}</p>
+                        <p className="mt-3 text-xs text-amber-700 font-medium">{section.upgradeText}</p>
                       )}
                     </Link>
                   );
