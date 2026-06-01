@@ -9,7 +9,7 @@ import {
   getInventoryByCrop,
   getRecentLotEvents,
 } from "@/actions/route-trace/lots";
-import RouteTraceDashboard from "@/components/route-trace/RouteTraceDashboard";
+import RouteTracePage from "@/components/route-trace/RouteTracePage";
 
 export default async function RouteTraceDashboardPage() {
   const adminUser = await getAdminUser();
@@ -33,24 +33,22 @@ export default async function RouteTraceDashboardPage() {
     active_count: 0, in_transit_count: 0, at_shed_count: 0, total_lots_today: 0, total_harvested_today: 0, total_lots: 0,
   };
   const recentLots = lotsResult.success ? lotsResult.lots.slice(0, 8) : [];
+  const allLots = lotsResult.success ? lotsResult.lots : [];
   const haulingLots = haulingResult.success ? haulingResult.lots : [];
   const fieldYield = yieldResult.success ? yieldResult.summary : [];
   const inventoryByCrop = invResult.success ? invResult.inventory : [];
   const recentActivity = eventsResult.success ? eventsResult.events : [];
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="mx-auto max-w-5xl">
-        <RouteTraceDashboard
-          stats={stats}
-          recentLots={recentLots}
-          haulingLots={haulingLots}
-          fieldYield={fieldYield}
-          inventoryByCrop={inventoryByCrop}
-          recentActivity={recentActivity}
-          brandId={effectiveBrandId}
-        />
-      </div>
-    </main>
+    <RouteTracePage
+      stats={stats}
+      recentLots={recentLots}
+      haulingLots={haulingLots}
+      fieldYield={fieldYield}
+      inventoryByCrop={inventoryByCrop}
+      recentActivity={recentActivity}
+      brandId={effectiveBrandId}
+      lots={allLots}
+    />
   );
 }

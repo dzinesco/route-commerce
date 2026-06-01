@@ -374,7 +374,7 @@ export default function RouteTraceDashboard({
   brandId,
 }: {
   stats: RouteTraceStats;
-  recentLots: Array<{ lot_number: string; crop_type: string; status: string; harvest_date: string; id: string }>;
+  recentLots: HaulingLot[];
   haulingLots: HaulingLot[];
   fieldYield: FieldYieldSummary[];
   inventoryByCrop: InventoryByCrop[];
@@ -474,7 +474,7 @@ export default function RouteTraceDashboard({
         </button>
         <button
           onClick={() => setShowScan(true)}
-          className="rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-stone-800 transition-colors flex items-center gap-2"
+          className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors flex items-center gap-2"
         >
           📷 Scan QR
         </button>
@@ -617,9 +617,9 @@ export default function RouteTraceDashboard({
             </thead>
             <tbody>
               {recentLots.map((lot) => (
-                <tr key={lot.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/40 transition-colors">
+                <tr key={lot.lot_id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/40 transition-colors">
                   <td className="px-5 py-3.5">
-                    <Link href={`/admin/route-trace/lots/${lot.id}`} className="font-mono text-sm font-bold text-stone-900 hover:text-blue-600">
+                    <Link href={`/admin/route-trace/lots/${lot.lot_id}`} className="font-mono text-sm font-bold text-stone-900 hover:text-blue-600">
                       {lot.lot_number}
                     </Link>
                   </td>

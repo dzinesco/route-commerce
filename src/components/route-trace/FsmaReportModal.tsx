@@ -51,7 +51,7 @@ export default function FsmaReportModal({ brandId }: Props) {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
@@ -60,7 +60,7 @@ export default function FsmaReportModal({ brandId }: Props) {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600"
                   />
                 </div>
               </div>
@@ -78,7 +78,7 @@ export default function FsmaReportModal({ brandId }: Props) {
               <button
                 onClick={handleDownload}
                 disabled={loading}
-                className="rounded-xl bg-stone-900 px-5 py-2 text-sm font-bold text-white hover:bg-stone-800 disabled:opacity-50 flex items-center gap-2"
+                className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? "Preparing..." : "📥 Download CSV"}
               </button>

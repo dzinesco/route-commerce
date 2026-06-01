@@ -82,7 +82,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
               onChange={(e) => setCropType(e.target.value)}
               placeholder="e.g. Sweet Corn"
               required
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium outline-none focus:border-stone-900 focus:bg-white transition-colors"
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium outline-none focus:border-emerald-600 focus:bg-white transition-colors"
             />
           </div>
           <div>
@@ -92,7 +92,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
               value={variety}
               onChange={(e) => setVariety(e.target.value)}
               placeholder="e.g. Golden Bantam"
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium outline-none focus:border-stone-900 focus:bg-white transition-colors"
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium outline-none focus:border-emerald-600 focus:bg-white transition-colors"
             />
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
             value={harvest_date}
             onChange={(e) => setHarvestDate(e.target.value)}
             required
-            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium outline-none focus:border-stone-900 focus:bg-white transition-colors"
+            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium outline-none focus:border-emerald-600 focus:bg-white transition-colors"
           />
         </div>
 
@@ -120,7 +120,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                 onChange={(e) => setFieldLocation(e.target.value)}
                 placeholder="e.g. North Field"
                 required
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-base outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-base outline-none focus:border-emerald-600 focus:bg-white transition-colors"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -131,7 +131,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                   value={field_block}
                   onChange={(e) => setFieldBlock(e.target.value)}
                   placeholder="e.g. Block A"
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
                 />
               </div>
               <div>
@@ -141,7 +141,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                   value={worker_name}
                   onChange={(e) => setWorkerName(e.target.value)}
                   placeholder="e.g. Maria S."
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
                 />
               </div>
             </div>
@@ -161,12 +161,12 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                 placeholder="e.g. 4800"
                 min="0"
                 step="0.01"
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3.5 text-base outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3.5 text-base outline-none focus:border-emerald-600 focus:bg-white transition-colors"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-stone-600 mb-1.5">Yield Est.</label>
-              <div className="flex rounded-xl border border-stone-200 bg-stone-50 overflow-hidden focus-within:border-stone-900 focus-within:bg-white transition-colors">
+              <div className="flex rounded-xl border border-stone-200 bg-stone-50 overflow-hidden focus-within:border-emerald-600 focus-within:bg-white transition-colors">
                 <input
                   type="number"
                   value={yield_estimate_lbs}
@@ -197,7 +197,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                   placeholder="Unit name…"
                   value={customYieldUnit}
                   onChange={(e) => setCustomYieldUnit(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                  className="mt-1.5 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
                 />
               )}
             </div>
@@ -215,7 +215,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                 value={bin_id}
                 onChange={(e) => setBinId(e.target.value)}
                 placeholder="e.g. BIN-001"
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
               />
             </div>
             <div>
@@ -225,7 +225,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                 value={container_id}
                 onChange={(e) => setContainerId(e.target.value)}
                 placeholder="e.g. CONT-A42"
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
               />
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                 onChange={(e) => setPallets(e.target.value)}
                 placeholder="e.g. 4"
                 min="0"
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
               />
             </div>
             <div>
@@ -248,7 +248,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
                 value={packer_name}
                 onChange={(e) => setPackerName(e.target.value)}
                 placeholder="e.g. Jose R."
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors"
               />
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Spray records, weather conditions, or other harvest details..."
               rows={3}
-              className="mt-3 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 focus:bg-white transition-colors resize-none"
+              className="mt-3 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 focus:bg-white transition-colors resize-none"
             />
           )}
         </div>

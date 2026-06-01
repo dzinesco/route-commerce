@@ -168,7 +168,7 @@ export default function QRScanModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={() => setMode("camera")}
             className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-              mode === "camera" ? "text-stone-900 border-b-2 border-stone-900" : "text-stone-400"
+              mode === "camera" ? "text-emerald-700 border-b-2 border-emerald-600" : "text-stone-400"
             }`}
           >
             📷 Camera
@@ -176,7 +176,7 @@ export default function QRScanModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={() => setMode("manual")}
             className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-              mode === "manual" ? "text-stone-900 border-b-2 border-stone-900" : "text-stone-400"
+              mode === "manual" ? "text-emerald-700 border-b-2 border-emerald-600" : "text-stone-400"
             }`}
           >
             ⌨️ Manual
@@ -241,14 +241,14 @@ export default function QRScanModal({ onClose }: { onClose: () => void }) {
                   onChange={(e) => setManualInput(e.target.value.toUpperCase())}
                   placeholder="e.g. TC-20260520-001"
                   autoFocus
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-base font-mono text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900"
+                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-base font-mono text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-600"
                 />
                 <p className="text-[10px] text-stone-400 mt-1.5">Enter the lot number from any Route Trace sticker</p>
               </div>
               <button
                 type="submit"
                 disabled={!manualInput.trim() || isLoading}
-                className="w-full rounded-xl bg-stone-900 py-3.5 text-base font-bold text-white hover:bg-stone-800 disabled:opacity-50 transition-colors"
+                className="w-full rounded-xl bg-emerald-600 py-3.5 text-base font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
               >
                 {isLoading ? "Loading..." : "🔍 Trace Lot"}
               </button>

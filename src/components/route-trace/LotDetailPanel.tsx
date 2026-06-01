@@ -145,7 +145,7 @@ export default function LotDetailPanel({
               {nextStatuses.length > 0 && (
                 <button
                   onClick={() => { setNewStatus(nextStatuses[0]); setShowStatusModal(true); }}
-                  className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                  className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                 >
                   Update Status
                 </button>
@@ -396,7 +396,7 @@ export default function LotDetailPanel({
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
                     required
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600"
                   >
                     <option value="">Select status...</option>
                     {STATUS_FLOW.filter((s) => s !== lot.status).map((s) => {
@@ -416,7 +416,7 @@ export default function LotDetailPanel({
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="e.g. Warehouse A"
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
@@ -426,7 +426,7 @@ export default function LotDetailPanel({
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Any notes..."
                     rows={2}
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 resize-none"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 resize-none"
                   />
                 </div>
               </div>
@@ -434,7 +434,7 @@ export default function LotDetailPanel({
                 <button type="button" onClick={() => setShowStatusModal(false)} className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50">
                   Cancel
                 </button>
-                <button type="submit" disabled={isPending || !newStatus} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                <button type="submit" disabled={isPending || !newStatus} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
                   {isPending ? "Saving..." : "Save"}
                 </button>
               </div>
@@ -461,7 +461,7 @@ export default function LotDetailPanel({
                     onChange={(e) => setBinId(e.target.value)}
                     placeholder="e.g. BIN-042"
                     required
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
@@ -471,7 +471,7 @@ export default function LotDetailPanel({
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Weight, count, or other details..."
                     rows={2}
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 resize-none"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 resize-none"
                   />
                 </div>
               </div>
@@ -508,7 +508,7 @@ export default function LotDetailPanel({
                     onChange={(e) => setUsedOrderId(e.target.value.toUpperCase())}
                     placeholder="e.g. 4f3e2a1b-..."
                     required
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm font-mono outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm font-mono outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
@@ -519,7 +519,7 @@ export default function LotDetailPanel({
                     onChange={(e) => setUsedQty(e.target.value)}
                     placeholder="Leave blank to auto-detect from order items"
                     min="0"
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
@@ -529,7 +529,7 @@ export default function LotDetailPanel({
                     onChange={(e) => setUsedNotes(e.target.value)}
                     placeholder="Any notes..."
                     rows={2}
-                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-900 resize-none"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-emerald-600 resize-none"
                   />
                 </div>
               </div>
@@ -537,7 +537,7 @@ export default function LotDetailPanel({
                 <button type="button" onClick={() => setShowUsedModal(false)} className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50">
                   Cancel
                 </button>
-                <button type="submit" disabled={isPending || !usedOrderId.trim()} className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:opacity-50">
+                <button type="submit" disabled={isPending || !usedOrderId.trim()} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
                   {isPending ? "Saving..." : "Mark as Used"}
                 </button>
               </div>

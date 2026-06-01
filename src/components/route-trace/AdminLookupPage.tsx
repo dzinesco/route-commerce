@@ -49,12 +49,12 @@ export default function AdminLookupPage({ brandId }: { brandId: string }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="e.g. TC-20260519-001 or Sweet Corn"
-            className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-base outline-none focus:border-stone-900 focus:bg-white transition-colors"
+            className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-base outline-none focus:border-emerald-600 focus:bg-white transition-colors"
           />
           <button
             type="submit"
             disabled={loading || !query.trim()}
-            className="rounded-xl bg-stone-900 px-5 py-3 text-sm font-bold text-white hover:bg-stone-800 disabled:opacity-50"
+            className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
             {loading ? "Searching..." : "🔍 Search"}
           </button>
@@ -78,7 +78,7 @@ export default function AdminLookupPage({ brandId }: { brandId: string }) {
                     const input = prompt("Enter lot number from QR scan:");
                     if (input) handleScanResult(input.trim());
                   }}
-                  className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800"
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   Enter Manually
                 </button>

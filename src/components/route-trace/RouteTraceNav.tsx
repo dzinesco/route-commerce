@@ -23,7 +23,7 @@ export default function RouteTraceNav({
               href={tab.href}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap rounded-t-lg ${
                 isActive
-                  ? "border-stone-900 text-stone-900 bg-white"
+                  ? "border-emerald-600 text-emerald-700 bg-white"
                   : "border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300"
               }`}
             >

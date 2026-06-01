@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import StatusBadge from "./StatusBadge";
-import { HarvestLot, updateHarvestLotStatus } from "@/actions/route-trace/lots";
+import { HaulingLot, updateHarvestLotStatus } from "@/actions/route-trace/lots";
 
 const STATUS_FILTERS = [
   { value: "", label: "All" },
@@ -29,7 +29,7 @@ export default function LotListTable({
   initialLots,
   brandId,
 }: {
-  initialLots: HarvestLot[];
+  initialLots: HaulingLot[];
   brandId: string;
 }) {
   const [filter, setFilter] = useState("");
@@ -65,7 +65,7 @@ export default function LotListTable({
     if (selected.size === filtered.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(filtered.map((l) => l.id)));
+      setSelected(new Set(filtered.map((l) => l.lot_id)));
     }
   }
 
@@ -115,7 +115,7 @@ export default function LotListTable({
               onClick={() => setFilter(f.value)}
               className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
                 filter === f.value
-                  ? "bg-stone-900 text-white"
+                  ? "bg-emerald-600 text-white"
                   : "text-stone-600 hover:bg-stone-50"
               }`}
             >
@@ -129,12 +129,12 @@ export default function LotListTable({
             placeholder="Search lot #, crop, field, or bin..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-56 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-stone-900"
+            className="w-56 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-600"
           />
           <button
             onClick={() => { setShowBulk(!showBulk); setSelected(new Set()); }}
             className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
-              showBulk ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 text-stone-600 hover:bg-stone-50"
+              showBulk ? "border-emerald-600 bg-emerald-600 text-white" : "border-stone-200 text-stone-600 hover:bg-stone-50"
             }`}
           >
             ☑ Bulk {showBulk ? "On" : "Off"}
@@ -144,7 +144,7 @@ export default function LotListTable({
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="rounded-2xl border-2 border-stone-900 bg-stone-900 px-5 py-3 flex items-center justify-between">
+        <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-3 flex items-center justify-between">
           <span className="text-sm font-bold text-white">{selected.size} lot{selected.size !== 1 ? "s" : ""} selected</span>
           <div className="flex gap-2 flex-wrap">
             <button
@@ -217,25 +217,24 @@ export default function LotListTable({
             </thead>
             <tbody>
               {filtered.map((lot) => (
-                <tr key={lot.id} className={`border-b border-stone-50 last:border-0 hover:bg-stone-50/50 transition-colors ${selected.has(lot.id) ? "bg-green-50" : ""}`}>
+                <tr key={lot.lot_id} className={`border-b border-stone-50 last:border-0 hover:bg-stone-50/50 transition-colors ${selected.has(lot.lot_id) ? "bg-green-50" : ""}`}>
                   {showBulk && (
                     <td className="px-5 py-4">
                       <input
                         type="checkbox"
-                        checked={selected.has(lot.id)}
-                        onChange={() => toggleSelect(lot.id)}
+                        checked={selected.has(lot.lot_id)}
+                        onChange={() => toggleSelect(lot.lot_id)}
                         className="h-4 w-4 rounded border-stone-300"
                       />
                     </td>
                   )}
                   <td className="px-5 py-4">
-                    <Link href={`/admin/route-trace/lots/${lot.id}`} className="font-mono text-sm font-black text-stone-900 hover:text-blue-600">
+                    <Link href={`/admin/route-trace/lots/${lot.lot_id}`} className="font-mono text-sm font-black text-stone-900 hover:text-blue-600">
                       {lot.lot_number}
                     </Link>
                   </td>
                   <td className="px-5 py-4">
                     <div className="text-sm font-semibold text-stone-700">{lot.crop_type}</div>
-                    {lot.variety && <div className="text-xs text-stone-400">{lot.variety}</div>}
                   </td>
                   <td className="px-5 py-4">
                     {(() => {
@@ -275,7 +274,7 @@ export default function LotListTable({
                     <StatusBadge status={lot.status} />
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <Link href={`/admin/route-trace/lots/${lot.id}`} className="text-sm font-semibold text-blue-600 hover:text-blue-800">
+                    <Link href={`/admin/route-trace/lots/${lot.lot_id}`} className="text-sm font-semibold text-blue-600 hover:text-blue-800">
                       View →
                     </Link>
                   </td>

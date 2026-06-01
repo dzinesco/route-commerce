@@ -123,30 +123,30 @@ function CampaignWriterTool({ brandId, brandName }: { brandId: string; brandName
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">What do you want to communicate?</label>
+        <label className="block text-sm font-medium text-stone-700 mb-1">What do you want to communicate?</label>
         <textarea
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           rows={3}
           placeholder="e.g., 'Remind customers about the new sweet corn season starting next week, emphasize freshness and local delivery'"
-          className="w-full rounded-xl border border-zinc-600 px-4 py-3 text-sm outline-none focus:border-violet-500"
+          className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
         />
       </div>
       <button
         onClick={handleGenerate}
         disabled={loading || !topic.trim()}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Generating..." : "Generate Campaign Ideas"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {results.length > 0 && (
         <div className="space-y-3">
           {results.map((idea, i) => (
-            <div key={i} className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">Idea {i + 1}</p>
-              <p className="text-sm font-medium text-zinc-100 mb-1"><span className="text-zinc-500">Subject:</span> {idea.subject}</p>
-              <p className="text-sm text-zinc-400 mt-2 whitespace-pre-line">{idea.body}</p>
+            <div key={i} className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Idea {i + 1}</p>
+              <p className="text-sm font-medium text-stone-950 mb-1"><span className="text-stone-400">Subject:</span> {idea.subject}</p>
+              <p className="text-sm text-stone-500 mt-2 whitespace-pre-line">{idea.body}</p>
             </div>
           ))}
         </div>
@@ -192,48 +192,48 @@ function ProductWriterTool({ brandId }: { brandId: string }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Product Name *</label>
-          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Product Name *</label>
+          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Category</label>
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetables" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
+          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetables" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Price</label>
-          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$4.50" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Price</label>
+          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$4.50" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Unit</label>
-          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="per dozen" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Unit</label>
+          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="per dozen" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
       </div>
       <button
         onClick={handleGenerate}
         disabled={loading || !productName.trim()}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Generating..." : "Write Description"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
-        <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900 space-y-4">
+        <div className="rounded-xl border border-stone-300 p-5 bg-white space-y-4">
           <div>
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Product Name</p>
-            <p className="text-base font-semibold text-zinc-100">{result.name}</p>
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Product Name</p>
+            <p className="text-base font-semibold text-stone-950">{result.name}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Description</p>
-            <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">{result.description}</p>
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Description</p>
+            <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-line">{result.description}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Image Alt Text</p>
-            <p className="text-sm text-zinc-400">{result.altText}</p>
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Image Alt Text</p>
+            <p className="text-sm text-stone-500">{result.altText}</p>
           </div>
           {result.priceNote && (
             <div>
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Pricing Note</p>
-              <p className="text-sm text-zinc-400">{result.priceNote}</p>
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Pricing Note</p>
+              <p className="text-sm text-stone-500">{result.priceNote}</p>
             </div>
           )}
         </div>
@@ -287,16 +287,16 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400 bg-zinc-900 rounded-lg p-3">
+      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
         The Report Explainer analyzes any report tab from the Reports dashboard. Switch to a report tab, copy the data, and paste it here for an AI-generated breakdown.
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Report Type</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Report Type</label>
           <select
             value={reportType}
             onChange={(e) => setReportType(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500"
+            className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
           >
             {reportTypes.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
@@ -304,49 +304,49 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Date Range</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Date Range</label>
           <input
             type="text"
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
             placeholder="e.g., Last 7 days, March 2026"
-            className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500"
+            className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
           />
         </div>
       </div>
-      <div className="bg-violet-900/20 border border-violet-800/50 rounded-lg p-3 text-xs text-violet-400">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
         ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={handleExplain}
         disabled={loading}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Analyzing..." : "Explain Report"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Summary</p>
-            <p className="text-sm text-zinc-300 leading-relaxed">{result.summary}</p>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Summary</p>
+            <p className="text-sm text-stone-700 leading-relaxed">{result.summary}</p>
           </div>
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Key Insights</p>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Key Insights</p>
             <ul className="space-y-2">
               {result.keyInsights.map((insight, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
-                  <span className="text-violet-500 mt-0.5">→</span>
+                <li key={i} className="flex items-start gap-2 text-sm text-stone-700">
+                  <span className="text-emerald-600 mt-0.5">→</span>
                   <span>{insight}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Suggested Actions</p>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Suggested Actions</p>
             <ul className="space-y-2">
               {result.suggestedActions.map((action, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
+                <li key={i} className="flex items-start gap-2 text-sm text-stone-700">
                   <span className="text-green-500 mt-0.5">✓</span>
                   <span>{action}</span>
                 </li>
@@ -355,7 +355,7 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
           </div>
           <button
             onClick={() => copyToClipboard(JSON.stringify(result, null, 2))}
-            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+            className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1"
           >
             📋 Copy to clipboard
           </button>
@@ -448,25 +448,25 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400 bg-zinc-900 rounded-lg p-3">
+      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
         Enter a product name and optional price tiers or historical sales data for AI-powered pricing recommendations.
       </p>
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Product Name *</label>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Product Name *</label>
         <input
           type="text"
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
           placeholder="Sweet Corn"
-          className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500"
+          className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
         />
       </div>
 
       {/* Price Tiers */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-zinc-300">Price Tiers</label>
-          <button onClick={addTier} className="text-xs text-violet-400 hover:text-violet-300">+ Add Tier</button>
+          <label className="block text-sm font-medium text-stone-700">Price Tiers</label>
+          <button onClick={addTier} className="text-xs text-emerald-700 hover:text-emerald-600">+ Add Tier</button>
         </div>
         {priceTiers.map((tier, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -475,20 +475,20 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
               value={tier.tier}
               onChange={(e) => updateTier(i, "tier", e.target.value)}
               placeholder="e.g., Wholesale"
-              className="flex-1 rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+              className="flex-1 rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
             />
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
               <input
                 type="text"
                 value={tier.price}
                 onChange={(e) => updateTier(i, "price", e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-lg border border-zinc-600 pl-7 pr-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+                className="w-full rounded-lg border border-stone-200 pl-7 pr-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
               />
             </div>
             {priceTiers.length > 1 && (
-              <button onClick={() => removeTier(i)} className="text-red-400 hover:text-red-300 text-xs px-2">✕</button>
+              <button onClick={() => removeTier(i)} className="text-red-700 hover:text-red-600 text-xs px-2">✕</button>
             )}
           </div>
         ))}
@@ -497,14 +497,14 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
       {/* Historical Sales */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-zinc-300">Historical Sales</label>
-          <button onClick={addSale} className="text-xs text-violet-400 hover:text-violet-300">+ Add Row</button>
+          <label className="block text-sm font-medium text-stone-700">Historical Sales</label>
+          <button onClick={addSale} className="text-xs text-emerald-700 hover:text-emerald-600">+ Add Row</button>
         </div>
-        <div className="rounded-xl border border-zinc-700 bg-zinc-900 divide-y divide-zinc-800">
+        <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-200">
           <div className="grid grid-cols-4 gap-2 px-3 py-2">
-            <span className="text-xs text-zinc-500 font-medium">Date</span>
-            <span className="text-xs text-zinc-500 font-medium">Units Sold</span>
-            <span className="text-xs text-zinc-500 font-medium">Revenue</span>
+            <span className="text-xs text-stone-400 font-medium">Date</span>
+            <span className="text-xs text-stone-400 font-medium">Units Sold</span>
+            <span className="text-xs text-stone-400 font-medium">Revenue</span>
             <span />
           </div>
           {historicalSales.map((sale, i) => (
@@ -514,95 +514,95 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
                 value={sale.date}
                 onChange={(e) => updateSale(i, "date", e.target.value)}
                 placeholder="2026-04-01"
-                className="rounded-lg border border-zinc-600 px-2 py-1.5 text-xs outline-none focus:border-violet-500 bg-zinc-950"
+                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
               />
               <input
                 type="text"
                 value={sale.units_sold}
                 onChange={(e) => updateSale(i, "units_sold", e.target.value)}
                 placeholder="120"
-                className="rounded-lg border border-zinc-600 px-2 py-1.5 text-xs outline-none focus:border-violet-500 bg-zinc-950"
+                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
               />
               <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">$</span>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-stone-400 text-xs">$</span>
                 <input
                   type="text"
                   value={sale.revenue}
                   onChange={(e) => updateSale(i, "revenue", e.target.value)}
                   placeholder="540"
-                  className="w-full rounded-lg border border-zinc-600 pl-5 pr-2 py-1.5 text-xs outline-none focus:border-violet-500 bg-zinc-950"
+                  className="w-full rounded-lg border border-stone-200 pl-5 pr-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
                 />
               </div>
               {historicalSales.length > 1 && (
-                <button onClick={() => removeSale(i)} className="text-red-400 hover:text-red-300 text-xs justify-self-end">✕</button>
+                <button onClick={() => removeSale(i)} className="text-red-700 hover:text-red-600 text-xs justify-self-end">✕</button>
               )}
             </div>
           ))}
         </div>
       </div>
-      <div className="bg-violet-900/20 border border-violet-800/50 rounded-lg p-3 text-xs text-violet-400">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
         ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={handleAnalyze}
         disabled={loading || !productName.trim()}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Analyzing..." : "Analyze Pricing"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Current State</p>
-            <p className="text-sm text-zinc-300 leading-relaxed">{result.currentState}</p>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Current State</p>
+            <p className="text-sm text-stone-700 leading-relaxed">{result.currentState}</p>
           </div>
           {result.recommendations.map((rec, i) => (
-            <div key={i} className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
+            <div key={i} className="rounded-xl border border-stone-300 p-5 bg-white">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-zinc-100">{rec.productName}</p>
+                <p className="text-sm font-semibold text-stone-950">{rec.productName}</p>
                 <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${
-                  rec.direction === "increase" ? "bg-green-900/50 text-green-400" :
-                  rec.direction === "decrease" ? "bg-red-900/50 text-red-400" :
-                  "bg-zinc-950 text-zinc-400"
+                  rec.direction === "increase" ? "bg-green-50 text-green-700" :
+                  rec.direction === "decrease" ? "bg-red-50 text-red-700" :
+                  "bg-stone-50 text-stone-500"
                 }`}>
                   {rec.direction}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm mb-2">
-                <span className="text-zinc-400">${rec.currentPrice}</span>
-                <span className="text-zinc-400">→</span>
-                <span className="font-bold text-violet-400">${rec.suggestedPrice}</span>
-                <span className={`text-xs ml-auto ${rec.estimatedRevenueImpact.startsWith("+") ? "text-green-400" : "text-zinc-500"}`}>
+                <span className="text-stone-500">${rec.currentPrice}</span>
+                <span className="text-stone-500">→</span>
+                <span className="font-bold text-emerald-700">${rec.suggestedPrice}</span>
+                <span className={`text-xs ml-auto ${rec.estimatedRevenueImpact.startsWith("+") ? "text-green-700" : "text-stone-400"}`}>
                   {rec.estimatedRevenueImpact}
                 </span>
               </div>
-              <p className="text-sm text-zinc-400">{rec.reasoning}</p>
+              <p className="text-sm text-stone-500">{rec.reasoning}</p>
             </div>
           ))}
           {result.opportunities.length > 0 && (
-            <div className="rounded-xl border border-green-800 p-5 bg-green-900/30">
-              <p className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">Opportunities</p>
+            <div className="rounded-xl border border-green-200 p-5 bg-green-50">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">Opportunities</p>
               <ul className="space-y-1">
                 {result.opportunities.map((opp, i) => (
-                  <li key={i} className="text-sm text-green-300">• {opp}</li>
+                  <li key={i} className="text-sm text-green-600">• {opp}</li>
                 ))}
               </ul>
             </div>
           )}
           {result.warnings.length > 0 && (
-            <div className="rounded-xl border border-amber-800 p-5 bg-amber-900/30">
-              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Warnings</p>
+            <div className="rounded-xl border border-amber-200 p-5 bg-amber-50">
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Warnings</p>
               <ul className="space-y-1">
                 {result.warnings.map((warn, i) => (
-                  <li key={i} className="text-sm text-amber-300">• {warn}</li>
+                  <li key={i} className="text-sm text-amber-600">• {warn}</li>
                 ))}
               </ul>
             </div>
           )}
           <button
             onClick={() => copyToClipboard(JSON.stringify(result, null, 2))}
-            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+            className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1"
           >
             📋 Copy to clipboard
           </button>
@@ -666,71 +666,71 @@ function StopBlastAdvisorTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400 bg-zinc-900 rounded-lg p-3">
+      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
         Enter details about the stop you want to send a blast for. The AI will suggest optimal timing, subject lines, content angles, and audience targeting.
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Stop Name *</label>
-          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Stop Name *</label>
+          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Stop Date</label>
-          <input type="text" value={stopDate} onChange={(e) => setStopDate(e.target.value)} placeholder="2026-06-15" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Stop Date</label>
+          <input type="text" value={stopDate} onChange={(e) => setStopDate(e.target.value)} placeholder="2026-06-15" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">City</label>
-          <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Greeley" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">City</label>
+          <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Greeley" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Customer Count</label>
-          <input type="text" value={customerCount} onChange={(e) => setCustomerCount(e.target.value)} placeholder="42" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Customer Count</label>
+          <input type="text" value={customerCount} onChange={(e) => setCustomerCount(e.target.value)} placeholder="42" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
       </div>
-      <div className="bg-violet-900/20 border border-violet-800/50 rounded-lg p-3 text-xs text-violet-400">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
         ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={handleAnalyze}
         disabled={loading || !stopName.trim()}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Analyzing..." : "Get Recommendations"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Timing</p>
-            <p className="text-sm text-zinc-300">{result.timingRecommendation}</p>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Timing</p>
+            <p className="text-sm text-stone-700">{result.timingRecommendation}</p>
           </div>
-          <div className="rounded-xl border border-violet-800 p-5 bg-violet-900/20">
-            <p className="text-xs font-semibold text-violet-500 uppercase tracking-wider mb-2">Recommended Subject Line</p>
-            <p className="text-base font-semibold text-zinc-100">{result.subjectLine}</p>
-            <button onClick={() => copyToClipboard(result.subjectLine)} className="mt-2 text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
+          <div className="rounded-xl border border-emerald-200 p-5 bg-emerald-50">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">Recommended Subject Line</p>
+            <p className="text-base font-semibold text-stone-950">{result.subjectLine}</p>
+            <button onClick={() => copyToClipboard(result.subjectLine)} className="mt-2 text-xs text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
               📋 Copy
             </button>
           </div>
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Body Preview</p>
-            <p className="text-sm text-zinc-300 leading-relaxed">{result.bodyPreview}</p>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Body Preview</p>
+            <p className="text-sm text-stone-700 leading-relaxed">{result.bodyPreview}</p>
           </div>
-          <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Audience</p>
-            <p className="text-sm text-zinc-300">{result.audienceRecommendation}</p>
-            <span className="inline-block mt-1 text-xs bg-blue-900/50 text-blue-400 rounded-full px-2 py-0.5">{result.audienceSize} recipients</span>
+          <div className="rounded-xl border border-stone-300 p-5 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Audience</p>
+            <p className="text-sm text-stone-700">{result.audienceRecommendation}</p>
+            <span className="inline-block mt-1 text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{result.audienceSize} recipients</span>
           </div>
           {result.contentAngles.map((a, i) => (
-            <div key={i} className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-sm font-semibold text-zinc-100 mb-1">📣 {a.angle}</p>
-              <p className="text-xs text-zinc-500">{a.reasoning}</p>
+            <div key={i} className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-sm font-semibold text-stone-950 mb-1">📣 {a.angle}</p>
+              <p className="text-xs text-stone-400">{a.reasoning}</p>
             </div>
           ))}
           {result.warnings.length > 0 && (
-            <div className="rounded-xl border border-amber-800 p-4 bg-amber-900/30">
-              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Warnings</p>
+            <div className="rounded-xl border border-amber-200 p-4 bg-amber-50">
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Warnings</p>
               {result.warnings.map((w, i) => (
-                <p key={i} className="text-xs text-amber-300">• {w}</p>
+                <p key={i} className="text-xs text-amber-600">• {w}</p>
               ))}
             </div>
           )}
@@ -787,17 +787,17 @@ function CustomerInsightsTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400 bg-zinc-900 rounded-lg p-3">
+      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
         Ask questions about your customers and orders in plain English. The AI will analyze and return actionable insights.
       </p>
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Ask about your customers</label>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Ask about your customers</label>
         <textarea
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           rows={2}
           placeholder="e.g., 'Which customers haven't ordered in 45 days?'"
-          className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500"
+          className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
         />
       </div>
       <div className="flex flex-wrap gap-2">
@@ -805,51 +805,51 @@ function CustomerInsightsTool({ brandId }: { brandId: string }) {
           <button
             key={q}
             onClick={() => { setQuery(q); handleAnalyze(q); }}
-            className="rounded-full bg-zinc-950 px-3 py-1 text-xs text-zinc-400 hover:bg-violet-900/40 hover:text-violet-300 transition-colors"
+            className="rounded-full bg-stone-50 px-3 py-1 text-xs text-stone-500 hover:bg-emerald-100 hover:text-emerald-600 transition-colors"
           >
             {q}
           </button>
         ))}
       </div>
-      <div className="bg-violet-900/20 border border-violet-800/50 rounded-lg p-3 text-xs text-violet-400">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
         ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={() => handleAnalyze()}
         disabled={loading || !query.trim()}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Analyzing..." : "Analyze"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Query Type</p>
-            <span className="rounded-full bg-violet-900/50 text-violet-300 px-2 py-0.5 text-xs font-medium">{result.queryType?.replace("_", " ")}</span>
-            <p className="text-sm text-zinc-400 mt-2">{result.explanation}</p>
+          <div className="rounded-xl border border-stone-300 p-4 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Query Type</p>
+            <span className="rounded-full bg-emerald-50 text-emerald-600 px-2 py-0.5 text-xs font-medium">{result.queryType?.replace("_", " ")}</span>
+            <p className="text-sm text-stone-500 mt-2">{result.explanation}</p>
           </div>
-          <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
-              Results <span className="text-violet-400">({result.count} found)</span>
+          <div className="rounded-xl border border-stone-300 p-4 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">
+              Results <span className="text-emerald-700">({result.count} found)</span>
             </p>
             {result.results.length === 0 ? (
-              <p className="text-sm text-zinc-500">No results found.</p>
+              <p className="text-sm text-stone-400">No results found.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-zinc-800">
+                    <tr className="border-b border-stone-300">
                       {Object.keys(result.results[0] ?? {}).map((k) => (
-                        <th key={k} className="text-left px-2 py-1.5 font-medium text-zinc-500 uppercase">{k}</th>
+                        <th key={k} className="text-left px-2 py-1.5 font-medium text-stone-400 uppercase">{k}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {result.results.map((row, i) => (
-                      <tr key={i} className="border-b border-zinc-800">
+                      <tr key={i} className="border-b border-stone-300">
                         {Object.values(row).map((v, j) => (
-                          <td key={j} className="px-2 py-1.5 text-zinc-300">{String(v ?? "—")}</td>
+                          <td key={j} className="px-2 py-1.5 text-stone-700">{String(v ?? "—")}</td>
                         ))}
                       </tr>
                     ))}
@@ -929,144 +929,144 @@ function RouteOptimizerTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400 bg-zinc-900 rounded-lg p-3">
+      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
         Add your stops below. You need at least 2 stops to optimize a route.
       </p>
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Start Location</label>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Start Location</label>
         <input
           type="text"
           value={startLocation}
           onChange={(e) => setStartLocation(e.target.value)}
           placeholder="Warehouse, Greeley CO"
-          className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500"
+          className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
         />
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-zinc-300">Stops</label>
+          <label className="block text-sm font-medium text-stone-700">Stops</label>
           <button
             onClick={addStop}
-            className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1"
+            className="text-xs text-emerald-700 hover:text-emerald-600 flex items-center gap-1"
           >
             + Add Stop
           </button>
         </div>
         {stops.map((stop, i) => (
-          <div key={i} className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 space-y-3">
+          <div key={i} className="rounded-xl border border-stone-200 bg-white p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Stop {i + 1}</span>
+              <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Stop {i + 1}</span>
               {stops.length > 2 && (
-                <button onClick={() => removeStop(i)} className="text-xs text-red-400 hover:text-red-300">
+                <button onClick={() => removeStop(i)} className="text-xs text-red-700 hover:text-red-600">
                   Remove
                 </button>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Name *</label>
+                <label className="block text-xs text-stone-400 mb-1">Name *</label>
                 <input
                   type="text"
                   value={stop.name}
                   onChange={(e) => updateStop(i, "name", e.target.value)}
                   placeholder="Farmers Market"
-                  className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">City *</label>
+                <label className="block text-xs text-stone-400 mb-1">City *</label>
                 <input
                   type="text"
                   value={stop.city}
                   onChange={(e) => updateStop(i, "city", e.target.value)}
                   placeholder="Greeley"
-                  className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">State *</label>
+                <label className="block text-xs text-stone-400 mb-1">State *</label>
                 <input
                   type="text"
                   value={stop.state}
                   onChange={(e) => updateStop(i, "state", e.target.value)}
                   placeholder="CO"
-                  className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Address</label>
+                <label className="block text-xs text-stone-400 mb-1">Address</label>
                 <input
                   type="text"
                   value={stop.address}
                   onChange={(e) => updateStop(i, "address", e.target.value)}
                   placeholder="123 Main St"
-                  className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-zinc-500 mb-1">Time Window</label>
+              <label className="block text-xs text-stone-400 mb-1">Time Window</label>
               <input
                 type="text"
                 value={stop.time_window}
                 onChange={(e) => updateStop(i, "time_window", e.target.value)}
                 placeholder="8am–12pm"
-                className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-violet-500 bg-zinc-950"
+                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
               />
             </div>
           </div>
         ))}
       </div>
-      <div className="bg-violet-900/20 border border-violet-800/50 rounded-lg p-3 text-xs text-violet-400">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
         ⚠️ AI-generated suggestions — review before use. Not a substitute for professional routing software.
       </div>
       <button
         onClick={handleOptimize}
         disabled={loading || validStops.length < 2}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Optimizing..." : "Optimize Route"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Est. Distance</p>
-              <p className="text-base font-bold text-zinc-100">{result.totalEstimatedDistance}</p>
+            <div className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Est. Distance</p>
+              <p className="text-base font-bold text-stone-950">{result.totalEstimatedDistance}</p>
             </div>
-            <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Drive Time</p>
-              <p className="text-base font-bold text-zinc-100">{result.totalEstimatedDriveTime}</p>
+            <div className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Drive Time</p>
+              <p className="text-base font-bold text-stone-950">{result.totalEstimatedDriveTime}</p>
             </div>
           </div>
-          <div className="rounded-xl border border-violet-800 p-4 bg-violet-900/20">
-            <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">Optimized Sequence</p>
+          <div className="rounded-xl border border-emerald-200 p-4 bg-emerald-50">
+            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Optimized Sequence</p>
             {result.optimizedSequence.map((s, i) => (
-              <div key={i} className="flex items-start gap-3 py-2 border-b border-zinc-800 last:border-0">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-violet-600 text-white text-xs font-bold flex-shrink-0">{s.position}</span>
+              <div key={i} className="flex items-start gap-3 py-2 border-b border-stone-300 last:border-0">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex-shrink-0">{s.position}</span>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">{s.stopName}</p>
-                  <p className="text-xs text-zinc-500">{s.city}, {s.state}</p>
-                  <p className="text-xs text-violet-400 mt-0.5">{s.reason}</p>
+                  <p className="text-sm font-semibold text-stone-950">{s.stopName}</p>
+                  <p className="text-xs text-stone-400">{s.city}, {s.state}</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">{s.reason}</p>
                 </div>
               </div>
             ))}
           </div>
           {result.suggestions.length > 0 && (
-            <div className="rounded-xl border border-green-800 p-4 bg-green-900/30">
-              <p className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">Suggestions</p>
-              {result.suggestions.map((s, i) => <p key={i} className="text-sm text-green-300">✓ {s}</p>)}
+            <div className="rounded-xl border border-green-200 p-4 bg-green-50">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">Suggestions</p>
+              {result.suggestions.map((s, i) => <p key={i} className="text-sm text-green-600">✓ {s}</p>)}
             </div>
           )}
           {result.warnings.length > 0 && (
-            <div className="rounded-xl border border-amber-800 p-4 bg-amber-900/30">
-              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Warnings</p>
-              {result.warnings.map((w, i) => <p key={i} className="text-sm text-amber-300">⚠ {w}</p>)}
+            <div className="rounded-xl border border-amber-200 p-4 bg-amber-50">
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Warnings</p>
+              {result.warnings.map((w, i) => <p key={i} className="text-sm text-amber-600">⚠ {w}</p>)}
             </div>
           )}
-          <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+          <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1">
             📋 Copy to clipboard
           </button>
         </div>
@@ -1142,31 +1142,31 @@ function DemandForecastTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400 bg-zinc-900 rounded-lg p-3">
+      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
         Enter a product name for demand forecasting. Add historical sales rows to improve accuracy.
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Product Name *</label>
-          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Product Name *</label>
+          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Stop Name</label>
-          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className="w-full rounded-xl border border-zinc-600 px-4 py-2.5 text-sm outline-none focus:border-violet-500" />
+          <label className="block text-sm font-medium text-stone-700 mb-1">Stop Name</label>
+          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
         </div>
       </div>
 
       {/* Historical Data */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-zinc-300">Historical Sales</label>
-          <button onClick={addRow} className="text-xs text-violet-400 hover:text-violet-300">+ Add Row</button>
+          <label className="block text-sm font-medium text-stone-700">Historical Sales</label>
+          <button onClick={addRow} className="text-xs text-emerald-700 hover:text-emerald-600">+ Add Row</button>
         </div>
-        <div className="rounded-xl border border-zinc-700 bg-zinc-900 divide-y divide-zinc-800">
+        <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-200">
           <div className="grid grid-cols-4 gap-2 px-3 py-2">
-            <span className="text-xs text-zinc-500 font-medium">Date</span>
-            <span className="text-xs text-zinc-500 font-medium">Units Sold</span>
-            <span className="text-xs text-zinc-500 font-medium">Stop</span>
+            <span className="text-xs text-stone-400 font-medium">Date</span>
+            <span className="text-xs text-stone-400 font-medium">Units Sold</span>
+            <span className="text-xs text-stone-400 font-medium">Stop</span>
             <span />
           </div>
           {historicalData.map((row, i) => (
@@ -1176,83 +1176,83 @@ function DemandForecastTool({ brandId }: { brandId: string }) {
                 value={row.date}
                 onChange={(e) => updateRow(i, "date", e.target.value)}
                 placeholder="2026-04-01"
-                className="rounded-lg border border-zinc-600 px-2 py-1.5 text-xs outline-none focus:border-violet-500 bg-zinc-950"
+                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
               />
               <input
                 type="text"
                 value={row.quantity_sold}
                 onChange={(e) => updateRow(i, "quantity_sold", e.target.value)}
                 placeholder="120"
-                className="rounded-lg border border-zinc-600 px-2 py-1.5 text-xs outline-none focus:border-violet-500 bg-zinc-950"
+                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
               />
               <input
                 type="text"
                 value={row.stop}
                 onChange={(e) => updateRow(i, "stop", e.target.value)}
                 placeholder="Farmers Market"
-                className="rounded-lg border border-zinc-600 px-2 py-1.5 text-xs outline-none focus:border-violet-500 bg-zinc-950"
+                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
               />
               {historicalData.length > 1 && (
-                <button onClick={() => removeRow(i)} className="text-red-400 hover:text-red-300 text-xs justify-self-end">✕</button>
+                <button onClick={() => removeRow(i)} className="text-red-700 hover:text-red-600 text-xs justify-self-end">✕</button>
               )}
             </div>
           ))}
         </div>
       </div>
-      <div className="bg-violet-900/20 border border-violet-800/50 rounded-lg p-3 text-xs text-violet-400">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
         ⚠️ AI-generated forecasts — review before use. Not a substitute for professional supply chain planning.
       </div>
       <button
         onClick={handleAnalyze}
         disabled={loading || !productName.trim()}
-        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Forecasting..." : "Generate Forecast"}
       </button>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Current Trend</p>
-            <p className="text-sm text-zinc-300 leading-relaxed">{result.currentTrend}</p>
+          <div className="rounded-xl border border-stone-300 p-4 bg-white">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Current Trend</p>
+            <p className="text-sm text-stone-700 leading-relaxed">{result.currentTrend}</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Next Stop</p>
-              <p className="text-xl font-bold text-violet-400">{result.prediction.nextStopVolume}<span className="text-sm font-normal text-zinc-500 ml-1">units</span></p>
+            <div className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Next Stop</p>
+              <p className="text-xl font-bold text-emerald-700">{result.prediction.nextStopVolume}<span className="text-sm font-normal text-stone-400 ml-1">units</span></p>
             </div>
-            <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Next Week</p>
-              <p className="text-xl font-bold text-violet-400">{result.prediction.nextWeekVolume}<span className="text-sm font-normal text-zinc-500 ml-1">units</span></p>
+            <div className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Next Week</p>
+              <p className="text-xl font-bold text-emerald-700">{result.prediction.nextWeekVolume}<span className="text-sm font-normal text-stone-400 ml-1">units</span></p>
             </div>
-            <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Confidence</p>
+            <div className="rounded-xl border border-stone-300 p-4 bg-white">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Confidence</p>
               <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
-                result.prediction.confidence === "high" ? "bg-green-900/50 text-green-400" :
-                result.prediction.confidence === "medium" ? "bg-amber-900/50 text-amber-400" :
-                "bg-red-900/50 text-red-400"
+                result.prediction.confidence === "high" ? "bg-green-50 text-green-700" :
+                result.prediction.confidence === "medium" ? "bg-amber-50 text-amber-600" :
+                "bg-red-50 text-red-700"
               }`}>{result.prediction.confidence}</span>
-              <p className="text-xs text-zinc-500 mt-1">{result.prediction.confidenceReason}</p>
+              <p className="text-xs text-stone-400 mt-1">{result.prediction.confidenceReason}</p>
             </div>
           </div>
-          <div className="rounded-xl border border-violet-800 p-4 bg-violet-900/20">
-            <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">Recommended Stock</p>
-            <p className="text-2xl font-bold text-zinc-100">{result.recommendedStock.units}<span className="text-sm font-normal text-zinc-500 ml-1">units</span></p>
-            <p className="text-sm text-zinc-400 mt-1">{result.recommendedStock.reasoning}</p>
+          <div className="rounded-xl border border-emerald-200 p-4 bg-emerald-50">
+            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Recommended Stock</p>
+            <p className="text-2xl font-bold text-stone-950">{result.recommendedStock.units}<span className="text-sm font-normal text-stone-400 ml-1">units</span></p>
+            <p className="text-sm text-stone-500 mt-1">{result.recommendedStock.reasoning}</p>
           </div>
           {result.seasonalFactors.length > 0 && (
-            <div className="rounded-xl border border-blue-800 p-4 bg-blue-900/20">
-              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Seasonal Factors</p>
-              {result.seasonalFactors.map((f, i) => <p key={i} className="text-sm text-blue-300">☀ {f}</p>)}
+            <div className="rounded-xl border border-blue-200 p-4 bg-blue-50">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2">Seasonal Factors</p>
+              {result.seasonalFactors.map((f, i) => <p key={i} className="text-sm text-blue-600">☀ {f}</p>)}
             </div>
           )}
           {result.riskFlags.length > 0 && (
-            <div className="rounded-xl border border-amber-800 p-4 bg-amber-900/30">
-              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Risk Flags</p>
-              {result.riskFlags.map((r, i) => <p key={i} className="text-sm text-amber-300">⚠ {r}</p>)}
+            <div className="rounded-xl border border-amber-200 p-4 bg-amber-50">
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Risk Flags</p>
+              {result.riskFlags.map((r, i) => <p key={i} className="text-sm text-amber-600">⚠ {r}</p>)}
             </div>
           )}
-          <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+          <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1">
             📋 Copy to clipboard
           </button>
         </div>
@@ -1273,13 +1273,13 @@ type ModalProps = {
 function ToolModal({ tool, brandId, brandName, onClose }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-300">
           <div className="flex items-center gap-3">
             <span className="text-2xl">{tool.icon}</span>
-            <h2 className="text-lg font-bold text-zinc-100">{tool.title}</h2>
+            <h2 className="text-lg font-bold text-stone-950">{tool.title}</h2>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-400 p-2">
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-500 p-2">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -1312,45 +1312,45 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
   const availableCount = AI_TOOLS.filter((t) => t.status === "available").length;
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-6 py-12">
+    <main className="min-h-screen bg-stone-50 px-6 py-12">
       <div className="mx-auto max-w-4xl">
 
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <svg className="w-8 h-8 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="w-8 h-8 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
             </svg>
-            <h1 className="text-3xl font-bold text-zinc-100">AI Tools</h1>
+            <h1 className="text-3xl font-bold text-stone-950">AI Tools</h1>
           </div>
-          <p className="text-zinc-400">
+          <p className="text-stone-500">
             AI-assisted features across Harvest Reach, Products, Reports, and more.
           </p>
         </div>
 
         {/* Connection Status Banner */}
         {isConnected ? (
-          <div className="mb-6 rounded-2xl bg-green-900/30 border border-green-800 p-5 flex items-center gap-4">
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-900/50 flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="mb-6 rounded-2xl bg-green-50 border border-green-200 p-5 flex items-center gap-4">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-50 flex-shrink-0">
+              <svg className="h-5 w-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-green-400">AI Connected</p>
+              <p className="font-semibold text-green-700">AI Connected</p>
               <p className="text-sm text-green-500">{availableCount} tool{availableCount !== 1 ? "s" : ""} ready to use</p>
             </div>
-            <span className="text-xs font-medium text-green-400 bg-green-900/50 rounded-full px-3 py-1">Active</span>
+            <span className="text-xs font-medium text-green-700 bg-green-50 rounded-full px-3 py-1">Active</span>
           </div>
         ) : (
-          <div className="mb-6 rounded-2xl bg-amber-900/30 border border-amber-800 p-5 flex items-center gap-4">
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-amber-900/50 flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-5 flex items-center gap-4">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-amber-50 flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-amber-400">AI Not Configured</p>
+              <p className="font-semibold text-amber-600">AI Not Configured</p>
               <p className="text-sm text-amber-500">Add your API key to enable AI tools.</p>
             </div>
             <Link
@@ -1367,7 +1367,7 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
           <button
             onClick={() => setActiveModule(null)}
             className={`text-xs font-medium rounded-full px-3 py-1.5 transition-colors ${
-              activeModule === null ? "bg-violet-600 text-white" : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-violet-300"
+              activeModule === null ? "bg-emerald-600 text-white" : "bg-white text-stone-500 border border-stone-300 hover:border-emerald-300"
             }`}
           >
             All ({AI_TOOLS.length})
@@ -1379,7 +1379,7 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
                 key={m}
                 onClick={() => setActiveModule(activeModule === m ? null : m)}
                 className={`text-xs font-medium rounded-full px-3 py-1.5 transition-colors ${
-                  activeModule === m ? "bg-violet-600 text-white" : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-violet-300"
+                  activeModule === m ? "bg-emerald-600 text-white" : "bg-white text-stone-500 border border-stone-300 hover:border-emerald-300"
                 }`}
               >
                 {m} ({count})
@@ -1395,47 +1395,47 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
             return (
               <div
                 key={tool.id}
-                className={`rounded-2xl bg-zinc-900 p-5 shadow-black/20 ring-1 transition-all ${
+                className={`rounded-2xl bg-white p-5 shadow-black/20 ring-1 transition-all ${
                   tool.status === "available"
-                    ? "ring-zinc-700 hover:shadow-md"
+                    ? "ring-stone-200 hover:shadow-md"
                     : tool.status === "experimental"
-                    ? "ring-amber-200 bg-amber-900/30/30"
-                    : "ring-zinc-700 opacity-75"
+                    ? "ring-amber-200 bg-amber-50"
+                    : "ring-stone-200 opacity-75"
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <span className="text-2xl mt-0.5">{tool.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="text-base font-semibold text-zinc-100">{tool.title}</h3>
+                      <h3 className="text-base font-semibold text-stone-950">{tool.title}</h3>
                       {tool.badge && (
-                        <span className="text-xs font-medium bg-violet-900/50 text-violet-300 rounded-full px-2 py-0.5">
+                        <span className="text-xs font-medium bg-emerald-50 text-emerald-600 rounded-full px-2 py-0.5">
                           {tool.badge}
                         </span>
                       )}
                       {tool.status === "available" && (
-                        <span className="text-xs font-medium text-green-400 bg-green-900/30 rounded-full px-2 py-0.5">Ready</span>
+                        <span className="text-xs font-medium text-green-700 bg-green-50 rounded-full px-2 py-0.5">Ready</span>
                       )}
                       {tool.status === "experimental" && (
-                        <span className="text-xs font-medium text-amber-400 bg-amber-900/30 rounded-full px-2 py-0.5">Experimental</span>
+                        <span className="text-xs font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">Experimental</span>
                       )}
                       {tool.status === "coming_soon" && (
-                        <span className="text-xs font-medium text-zinc-500 bg-zinc-950 rounded-full px-2 py-0.5">Coming Soon</span>
+                        <span className="text-xs font-medium text-stone-400 bg-stone-50 rounded-full px-2 py-0.5">Coming Soon</span>
                       )}
                     </div>
-                    <span className="text-xs text-zinc-400 font-medium">{tool.module}</span>
-                    <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{tool.description}</p>
+                    <span className="text-xs text-stone-500 font-medium">{tool.module}</span>
+                    <p className="mt-2 text-sm text-stone-500 leading-relaxed">{tool.description}</p>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-zinc-800">
+                <div className="mt-4 pt-4 border-t border-stone-300">
                   {tool.status === "available" && (
                     <button
                       onClick={() => isConnected && setActiveTool(tool)}
                       disabled={!isConnected}
                       className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
                         isConnected
-                          ? "bg-violet-600 text-white hover:bg-violet-700 cursor-pointer"
-                          : "bg-zinc-950 text-zinc-400 cursor-not-allowed"
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
+                          : "bg-stone-50 text-stone-500 cursor-not-allowed"
                       }`}
                       title={!isConnected ? "Add your OpenAI API key in Settings to enable" : "Open tool"}
                     >
@@ -1443,12 +1443,12 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
                     </button>
                   )}
                   {tool.status === "coming_soon" && (
-                    <button disabled className="w-full rounded-xl bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-zinc-400 cursor-not-allowed">
+                    <button disabled className="w-full rounded-xl bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-500 cursor-not-allowed">
                       Coming Soon
                     </button>
                   )}
                   {tool.status === "experimental" && (
-                    <button disabled className="w-full rounded-xl bg-amber-900/50 px-4 py-2.5 text-sm font-semibold text-amber-400 cursor-not-allowed">
+                    <button disabled className="w-full rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-600 cursor-not-allowed">
                       Request Access
                     </button>
                   )}
@@ -1459,9 +1459,9 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
         </div>
 
         {/* Info box */}
-        <div className="mt-8 rounded-xl bg-violet-900/20 border border-violet-800/50 p-5">
-          <h3 className="text-sm font-semibold text-violet-300 mb-2">About AI in Route Commerce</h3>
-          <p className="text-sm text-violet-400 leading-relaxed">
+        <div className="mt-8 rounded-xl bg-emerald-50 border border-emerald-200 p-5">
+          <h3 className="text-sm font-semibold text-emerald-600 mb-2">About AI in Route Commerce</h3>
+          <p className="text-sm text-emerald-700 leading-relaxed">
             AI tools process your data locally — orders, products, stops, and contacts — and send requests to your configured AI provider.
             No data is stored or shared beyond the generation request. Experimental features may require additional setup.
           </p>

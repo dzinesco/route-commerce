@@ -83,7 +83,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
                       onClick={() => setStickerType(t)}
                       className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         stickerType === t
-                          ? "border-stone-900 bg-stone-900 text-white"
+                          ? "border-emerald-600 bg-emerald-600 text-white"
                           : "border-stone-200 hover:bg-stone-50"
                       }`}
                     >
@@ -106,7 +106,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
                       onClick={() => setStickerSize(s)}
                       className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         stickerSize === s
-                          ? "border-stone-900 bg-stone-900 text-white"
+                          ? "border-emerald-600 bg-emerald-600 text-white"
                           : "border-stone-200 hover:bg-stone-50"
                       }`}
                     >
@@ -128,7 +128,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
                     onClick={() => setCopies(n)}
                     className={`rounded-lg border py-2 text-center text-sm font-bold transition-colors ${
                       copies === n
-                        ? "border-stone-900 bg-stone-900 text-white"
+                        ? "border-emerald-600 bg-emerald-600 text-white"
                         : "border-stone-200 text-stone-600 hover:bg-stone-50"
                     }`}
                   >
@@ -264,7 +264,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
           <button
             onClick={handlePrint}
             disabled={loading}
-            className="rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-stone-800 disabled:opacity-50 flex items-center gap-2"
+            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
           >
             {loading ? "Generating PDF..." : `🖨 Print ${copies === 1 ? "" : `${copies}× `}${stickerType === "field" ? "Field" : "Shed"} Sticker${copies > 1 ? "s" : ""}`}
           </button>

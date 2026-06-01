@@ -11,7 +11,7 @@ const STATUS_CONFIG = {
 type Status = keyof typeof STATUS_CONFIG;
 
 export default function StatusBadge({ status }: { status: string }) {
-  const config = STATUS_CONFIG[status as Status] ?? { label: status, bg: "bg-slate-100", text: "text-slate-700" };
+  const config = STATUS_CONFIG[status as Status] ?? { label: status, bg: "bg-stone-100", text: "text-stone-700" };
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.bg} ${config.text}`}>
       <span className="h-1.5 w-1.5 rounded-full currentColor" />
