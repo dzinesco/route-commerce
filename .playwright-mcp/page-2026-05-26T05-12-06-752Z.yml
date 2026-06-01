@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Route Commerce" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e5]:
+        - link "Tuxedo" [ref=e6] [cursor=pointer]:
+          - /url: /tuxedo
+        - link "IRD" [ref=e7] [cursor=pointer]:
+          - /url: /indian-river-direct
+        - link "Admin" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+        - button "Switch to dark mode" [ref=e9]:
+          - img [ref=e10]
+        - link "Cart (0)" [ref=e12] [cursor=pointer]:
+          - /url: /cart
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - heading "Admin Login" [level=1] [ref=e16]
+        - paragraph [ref=e17]: Sign in with your account.
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: Email
+            - textbox "Email" [ref=e21]:
+              - /placeholder: admin@example.com
+          - generic [ref=e22]:
+            - generic [ref=e23]: Password
+            - textbox "Password" [ref=e24]:
+              - /placeholder: ••••••••
+          - button "Sign In" [ref=e25]
+          - button "Forgot password?" [ref=e26]
+      - link "← Back to storefront" [ref=e27] [cursor=pointer]:
+        - /url: /
+  - contentinfo [ref=e28]:
+    - generic [ref=e30]:
+      - paragraph [ref=e31]: © 2026 Route Commerce. All rights reserved.
+      - navigation [ref=e32]:
+        - link "Privacy Policy" [ref=e33] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Terms & Conditions" [ref=e34] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Powered by Route Commerce" [ref=e35] [cursor=pointer]:
+          - /url: https://cielohermosa.com
+  - alert [ref=e36]

@@ -1,0 +1,444 @@
+@import "tailwindcss";
+
+@theme {
+  /* Apple-inspired dark palette — sophisticated depth */
+  --color-surface-50: #f5f5f7;
+  --color-surface-100: #e8e8ed;
+  --color-surface-200: #d2d2d7;
+  --color-surface-300: #aeaeb5;
+  --color-surface-400: #86868b;
+  --color-surface-500: #6e6e73;
+  --color-surface-600: #424245;
+  --color-surface-700: #333336;
+  --color-surface-800: #1d1d1f;
+  --color-surface-900: #141417;
+  --color-surface-950: #0a0a0c;
+
+  /* Forest green — refined accent */
+  --color-forest-50: #f0fdf4;
+  --color-forest-100: #dcfce7;
+  --color-forest-200: #bbf7d0;
+  --color-forest-300: #86efac;
+  --color-forest-400: #4ade80;
+  --color-forest-500: #22c55e;
+  --color-forest-600: #16a34a;
+  --color-forest-700: #15803d;
+  --color-forest-800: #166534;
+  --color-forest-900: #14532d;
+
+  /* Sage — secondary accent */
+  --color-sage-50: #f6f7f6;
+  --color-sage-100: #e8ebe8;
+  --color-sage-200: #d4d9d3;
+  --color-sage-300: #b3bfac;
+  --color-sage-400: #8fa284;
+  --color-sage-500: #6f8562;
+  --color-sage-600: #57694e;
+  --color-sage-700: #47543f;
+  --color-sage-800: #3b4434;
+  --color-sage-900: #313a2c;
+
+  /* Warm gold — premium highlight */
+  --color-gold-50: #fefce8;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #facc15;
+  --color-gold-500: #eab308;
+  --color-gold-600: #ca8a04;
+  --color-gold-700: #a16207;
+  --color-gold-800: #854d0e;
+  --color-gold-900: #713f12;
+
+  /* Warm red for errors/warnings */
+  --color-warmred-50: #fef2f2;
+  --color-warmred-100: #fee2e2;
+  --color-warmred-500: #ef4444;
+  --color-warmred-600: #dc2626;
+  --color-warmred-700: #b91c1c;
+
+  /* Citrus orange — IRD brand accent */
+  --color-citrus-50: #fff7ed;
+  --color-citrus-100: #ffedd5;
+  --color-citrus-200: #fed7aa;
+  --color-citrus-300: #fdba74;
+  --color-citrus-400: #fb923c;
+  --color-citrus-500: #f97316;
+  --color-citrus-600: #ea580c;
+  --color-citrus-700: #c2410c;
+  --color-citrus-800: #9a3412;
+  --color-citrus-900: #7c2d12;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+  caret-color: #1a4d2e;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: #ffffff;
+  background-attachment: fixed;
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+
+/* Admin content area: warm cream instead of dark */
+.admin-section {
+  background: linear-gradient(180deg, #fdfaf6 0%, #f5f3ef 100%) !important;
+}
+
+/* Animated gradient background - light theme */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(34, 197, 94, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ─── Text Selection - Light Theme ───────────────────────────────────────── */
+
+::selection {
+  background-color: rgba(26, 77, 46, 0.2);
+  color: #1a1a1a;
+}
+
+/* ─── Custom scrollbar - Light Theme ─────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ─── Focus states - Light Theme ──────────────────────────────────────────── */
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(26, 77, 46, 0.4);
+  border-radius: 6px;
+}
+
+/* ─── Light mode form autofill ─────────────────────────────────── */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1a1a1a;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ─── Placeholder text - Light Theme ─────────────────────────────────────── */
+
+::placeholder {
+  color: #999999;
+  opacity: 1;
+}
+
+::-webkit-input-placeholder {
+  color: #999999;
+}
+
+::-moz-placeholder {
+  color: #999999;
+}
+
+/* Light mode placeholder (used by storefront) */
+.light ::placeholder,
+.light::-webkit-input-placeholder,
+.light::-moz-placeholder {
+  color: #a8a29e;
+}
+
+/* ─── Glass morphism card - Light Theme ────────────────────────────────────── */
+
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 1rem;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.95) 100%
+  );
+  border-color: rgba(26, 77, 46, 0.15);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+/* ─── Premium card - Light Theme ─────────────────────────────────────── */
+
+.card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(248, 248, 248, 0.98) 100%
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.99) 100%
+  );
+  border-color: rgba(26, 77, 46, 0.12);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(26, 77, 46, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+.card:active {
+  transform: scale(0.98) translateY(0);
+}
+
+.card-dark {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(250, 250, 250, 0.98) 100%
+  );
+  backdrop-filter: blur(20px);
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* ─── High-contrast text utilities - Light Theme ─────────────────────────── */
+
+.text-contrast { color: #1a1a1a; }
+.light .text-contrast { color: #1a1a1a; }
+
+.text-body { color: #555555; }
+.light .text-body { color: #555555; }
+
+.text-label { color: #888888; }
+.light .text-label { color: #888888; }
+
+/* ─── Premium button - Light Theme ───────────────────────────────────────── */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #1a4d2e 0%, #166534 100%);
+  color: white;
+  border: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 
+    0 4px 12px rgba(26, 77, 46, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2d6a4f 0%, #1a4d2e 100%);
+  box-shadow: 
+    0 8px 20px rgba(26, 77, 46, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: scale(0.98) translateY(0);
+}
+
+.btn-primary-green {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+  border: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 
+    0 4px 12px rgba(22, 163, 74, 0.3),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-primary-green:hover {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 
+    0 8px 20px rgba(22, 163, 74, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+
+/* ─── Gradient text ───────────────────────────────────────────── */
+
+.text-gradient-forest {
+  background: linear-gradient(135deg, var(--color-forest-400), var(--color-forest-300));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-300));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-subtle {
+  background: linear-gradient(135deg, var(--color-surface-200), var(--color-surface-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Subtle divider - Light Theme ───────────────────────────────────────── */
+
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.1), transparent);
+}
+
+/* ─── Ambient glow - Light Theme ─────────────────────────────────────────── */
+
+.glow-forest {
+  box-shadow: 
+    0 0 20px rgba(26, 77, 46, 0.15),
+    0 0 40px rgba(26, 77, 46, 0.1),
+    0 0 60px rgba(26, 77, 46, 0.05);
+}
+
+.glow-subtle {
+  box-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.8),
+    0 0 40px rgba(255, 255, 255, 0.6);
+}
+
+/* ─── Shimmer loading animation - Light Theme ─────────────────────────────── */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.03) 25%,
+    rgba(0,0,0,0.06) 50%,
+    rgba(0,0,0,0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ─── Glass overlay utility - Light Theme ────────────────────────── */
+
+.overlay-glass {
+  position: relative;
+}
+.overlay-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ─── Apple-style subtle borders ─────────────────────────────── */
+
+.border-subtle {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.border-active {
+  border-color: rgba(26, 77, 46, 0.3);
+  box-shadow: 0 0 0 1px rgba(26, 77, 46, 0.1);
+}
+
+/* ─── Smooth transitions ──────────────────────────────────────── */
+
+.transition-glass {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

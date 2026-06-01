@@ -1,0 +1,61 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/wholesale/webhooks/dispatch",
+      "schedule": "*/12 * * * *"
+    },
+    {
+      "path": "/api/wholesale/notifications/send",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/wholesale/notifications/pickup-reminder",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/square/process-queue",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/email-automation/abandoned-cart",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/email-automation/welcome-sequence",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/send-scheduled",
+      "schedule": "0 9 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-DNS-Prefetch-Control", "value": "on" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "X-Permitted-Cross-Domain-Policies", "value": "none" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.resend.com https://*.stripe.com" }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/api/stripe/webhook", "destination": "/api/stripe/webhook" },
+    { "source": "/api/resend/webhook", "destination": "/api/resend/webhook" }
+  ]
+}

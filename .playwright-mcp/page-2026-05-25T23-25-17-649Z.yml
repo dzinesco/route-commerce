@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Route Commerce" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e5]:
+        - link "Tuxedo" [ref=e6] [cursor=pointer]:
+          - /url: /tuxedo
+        - link "IRD" [ref=e7] [cursor=pointer]:
+          - /url: /indian-river-direct
+        - link "Admin" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+        - button "Switch to dark mode" [ref=e9]:
+          - img [ref=e10]
+        - link "Cart (0)" [ref=e12] [cursor=pointer]:
+          - /url: /cart
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - heading "Admin Login" [level=1] [ref=e16]
+        - paragraph [ref=e17]: Sign in with your account.
+        - generic [ref=e18]:
+          - generic [ref=e23]: Dev access
+          - generic [ref=e24]:
+            - link "Platform Admin" [ref=e25] [cursor=pointer]:
+              - /url: /api/force-admin?role=platform_admin
+            - link "Brand Admin" [ref=e26] [cursor=pointer]:
+              - /url: /api/force-admin?role=brand_admin
+            - link "Store Employee" [ref=e27] [cursor=pointer]:
+              - /url: /api/force-admin?role=store_employee
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - generic [ref=e30]: Email
+            - textbox "Email" [ref=e31]:
+              - /placeholder: admin@example.com
+          - generic [ref=e32]:
+            - generic [ref=e33]: Password
+            - textbox "Password" [ref=e34]:
+              - /placeholder: ••••••••
+          - button "Sign In" [ref=e35]
+          - button "Forgot password?" [ref=e36]
+      - link "← Back to storefront" [ref=e37] [cursor=pointer]:
+        - /url: /
+  - contentinfo [ref=e38]:
+    - generic [ref=e40]:
+      - paragraph [ref=e41]: © 2026 Route Commerce. All rights reserved.
+      - navigation [ref=e42]:
+        - link "Privacy Policy" [ref=e43] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Terms & Conditions" [ref=e44] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Powered by Route Commerce" [ref=e45] [cursor=pointer]:
+          - /url: https://cielohermosa.com
+  - alert [ref=e46]

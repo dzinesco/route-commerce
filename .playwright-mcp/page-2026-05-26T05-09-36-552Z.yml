@@ -1,0 +1,168 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "Tuxedo Corn" [ref=e6] [cursor=pointer]:
+          - /url: /tuxedo
+          - img "Tuxedo Corn" [ref=e7]
+        - navigation [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /tuxedo
+          - link "Stops" [ref=e10] [cursor=pointer]:
+            - /url: /tuxedo#stops
+          - link "Products" [ref=e11] [cursor=pointer]:
+            - /url: /tuxedo#products
+          - link "Our Story" [ref=e12] [cursor=pointer]:
+            - /url: /tuxedo/about
+          - link "FAQ" [ref=e13] [cursor=pointer]:
+            - /url: /tuxedo/faq
+          - link "Contact" [ref=e14] [cursor=pointer]:
+            - /url: /tuxedo/contact
+          - link "Wholesale" [ref=e15] [cursor=pointer]:
+            - /url: /wholesale/login
+        - link "Cart" [ref=e17] [cursor=pointer]:
+          - /url: /cart
+    - main [ref=e18]:
+      - generic [ref=e22]:
+        - img "Olathe Sweet" [ref=e24]
+        - paragraph [ref=e25]: Olathe Sweet™ — Olathe, Colorado
+        - heading "Tuxedo Corn" [level=1] [ref=e26]
+        - paragraph [ref=e27]: Premium Sweet Corn, Farm-Direct to You
+        - generic [ref=e28]:
+          - button "Find a Stop" [ref=e29]
+          - button "Our Story" [ref=e30]:
+            - generic [ref=e31]: Our Story
+            - img [ref=e32]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - img [ref=e39]
+          - generic [ref=e41]: Hand-Harvested
+        - generic [ref=e43]:
+          - img [ref=e45]
+          - generic [ref=e47]: Non-GMO Verified
+        - generic [ref=e49]:
+          - img [ref=e51]
+          - generic [ref=e54]: Colorado Grown
+        - generic [ref=e56]:
+          - img [ref=e58]
+          - generic [ref=e60]: Regeneratively Grown
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - img [ref=e66]
+          - generic [ref=e68]:
+            - paragraph [ref=e69]: Peak Freshness
+            - paragraph [ref=e70]: Harvested at peak ripeness for maximum sweetness and flavor — every order is hand-selected from the field.
+        - generic [ref=e71]:
+          - img [ref=e73]
+          - generic [ref=e76]:
+            - paragraph [ref=e77]: Grown in Colorado
+            - paragraph [ref=e78]: Family farm in the Centennial State — Olathe Sweet™ is a local original.
+        - generic [ref=e79]:
+          - img [ref=e81]
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: No Middleman
+            - paragraph [ref=e85]: Order direct from the farm. Fresher corn, better prices for everyone.
+        - generic [ref=e86]:
+          - img [ref=e88]
+          - generic [ref=e90]:
+            - paragraph [ref=e91]: Easy Preorder
+            - paragraph [ref=e92]: Reserve ahead of time. Your order is waiting for you at the stop.
+      - generic [ref=e94]:
+        - generic [ref=e96]:
+          - paragraph [ref=e97]: Delivery Stops
+          - heading "Upcoming Stops" [level=2] [ref=e98]:
+            - text: Upcoming
+            - text: Stops
+          - paragraph [ref=e100]: Find a nearby stop and preorder your corn. Pickup is easy and guaranteed.
+        - paragraph [ref=e102]: No upcoming stops scheduled. Check back soon!
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - paragraph [ref=e106]: Farm-Direct
+          - heading "This Week's Harvest" [level=2] [ref=e107]:
+            - text: This Week's
+            - text: Harvest
+          - paragraph [ref=e109]: Preorder for pickup at a stop, or have cooler boxes shipped directly to your door after the season.
+        - paragraph [ref=e111]: No products available at this time.
+      - generic [ref=e114]:
+        - paragraph [ref=e115]: Our Story
+        - heading "Three Generations of Sweet Corn Excellence" [level=2] [ref=e116]
+        - paragraph [ref=e118]: Tuxedo Corn is the exclusive grower and shipper of Olathe Sweet Sweet Corn — developed for Colorado's high-altitude mountain climate and grown by the same family for over 40 years.
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - paragraph [ref=e121]: 40+
+            - paragraph [ref=e122]: Years
+          - generic [ref=e123]:
+            - paragraph [ref=e124]: "3"
+            - paragraph [ref=e125]: Generations
+          - generic [ref=e126]:
+            - paragraph [ref=e127]: 100%
+            - paragraph [ref=e128]: Hand-Picked
+        - link "Read Our Story" [ref=e129] [cursor=pointer]:
+          - /url: /tuxedo/about
+          - text: Read Our Story
+          - img [ref=e130]
+    - generic [ref=e134]:
+      - generic [ref=e135]:
+        - paragraph [ref=e136]: Stay in the loop
+        - heading "Harvest updates, new stops & seasonal news" [level=3] [ref=e137]
+      - generic [ref=e138]:
+        - textbox "your@email.com" [ref=e139]
+        - button "Subscribe" [ref=e140]
+    - contentinfo [ref=e141]:
+      - generic [ref=e142]:
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - img "Tuxedo Corn" [ref=e145]
+            - paragraph [ref=e146]: Fresh from the farm to your family. We grow and deliver premium produce with care you can taste and trust.
+            - generic [ref=e147]:
+              - link "Instagram" [ref=e148] [cursor=pointer]:
+                - /url: https://instagram.com
+                - img [ref=e149]
+              - link "Facebook" [ref=e151] [cursor=pointer]:
+                - /url: https://facebook.com
+                - img [ref=e152]
+            - link "970-323-6874" [ref=e154] [cursor=pointer]:
+              - /url: tel:9703236874
+            - link "info@tuxedofarmco.com" [ref=e155] [cursor=pointer]:
+              - /url: mailto:info@tuxedofarmco.com
+          - generic [ref=e156]:
+            - paragraph [ref=e157]: Shop
+            - navigation [ref=e158]:
+              - link "Home" [ref=e159] [cursor=pointer]:
+                - /url: /tuxedo
+              - link "Upcoming Stops" [ref=e160] [cursor=pointer]:
+                - /url: /tuxedo#stops
+              - link "Products" [ref=e161] [cursor=pointer]:
+                - /url: /tuxedo#products
+              - link "Our Story" [ref=e162] [cursor=pointer]:
+                - /url: /tuxedo/about
+          - generic [ref=e163]:
+            - paragraph [ref=e164]: Help
+            - navigation [ref=e165]:
+              - link "Cart" [ref=e166] [cursor=pointer]:
+                - /url: /cart
+              - link "Wholesale Portal" [ref=e167] [cursor=pointer]:
+                - /url: /wholesale/login
+              - link "Contact Us" [ref=e168] [cursor=pointer]:
+                - /url: /tuxedo/contact
+              - link "FAQ" [ref=e169] [cursor=pointer]:
+                - /url: /tuxedo/faq
+          - generic [ref=e170]:
+            - paragraph [ref=e171]: Fresh & Local
+            - navigation [ref=e172]:
+              - link "Our Farm" [ref=e173] [cursor=pointer]:
+                - /url: /tuxedo/about
+              - link "What's in Season" [ref=e174] [cursor=pointer]:
+                - /url: /tuxedo#products
+              - link "Visit Us" [ref=e175] [cursor=pointer]:
+                - /url: /tuxedo/contact
+              - link "Sell With Us" [ref=e176] [cursor=pointer]:
+                - /url: /wholesale/register
+        - generic [ref=e177]:
+          - paragraph [ref=e178]: © 2026 Tuxedo Corn. All rights reserved.
+          - generic [ref=e179]:
+            - link "Privacy Policy" [ref=e180] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms & Conditions" [ref=e181] [cursor=pointer]:
+              - /url: /terms-and-conditions

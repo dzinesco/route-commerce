@@ -1,0 +1,95 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Route Commerce" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e5]:
+        - link "Tuxedo" [ref=e6] [cursor=pointer]:
+          - /url: /tuxedo
+        - link "IRD" [ref=e7] [cursor=pointer]:
+          - /url: /indian-river-direct
+        - link "Admin" [ref=e8] [cursor=pointer]:
+          - /url: /admin
+        - button "Switch to dark mode" [ref=e9]:
+          - img [ref=e10]
+        - link "Cart (0)" [ref=e12] [cursor=pointer]:
+          - /url: /cart
+  - generic [ref=e13]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - img [ref=e18]
+        - generic [ref=e20]:
+          - paragraph [ref=e21]: Tuxedo Corn
+          - paragraph [ref=e22]: Wholesale Portal
+      - link "← Back to site" [ref=e23] [cursor=pointer]:
+        - /url: /
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - heading "Grow your business with wholesale pricing" [level=2] [ref=e27]
+        - paragraph [ref=e28]: Join our wholesale program and get access to exclusive pricing, easier ordering, and priority fulfillment.
+        - generic [ref=e29]:
+          - paragraph [ref=e30]: What You'll Get
+          - list [ref=e31]:
+            - listitem [ref=e32]:
+              - img [ref=e34]
+              - generic [ref=e36]:
+                - paragraph [ref=e37]: Exclusive Wholesale Pricing
+                - paragraph [ref=e38]: Access discounted rates and volume-based tiers that aren't available to retail customers.
+            - listitem [ref=e39]:
+              - img [ref=e41]
+              - generic [ref=e43]:
+                - paragraph [ref=e44]: Easy Online Ordering
+                - paragraph [ref=e45]: Place orders anytime with the option to pay a deposit and settle the balance at pickup.
+            - listitem [ref=e46]:
+              - img [ref=e48]
+              - generic [ref=e50]:
+                - paragraph [ref=e51]: Order History & Invoices
+                - paragraph [ref=e52]: Log in anytime to review past orders, download invoices, and track your spending.
+            - listitem [ref=e53]:
+              - img [ref=e55]
+              - generic [ref=e57]:
+                - paragraph [ref=e58]: Priority Pickup Scheduling
+                - paragraph [ref=e59]: Reserve your spot at upcoming stops and ensure your order is ready when you arrive.
+            - listitem [ref=e60]:
+              - img [ref=e62]
+              - generic [ref=e64]:
+                - paragraph [ref=e65]: Dedicated Bulk Support
+                - paragraph [ref=e66]: Get personalized help from our wholesale team for large or recurring orders.
+            - listitem [ref=e67]:
+              - img [ref=e69]
+              - generic [ref=e71]:
+                - paragraph [ref=e72]: Early Access to Seasonal Products
+                - paragraph [ref=e73]: Be the first to know when new crops launch and reserve before they sell out.
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - heading "Sign In" [level=1] [ref=e76]
+          - paragraph [ref=e77]: Access your wholesale account.
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: Company
+            - combobox [ref=e81]:
+              - option "Indian River Direct"
+              - option "Tuxedo Corn" [selected]
+          - generic [ref=e82]:
+            - generic [ref=e83]: Email
+            - textbox "buyer@company.com" [ref=e84]
+          - generic [ref=e85]:
+            - generic [ref=e86]: Password
+            - textbox "••••••••" [ref=e87]
+          - button "Sign In" [ref=e88]
+        - generic [ref=e89]:
+          - paragraph [ref=e90]: Don't have an account?
+          - link "Apply for a wholesale account →" [ref=e91] [cursor=pointer]:
+            - /url: /wholesale/register
+    - paragraph [ref=e93]: Powered by Route Commerce
+  - contentinfo [ref=e94]:
+    - generic [ref=e96]:
+      - paragraph [ref=e97]: © 2026 Route Commerce. All rights reserved.
+      - navigation [ref=e98]:
+        - link "Privacy Policy" [ref=e99] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Terms & Conditions" [ref=e100] [cursor=pointer]:
+          - /url: /terms-and-conditions
+        - link "Powered by Route Commerce" [ref=e101] [cursor=pointer]:
+          - /url: https://cielohermosa.com
+  - alert [ref=e102]

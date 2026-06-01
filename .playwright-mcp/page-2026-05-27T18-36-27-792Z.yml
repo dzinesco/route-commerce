@@ -1,0 +1,10 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic:
+          - img "Olathe Sweet"
+        - generic [ref=e6]: Tuxedo Corn
+      - button "ES" [ref=e7]
+    - generic [ref=e10]: Loading...

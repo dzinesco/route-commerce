@@ -1,0 +1,8 @@
+[build]
+  command = "git config --global submodule.recurse false && git submodule deinit --all 2>/dev/null; rm -rf .git/modules 2>/dev/null; npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+  GIT_LFS_ENABLED = "false"

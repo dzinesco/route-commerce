@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Nav Test</title></head>
+<body>
+<h1>Nav Test (plain HTML)</h1>
+<p id="status">waiting</p>
+<button id="btn">TEST window.location.replace("/admin/test-cookies")</button>
+<script>
+document.getElementById("btn").onclick = function() {
+  var status = document.getElementById("status");
+  status.textContent = "replace() called, current URL: " + window.location.href;
+  console.log("clicked replace, URL:", window.location.href);
+  window.location.replace("/admin/test-cookies");
+  console.log("replace() returned, URL now:", window.location.href);
+  status.textContent = "replace() returned, current: " + window.location.href;
+};
+</script>
+</body>
+</html>
