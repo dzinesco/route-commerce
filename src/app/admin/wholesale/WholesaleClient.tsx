@@ -94,36 +94,36 @@ export default function WholesaleClient({ brandId }: { brandId: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-500">Loading wholesale data...</p>
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <p className="text-stone-500">Loading wholesale data...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <div className="bg-zinc-900 border-b border-zinc-800 px-6 py-4">
+      <div className="bg-white border-b border-stone-200 px-6 py-5">
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-100">Wholesale Portal</h1>
-            <p className="mt-0.5 text-sm text-zinc-500">Manage wholesale orders, customers, and products</p>
+            <h1 className="text-2xl font-semibold text-stone-950 tracking-tight">Wholesale Portal</h1>
+            <p className="mt-0.5 text-sm text-stone-500">Manage wholesale orders, customers, and products</p>
           </div>
         </div>
       </div>
 
       {/* Tab nav */}
-      <div className="bg-zinc-900 border-b border-zinc-800 px-6">
+      <div className="bg-white border-b border-stone-200 px-6">
         <div className="mx-auto max-w-7xl">
           <nav className="flex gap-1 -mb-px">
             {(["dashboard", "customers", "products", "orders", "settings"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                   tab === t
-                    ? "border-green-600 text-green-400"
-                    : "border-transparent text-zinc-500 hover:text-zinc-300"
+                    ? "border-emerald-500 text-emerald-700"
+                    : "border-transparent text-stone-500 hover:text-stone-700"
                 }`}
               >
                 {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -137,8 +137,8 @@ export default function WholesaleClient({ brandId }: { brandId: string }) {
         {msg && (
           <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
             msg.kind === "success"
-              ? "border-green-200 bg-green-900/30 text-green-400"
-              : "border-red-200 bg-red-900/30 text-red-400"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
           }`}>
             {msg.text}
           </div>
@@ -223,30 +223,30 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Open Orders", value: stats.open_orders, color: "bg-blue-50 border-blue-200" },
-          { label: "Pickup Today", value: stats.pickup_today, color: "bg-yellow-50 border-yellow-200" },
-          { label: "Past Due", value: stats.past_due, color: "bg-red-900/30 border-red-200" },
-          { label: "Total Unpaid", value: `$${stats.total_unpaid.toFixed(2)}`, color: "bg-orange-50 border-orange-200" },
-          { label: "Awaiting Deposit", value: stats.awaiting_deposit, color: "bg-purple-50 border-purple-200" },
-          { label: "Fulfilled Today", value: stats.fulfilled_today, color: "bg-green-900/30 border-green-200" },
+          { label: "Open Orders", value: stats.open_orders, color: "bg-white border-stone-200" },
+          { label: "Pickup Today", value: stats.pickup_today, color: "bg-white border-stone-200" },
+          { label: "Past Due", value: stats.past_due, color: "bg-red-50 border-red-200" },
+          { label: "Total Unpaid", value: `$${stats.total_unpaid.toFixed(2)}`, color: "bg-white border-stone-200" },
+          { label: "Awaiting Deposit", value: stats.awaiting_deposit, color: "bg-amber-50 border-amber-200" },
+          { label: "Fulfilled Today", value: stats.fulfilled_today, color: "bg-emerald-50 border-emerald-200" },
         ].map((card) => (
-          <div key={card.label} className={`rounded-xl border p-4 ${card.color}`}>
-            <p className="text-xs text-zinc-500">{card.label}</p>
-            <p className="mt-1 text-2xl font-bold text-zinc-100">{card.value}</p>
+          <div key={card.label} className={`rounded-xl border p-4 shadow-sm ${card.color}`}>
+            <p className="text-xs text-stone-500">{card.label}</p>
+            <p className="mt-1 text-2xl font-bold text-stone-950">{card.value}</p>
           </div>
         ))}
       </div>
 
       {/* Recent orders */}
-      <div className="rounded-2xl bg-zinc-900 p-6 shadow-black/20 ring-1 ring-zinc-700">
-        <h2 className="text-lg font-semibold text-zinc-100 mb-4">Recent Orders</h2>
+      <div className="rounded-2xl bg-white border border-stone-200 p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-stone-950 mb-4">Recent Orders</h2>
         {recentOrders.length === 0 ? (
-          <p className="text-sm text-slate-400 py-8 text-center">No wholesale orders yet.</p>
+          <p className="text-sm text-stone-400 py-8 text-center">No wholesale orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-zinc-500 border-b">
+                <tr className="text-left text-stone-500 border-b">
                   <th className="pb-3 font-medium">Invoice</th>
                   <th className="pb-3 font-medium">Customer</th>
                   <th className="pb-3 font-medium">Pickup Date</th>
@@ -255,19 +255,19 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
                   <th className="pb-3 font-medium">Payment</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-stone-100">
                 {recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-zinc-800">
-                    <td className="py-3 font-mono text-xs text-slate-400">{order.invoice_number ?? "—"}</td>
-                    <td className="py-3 font-medium text-zinc-100">{order.company_name}</td>
-                    <td className="py-3 text-zinc-400">{order.anticipated_pickup_date ?? "—"}</td>
-                    <td className="py-3 text-right font-semibold text-zinc-100">${Number(order.subtotal).toFixed(2)}</td>
+                  <tr key={order.id} className="hover:bg-stone-50">
+                    <td className="py-3 font-mono text-xs text-stone-500">{order.invoice_number ?? "—"}</td>
+                    <td className="py-3 font-medium text-stone-900">{order.company_name}</td>
+                    <td className="py-3 text-stone-600">{order.anticipated_pickup_date ?? "—"}</td>
+                    <td className="py-3 text-right font-semibold text-stone-950">${Number(order.subtotal).toFixed(2)}</td>
                     <td className="py-3">
                       <StatusBadge status={order.status} />
                     </td>
                     <td className="py-3">
                       <span className={`text-xs font-medium ${
-                        order.payment_status === "paid" ? "text-green-600" : "text-orange-600"
+                        order.payment_status === "paid" ? "text-emerald-600" : "text-amber-600"
                       }`}>
                         {order.payment_status === "paid" ? "Paid" : order.balance_due > 0 ? `$${Number(order.balance_due).toFixed(2)} due` : "Partial"}
                       </span>
@@ -282,8 +282,8 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
 
       {/* Recent webhook activity */}
       {webhookActivity.length > 0 && (
-        <div className="rounded-2xl bg-zinc-900 p-6 shadow-black/20 ring-1 ring-zinc-700">
-          <h2 className="text-lg font-semibold text-zinc-100 mb-4">Recent Webhook Activity</h2>
+        <div className="rounded-2xl bg-white border border-stone-200 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-stone-950 mb-4">Recent Webhook Activity</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

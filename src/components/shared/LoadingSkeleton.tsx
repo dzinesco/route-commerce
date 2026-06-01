@@ -11,12 +11,12 @@ type SkeletonProps = {
 };
 
 function SkeletonLine({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded bg-slate-200 ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-stone-200 ${className}`} />;
 }
 
 export function SkeletonText({ lines = 3, className = "" }: { lines?: number; className?: string }) {
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2.5 ${className}`}>
       {Array.from({ length: lines }).map((_, i) => (
         <SkeletonLine key={i} className={i === lines - 1 ? "w-3/4" : "w-full"} />
       ))}
@@ -26,10 +26,10 @@ export function SkeletonText({ lines = 3, className = "" }: { lines?: number; cl
 
 export function SkeletonCard({ className = "" }: SkeletonProps) {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white p-6 ${className}`}>
+    <div className={`rounded-2xl border border-stone-200 bg-white p-6 ${className}`}>
       <div className="flex items-center gap-4">
-        <SkeletonLine className="h-10 w-10 rounded-lg" />
-        <div className="flex-1 space-y-2">
+        <SkeletonLine className="h-10 w-10 rounded-xl" />
+        <div className="flex-1 space-y-2.5">
           <SkeletonLine className="h-4 w-1/3" />
           <SkeletonLine className="h-3 w-1/2" />
         </div>
@@ -40,19 +40,19 @@ export function SkeletonCard({ className = "" }: SkeletonProps) {
 
 export function SkeletonTable({ rows = 5, cols = 4, className = "" }: { rows?: number; cols?: number; className?: string }) {
   return (
-    <div className={`overflow-hidden rounded-2xl border border-slate-200 ${className}`}>
-      <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-        <div className="flex gap-4">
+    <div className={`overflow-hidden rounded-2xl border border-stone-200 bg-white ${className}`}>
+      <div className="border-b border-stone-100 bg-stone-50 px-5 py-4">
+        <div className="flex gap-6">
           {Array.from({ length: cols }).map((_, i) => (
-            <SkeletonLine key={i} className="h-3 flex-1" />
+            <SkeletonLine key={i} className="h-3 flex-1 max-w-24" />
           ))}
         </div>
       </div>
-      <div className="divide-y divide-slate-50">
+      <div className="divide-y divide-stone-100">
         {Array.from({ length: rows }).map((_, rowIdx) => (
-          <div key={rowIdx} className="flex items-center gap-4 px-4 py-3">
+          <div key={rowIdx} className="flex items-center gap-6 px-5 py-4">
             {Array.from({ length: cols }).map((_, colIdx) => (
-              <SkeletonLine key={colIdx} className="h-3 flex-1" />
+              <SkeletonLine key={colIdx} className="h-3 flex-1 max-w-32" />
             ))}
           </div>
         ))}
@@ -66,7 +66,7 @@ export function SkeletonAvatar({ className = "" }: SkeletonProps) {
 }
 
 export function SkeletonButton({ className = "" }: SkeletonProps) {
-  return <SkeletonLine className={`h-9 w-24 rounded-lg ${className}`} />;
+  return <SkeletonLine className={`h-10 w-28 rounded-xl ${className}`} />;
 }
 
 export default function LoadingSkeleton({ variant = "text", width, height, className = "", count = 1 }: SkeletonProps) {
@@ -78,7 +78,7 @@ export default function LoadingSkeleton({ variant = "text", width, height, class
 
   if (variant === "card") {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {items.map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -108,7 +108,7 @@ export default function LoadingSkeleton({ variant = "text", width, height, class
   }
   // default: text
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {items.map((_, i) => (
         <SkeletonText key={i} className={className} />
       ))}
