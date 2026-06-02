@@ -74,7 +74,7 @@ const PackageIconHeader = () => (
   </svg>
 );
 
-export default function ProductsClient({ products, brandId }: { products: Product[]; brandId: string }) {
+export default function ProductsClient({ products, brandId }: { products: Product[]; brandId?: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
@@ -234,6 +234,12 @@ export default function ProductsClient({ products, brandId }: { products: Produc
     }
 
     try {
+      if (!brandId) {
+        setError("Brand ID is required");
+        setSaving(false);
+        return;
+      }
+
       let result;
       const imageUrl = pendingImageUrl || formData.image_url || null;
 

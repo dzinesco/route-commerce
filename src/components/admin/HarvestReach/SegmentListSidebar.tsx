@@ -6,7 +6,7 @@ import { AdminButton, AdminIconButton, AdminSearchInput } from "@/components/adm
 
 // Icon components
 const Icons = {
-  plus: (className: string) => (
+  Plus: ({ className }: { className: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 5v14M5 12h14" />
     </svg>
@@ -47,7 +47,7 @@ export default function SegmentListSidebar({ segments, activeSegmentId, onSelect
           variant="primary"
           size="sm"
         >
-          <Icons.plus className="w-4 h-4" />
+          <Icons.Plus className="w-4 h-4" />
         </AdminIconButton>
       </div>
 

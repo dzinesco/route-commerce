@@ -69,7 +69,7 @@ export default async function AdminProductsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--admin-bg)]">
-      <ProductsClient products={products ?? []} brandId={brandId} />
+      <ProductsClient products={products ?? []} brandId={brandId ?? undefined} />
     </div>
   );
 }
