@@ -145,7 +145,14 @@ const TABS = [
 ];
 
 export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }) {
-  const [tab, setTab] = useState<Tab>("summary");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      if (t === "tasks" || t === "workers") return t as Tab;
+    }
+    return "summary" as Tab;
+  });
   const [workers, setWorkers] = useState<TimeWorker[]>([]);
   const [tasks, setTasks] = useState<TimeTask[]>([]);
   const [logs, setLogs] = useState<TimeLog[]>([]);
