@@ -61,10 +61,10 @@ export default function HeroSection() {
         @keyframes pulse-glow {
           0%,
           100% {
-            box-shadow: 0 0 0 0 rgba(201, 122, 62, 0.4);
+            box-shadow: 0 0 0 0 rgba(247, 129, 130, 0.4);
           }
           50% {
-            box-shadow: 0 0 20px 5px rgba(201, 122, 62, 0.2);
+            box-shadow: 0 0 20px 5px rgba(232, 168, 124, 0.3);
           }
         }
 
@@ -245,28 +245,95 @@ export default function HeroSection() {
 
       <section
         className="min-h-screen relative overflow-hidden flex items-center"
-        style={{ backgroundColor: "#faf8f5" }}
+        style={{ 
+          background: "linear-gradient(135deg, #faf8f5 0%, #fef7f0 50%, #fdf6f0 100%)"
+        }}
       >
-        {/* Background Pattern - Subtle Grid */}
+        {/* Colorful Grid Pattern with Blue Tint */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage: `
-              linear-gradient(#1a4d2e 1px, transparent 1px),
-              linear-gradient(90deg, #1a4d2e 1px, transparent 1px)
+              linear-gradient(#4a7c94 1px, transparent 1px),
+              linear-gradient(90deg, #4a7c94 1px, transparent 1px)
             `,
             backgroundSize: "60px 60px",
           }}
         />
 
-        {/* Decorative Elements */}
+        {/* Decorative Colorful Blobs */}
+        {/* Coral/Pink Blob - Top Right */}
         <div
-          className="absolute top-20 left-10 w-32 h-32 rounded-full opacity-10"
-          style={{ backgroundColor: "#6b8f71" }}
+          className="absolute top-10 right-20 w-64 h-64 rounded-full blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(247, 129, 130, 0.25) 0%, rgba(247, 129, 130, 0.1) 50%, transparent 70%)",
+          }}
+        />
+        
+        {/* Mint/Teal Blob - Bottom Left */}
+        <div
+          className="absolute bottom-20 left-10 w-72 h-72 rounded-full blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(107, 185, 165, 0.25) 0%, rgba(107, 185, 165, 0.1) 50%, transparent 70%)",
+          }}
+        />
+        
+        {/* Golden/Amber Blob - Top Left */}
+        <div
+          className="absolute top-40 left-1/4 w-56 h-56 rounded-full blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(201, 162, 80, 0.2) 0%, rgba(201, 162, 80, 0.08) 50%, transparent 70%)",
+          }}
+        />
+        
+        {/* Lavender/Purple Blob - Bottom Right */}
+        <div
+          className="absolute bottom-40 right-1/4 w-48 h-48 rounded-full blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(147, 112, 180, 0.15) 0%, rgba(147, 112, 180, 0.05) 50%, transparent 70%)",
+          }}
+        />
+
+        {/* Color Overlay from Bottom Right - Golden/Amber tones */}
+        <div
+          className="absolute bottom-0 right-0 w-1/2 h-1/2 pointer-events-none"
+          style={{
+            background: "linear-gradient(135deg, transparent 0%, rgba(255, 215, 120, 0.08) 100%)",
+          }}
+        />
+
+        {/* Colorful Accent Dots */}
+        <div
+          className="absolute top-32 left-1/3 w-3 h-3 rounded-full"
+          style={{ backgroundColor: "#e8a87c", opacity: 0.6 }}
         />
         <div
-          className="absolute bottom-40 right-20 w-48 h-48 rounded-full opacity-5"
-          style={{ backgroundColor: "#c97a3e" }}
+          className="absolute top-48 right-1/4 w-2 h-2 rounded-full"
+          style={{ backgroundColor: "#85d2c5", opacity: 0.7 }}
+        />
+        <div
+          className="absolute top-24 right-1/3 w-4 h-4 rounded-full"
+          style={{ backgroundColor: "#d4a5a5", opacity: 0.5 }}
+        />
+        <div
+          className="absolute bottom-60 left-20 w-2 h-2 rounded-full"
+          style={{ backgroundColor: "#b8d4be", opacity: 0.6 }}
+        />
+        <div
+          className="absolute bottom-40 right-40 w-3 h-3 rounded-full"
+          style={{ backgroundColor: "#f5c77e", opacity: 0.5 }}
+        />
+        <div
+          className="absolute top-1/2 left-10 w-2 h-2 rounded-full"
+          style={{ backgroundColor: "#9bc4bc", opacity: 0.7 }}
+        />
+        <div
+          className="absolute top-60 left-1/2 w-3 h-3 rounded-full"
+          style={{ backgroundColor: "#e6b8af", opacity: 0.5 }}
+        />
+        <div
+          className="absolute bottom-1/3 right-1/3 w-2 h-2 rounded-full"
+          style={{ backgroundColor: "#c5d5cb", opacity: 0.6 }}
         />
 
         <div className="container mx-auto px-6 lg:px-12 py-20 relative z-10">
@@ -327,6 +394,15 @@ export default function HeroSection() {
                 efficiently than ever before.
               </p>
 
+              {/* Colorful Gradient Divider */}
+              <div
+                className="relative h-1 w-32 rounded-full overflow-hidden"
+                style={{
+                  background: "linear-gradient(90deg, #85d2c5 0%, #f5c77e 50%, #e8a87c 100%)",
+                  boxShadow: "0 0 20px rgba(245, 199, 126, 0.4)",
+                }}
+              />
+
               {/* CTAs */}
               <div
                 className={`flex flex-wrap gap-4 pt-4 ${mounted ? "animate-fade-in-up" : ""}`}
@@ -365,7 +441,7 @@ export default function HeroSection() {
                 </Link>
               </div>
 
-              {/* Trust Indicators */}
+              {/* Trust Indicators with Colorful Gradients */}
               <div
                 className={`flex flex-wrap gap-6 pt-6 ${
                   mounted ? "animate-fade-in-up" : ""
@@ -373,24 +449,28 @@ export default function HeroSection() {
                 style={{ animationDelay: mounted ? "600ms" : "0ms" }}
               >
                 {[
-                  { stat: "500+", label: "Farm Brands" },
-                  { stat: "98%", label: "On-Time" },
-                  { stat: "50K+", label: "Deliveries" },
+                  { stat: "500+", label: "Farm Brands", gradient: "linear-gradient(135deg, rgba(133, 210, 197, 0.25) 0%, rgba(107, 185, 165, 0.15) 100%)", borderColor: "rgba(133, 210, 197, 0.5)", statColor: "#2d8a7a" },
+                  { stat: "98%", label: "On-Time", gradient: "linear-gradient(135deg, rgba(245, 199, 126, 0.25) 0%, rgba(201, 162, 80, 0.15) 100%)", borderColor: "rgba(245, 199, 126, 0.5)", statColor: "#c17a30" },
+                  { stat: "50K+", label: "Deliveries", gradient: "linear-gradient(135deg, rgba(232, 168, 124, 0.25) 0%, rgba(247, 129, 130, 0.15) 100%)", borderColor: "rgba(232, 168, 124, 0.5)", statColor: "#b85a50" },
                 ].map((item, index) => (
                   <div
                     key={index}
                     className="trust-card rounded-2xl p-4 border"
-                    style={{ borderColor: "rgba(107, 143, 113, 0.2)" }}
+                    style={{ 
+                      background: item.gradient,
+                      borderColor: item.borderColor,
+                      boxShadow: `0 4px 20px ${item.borderColor.replace('0.5', '0.2')}`,
+                    }}
                   >
                     <div
                       className="font-display text-2xl sm:text-3xl font-bold"
-                      style={{ color: "#1a4d2e" }}
+                      style={{ color: item.statColor }}
                     >
                       {item.stat}
                     </div>
                     <div
                       className="text-sm font-medium"
-                      style={{ color: "#6b8f71" }}
+                      style={{ color: "#5a7a6a" }}
                     >
                       {item.label}
                     </div>
@@ -625,17 +705,18 @@ export default function HeroSection() {
                   <div
                     className="animate-pulse-glow rounded-2xl p-4 shadow-xl border"
                     style={{
-                      backgroundColor: "#faf8f5",
-                      borderColor: "rgba(201, 122, 62, 0.3)",
+                      background: "linear-gradient(135deg, rgba(232, 168, 124, 0.9) 0%, rgba(247, 129, 130, 0.8) 100%)",
+                      borderColor: "rgba(247, 129, 130, 0.5)",
+                      boxShadow: "0 8px 32px rgba(232, 168, 124, 0.35), 0 0 20px rgba(247, 129, 130, 0.2)",
                     }}
                   >
                     <div
                       className="text-2xl font-bold"
-                      style={{ color: "#c97a3e" }}
+                      style={{ color: "#ffffff" }}
                     >
                       2.4T
                     </div>
-                    <div className="text-sm" style={{ color: "#6b8f71" }}>
+                    <div className="text-sm" style={{ color: "rgba(255, 255, 255, 0.9)" }}>
                       Miles Saved
                     </div>
                   </div>
@@ -650,17 +731,18 @@ export default function HeroSection() {
                   <div
                     className="rounded-2xl p-4 shadow-xl border"
                     style={{
-                      backgroundColor: "#faf8f5",
-                      borderColor: "rgba(26, 77, 46, 0.3)",
+                      background: "linear-gradient(135deg, rgba(133, 210, 197, 0.9) 0%, rgba(107, 185, 165, 0.85) 100%)",
+                      borderColor: "rgba(133, 210, 197, 0.5)",
+                      boxShadow: "0 8px 32px rgba(107, 185, 165, 0.35), 0 0 20px rgba(133, 210, 197, 0.2)",
                     }}
                   >
                     <div
                       className="text-2xl font-bold"
-                      style={{ color: "#1a4d2e" }}
+                      style={{ color: "#ffffff" }}
                     >
                       12hrs
                     </div>
-                    <div className="text-sm" style={{ color: "#6b8f71" }}>
+                    <div className="text-sm" style={{ color: "rgba(255, 255, 255, 0.9)" }}>
                       Avg Delivery
                     </div>
                   </div>
@@ -675,18 +757,19 @@ export default function HeroSection() {
                   <div
                     className="rounded-2xl p-3 shadow-lg border"
                     style={{
-                      backgroundColor: "rgba(107, 143, 113, 0.15)",
-                      borderColor: "rgba(107, 143, 113, 0.4)",
+                      background: "linear-gradient(135deg, rgba(245, 199, 126, 0.9) 0%, rgba(201, 162, 80, 0.85) 100%)",
+                      borderColor: "rgba(245, 199, 126, 0.6)",
+                      boxShadow: "0 4px 20px rgba(245, 199, 126, 0.35), 0 0 15px rgba(201, 162, 80, 0.2)",
                     }}
                   >
                     <div className="flex items-center gap-2">
                       <span
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: "#1a4d2e" }}
+                        style={{ backgroundColor: "#ffffff" }}
                       />
                       <span
                         className="text-sm font-semibold"
-                        style={{ color: "#1a4d2e" }}
+                        style={{ color: "#5a4020" }}
                       >
                         Live Tracking
                       </span>

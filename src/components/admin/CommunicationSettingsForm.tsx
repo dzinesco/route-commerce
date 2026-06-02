@@ -4,8 +4,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CommunicationSettings } from "@/actions/communications/settings";
 import { upsertCommunicationSettings } from "@/actions/communications/settings";
+import { AdminButton } from "@/components/admin/design-system";
+import { AdminInput, AdminTextInput, AdminTextarea } from "@/components/admin/design-system/AdminFormElements";
 
-const BRAND_ID = process.env.NEXT_PUBLIC_TUXEDO_BRAND_ID ?? "64294306-5f42-463d-a5e8-2ad6c81a96de";
+// Mail icon for the header
+const MailIcon = ({ className }: { className?: string }) => (
+  <svg className={className ?? "h-5 w-5"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2"/>
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+  </svg>
+);
+
+// Check icon for success
+const CheckIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);
+
+// Warning icon for provider notice
+const WarningIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
 
 export default function CommunicationSettingsForm({
   settings,
@@ -46,76 +70,99 @@ export default function CommunicationSettingsForm({
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-zinc-100">Sender Settings</h2>
-        <p className="text-sm text-zinc-500 mt-1">
-          Configure the default sender identity for this brand&apos;s email campaigns.
-          Provider (Resend) is configured via environment variables — no credentials stored here.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-900/30 border border-red-200 px-4 py-3 text-sm text-red-400">{error}</div>
-      )}
-      {success && (
-        <div className="mb-4 rounded-lg bg-green-900/30 border border-green-200 px-4 py-3 text-sm text-green-400">
-          Settings saved successfully.
-        </div>
-      )}
-
-      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Default Sender Email</label>
-          <input
-            type="email"
-            value={senderEmail}
-            onChange={(e) => setSenderEmail(e.target.value)}
-            className="w-full border border-zinc-600 rounded-lg px-3 py-2 text-sm"
-            placeholder="orders@tuxedocorn.com"
-          />
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--admin-accent)] to-[var(--admin-accent-dark,var(--admin-accent))] text-white shadow-lg shadow-[var(--admin-accent)]/20">
+          <MailIcon />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Default Sender Name</label>
-          <input
-            type="text"
-            value={senderName}
-            onChange={(e) => setSenderName(e.target.value)}
-            className="w-full border border-zinc-600 rounded-lg px-3 py-2 text-sm"
-            placeholder="Route Commerce"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Reply-To Email</label>
-          <input
-            type="email"
-            value={replyTo}
-            onChange={(e) => setReplyTo(e.target.value)}
-            className="w-full border border-zinc-600 rounded-lg px-3 py-2 text-sm"
-            placeholder="support@tuxedocorn.com"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Email Footer HTML (optional)</label>
-          <textarea
-            value={footerHtml}
-            onChange={(e) => setFooterHtml(e.target.value)}
-            rows={3}
-            className="w-full border border-zinc-600 rounded-lg px-3 py-2 text-sm font-mono text-xs"
-            placeholder="<p>Unsubscribe: <a href='...'>link</a></p>"
-          />
-          <p className="mt-1 text-xs text-slate-400">Include your unsubscribe link here. Add {`{unsubscribe_url}`} as placeholder.</p>
+          <h2 className="text-lg font-bold text-[var(--admin-text-primary)]">Sender Settings</h2>
+          <p className="text-xs text-[var(--admin-text-muted)]">Configure the default sender identity for this brand's email campaigns</p>
         </div>
       </div>
 
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Save Settings"}
-        </button>
+      {/* Provider notice */}
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 mb-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600 flex-shrink-0">
+          <WarningIcon />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-amber-800">Email Provider</p>
+          <p className="text-xs text-amber-700 mt-0.5">
+            Provider (Resend) is configured via environment variables — no credentials stored here.
+          </p>
+        </div>
+      </div>
+
+      {/* Form card */}
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
+        {/* Form header */}
+        <div className="px-5 py-4 border-b border-[var(--admin-border)] bg-gradient-to-r from-[var(--admin-card)] to-[var(--admin-bg)]">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-[var(--admin-accent)]" />
+            <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Email Identity</h3>
+          </div>
+        </div>
+
+        {/* Form fields */}
+        <div className="p-5 space-y-5">
+          <AdminInput label="Default Sender Email" helpText="The email address recipients will see as the sender">
+            <AdminTextInput
+              type="email"
+              value={senderEmail}
+              onChange={(e) => setSenderEmail(e.target.value)}
+              placeholder="orders@yourbrand.com"
+            />
+          </AdminInput>
+
+          <AdminInput label="Default Sender Name" helpText="The name displayed as the sender">
+            <AdminTextInput
+              type="text"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              placeholder="Route Commerce"
+            />
+          </AdminInput>
+
+          <AdminInput label="Reply-To Email" helpText="Emails will be replied to this address">
+            <AdminTextInput
+              type="email"
+              value={replyTo}
+              onChange={(e) => setReplyTo(e.target.value)}
+              placeholder="support@yourbrand.com"
+            />
+          </AdminInput>
+
+          <AdminInput label="Email Footer HTML (optional)" helpText="Add {unsubscribe_url} as placeholder for automatic unsubscribe links">
+            <AdminTextarea
+              value={footerHtml}
+              onChange={(e) => setFooterHtml(e.target.value)}
+              rows={4}
+              placeholder={"<p>Unsubscribe: <a href='...'>link</a></p>"}
+            />
+          </AdminInput>
+        </div>
+
+        {/* Form footer with actions */}
+        <div className="px-5 py-4 border-t border-[var(--admin-border)] bg-gradient-to-r from-[var(--admin-bg)] to-[var(--admin-card)] flex items-center justify-between">
+          <div>
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
+            {success && (
+              <div className="flex items-center gap-2 text-sm text-emerald-600">
+                <CheckIcon />
+                <span>Settings saved successfully</span>
+              </div>
+            )}
+          </div>
+          <AdminButton
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save Settings"}
+          </AdminButton>
+        </div>
       </div>
     </div>
   );

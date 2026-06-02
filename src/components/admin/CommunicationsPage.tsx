@@ -9,6 +9,7 @@ import ContactImportForm from "./ContactImportForm";
 import SegmentBuilderPage from "@/components/admin/HarvestReach/SegmentBuilderPage";
 import AnalyticsDashboard from "@/components/admin/HarvestReach/AnalyticsDashboard";
 import CampaignComposerPage from "@/components/admin/HarvestReach/CampaignComposerPage";
+import CommunicationSettingsForm from "./CommunicationSettingsForm";
 import { PageHeader, AdminFilterTabs } from "@/components/admin/design-system";
 import type { Campaign } from "@/actions/communications/campaigns";
 import type { Template } from "@/actions/communications/templates";
@@ -16,7 +17,14 @@ import type { Contact } from "@/actions/communications/contacts";
 import type { Segment } from "@/actions/harvest-reach/segments";
 import type { CampaignAnalytics } from "@/actions/harvest-reach/campaigns";
 
-type Tab = "campaigns" | "compose" | "templates" | "contacts" | "segments" | "logs" | "analytics";
+type Tab = "campaigns" | "compose" | "templates" | "contacts" | "segments" | "logs" | "analytics" | "settings";
+
+const SettingsIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+);
 
 const ComposeIcon = () => (
   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -132,6 +140,7 @@ export default function CommunicationsPage({
               { value: "segments", label: "Segments", icon: <LayersIcon /> },
               { value: "logs", label: "Logs", icon: <ListIcon /> },
               { value: "analytics", label: "Analytics", icon: <ChartIcon /> },
+              { value: "settings", label: "Settings", icon: <SettingsIcon /> },
             ]}
             size="md"
           />
@@ -203,6 +212,13 @@ export default function CommunicationsPage({
         {currentTab === "analytics" && !isComposing && (
           <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
             <AnalyticsDashboard analytics={initialAnalytics} />
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {currentTab === "settings" && !isComposing && (
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-white p-4 sm:p-6">
+            <CommunicationSettingsForm settings={null} brandId={brandId} />
           </div>
         )}
 
