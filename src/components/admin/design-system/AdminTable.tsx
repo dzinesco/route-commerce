@@ -32,7 +32,7 @@ export default function AdminTable<T extends Record<string, unknown>>({
         <thead>
           <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
             {columns.map((col) => (
-              <th key={col.key} className={`px-3 sm:px-5 py-3 text-xs sm:text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)] whitespace-nowrap ${col.className ?? ""}`}>
+              <th key={col.key} className={`px-2 sm:px-3 py-2 text-xs sm:text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)] whitespace-nowrap ${col.className ?? ""}`}>
                 {col.header}
               </th>
             ))}
@@ -59,7 +59,7 @@ export default function AdminTable<T extends Record<string, unknown>>({
                 style={{ animationDelay: `${index * 30}ms` }}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-5 py-3.5 ${col.className ?? ""}`}>
+                  <td key={col.key} className={`px-3 py-2 ${col.className ?? ""}`}>
                     {col.render ? col.render(item) : String(item[col.key] ?? "")}
                   </td>
                 ))}

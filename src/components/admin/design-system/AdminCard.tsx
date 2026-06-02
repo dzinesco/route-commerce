@@ -12,7 +12,7 @@ type AdminCardProps = {
 export default function AdminCard({ children, className = "", noPadding = false, style }: AdminCardProps) {
   return (
     <div 
-      className={`rounded-2xl border bg-white shadow-[var(--admin-shadow-sm)] transition-all duration-200 hover:shadow-[var(--admin-shadow-md)] ${noPadding ? "" : "p-5"} ${className}`}
+      className={`rounded-xl border bg-white shadow-[var(--admin-shadow-sm)] transition-all duration-200 hover:shadow-[var(--admin-shadow-md)] ${noPadding ? "" : "p-4"} ${className}`}
       style={{
         borderColor: 'var(--admin-border)',
         ...style

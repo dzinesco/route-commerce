@@ -47,13 +47,13 @@ export default function OrderTableBody({ orders }: { orders: Order[] }) {
     <tbody className="divide-y divide-slate-200">
       {orders.map((order) => (
         <tr key={order.id} className="hover:bg-zinc-800">
-          <td className="px-5 py-4">
+          <td className="px-3 py-2">
             <span className="font-mono text-sm text-zinc-500">
               {order.id.slice(0, 8)}
             </span>
           </td>
 
-          <td className="px-5 py-4">
+          <td className="px-3 py-2">
             <div className="font-medium text-zinc-100">
               {order.customer_name}
             </div>
@@ -62,9 +62,9 @@ export default function OrderTableBody({ orders }: { orders: Order[] }) {
             </div>
           </td>
 
-          <td className="px-5 py-4">
+          <td className="px-3 py-2">
             <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 statusColors[order.status] ?? "bg-zinc-950 text-zinc-400"
               }`}
             >
@@ -72,14 +72,14 @@ export default function OrderTableBody({ orders }: { orders: Order[] }) {
             </span>
           </td>
 
-          <td className="px-5 py-4 font-semibold text-zinc-100">
+          <td className="px-3 py-2 font-semibold text-zinc-100">
             ${Number(order.subtotal).toFixed(2)}
           </td>
 
-          <td className="px-5 py-4">
+          <td className="px-3 py-2">
             <button
               onClick={() => togglePickup(order.id, pickupToggles[order.id])}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 pickupToggles[order.id]
                   ? "bg-green-900/40 text-green-400"
                   : "bg-zinc-950 text-zinc-500"
@@ -89,7 +89,7 @@ export default function OrderTableBody({ orders }: { orders: Order[] }) {
             </button>
           </td>
 
-          <td className="px-5 py-4 text-sm text-zinc-500">
+          <td className="px-3 py-2 text-sm text-zinc-500">
             {formatDate(new Date(order.created_at))}
           </td>
         </tr>

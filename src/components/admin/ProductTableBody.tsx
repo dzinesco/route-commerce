@@ -122,7 +122,7 @@ export default function ProductTableBody({
               key={product.id}
               className="hover:bg-zinc-800 transition-colors relative"
             >
-              <td className="px-5 py-4">
+              <td className="px-3 py-2">
                 <Link
                   href={`/admin/products/${product.id}`}
                   className="block font-medium text-zinc-100 hover:text-zinc-400"
@@ -134,25 +134,25 @@ export default function ProductTableBody({
                 </div>
               </td>
 
-              <td className="px-5 py-4 text-zinc-300">
+              <td className="px-3 py-2 text-zinc-300">
                 {Array.isArray(product.brands)
                   ? product.brands[0]?.name
                   : product.brands?.name}
               </td>
 
-              <td className="px-5 py-4 text-zinc-300">{product.type}</td>
+              <td className="px-3 py-2 text-zinc-300">{product.type}</td>
 
-              <td className="px-5 py-4 font-semibold text-zinc-100">
+              <td className="px-3 py-2 font-semibold text-zinc-100">
                 ${Number(product.price).toFixed(2)}
               </td>
 
-              <td className="px-5 py-4">
+              <td className="px-3 py-2">
                 <AdminBadge variant={product.active ? "success" : "default"} dot>
                   {product.active ? "Active" : "Inactive"}
                 </AdminBadge>
               </td>
 
-              <td className="px-5 py-4">
+              <td className="px-3 py-2">
                 {product.is_taxable === false ? (
                   <AdminBadge variant="warning">Non-taxable</AdminBadge>
                 ) : (
@@ -161,7 +161,7 @@ export default function ProductTableBody({
               </td>
 
               {/* Actions */}
-              <td className="px-5 py-4 text-right">
+              <td className="px-3 py-2 text-right">
                 <div className="relative inline-flex items-center justify-end gap-2">
                   <Link
                     href={`/admin/products/${product.id}`}

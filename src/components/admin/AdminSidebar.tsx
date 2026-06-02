@@ -316,7 +316,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
         ref={sidebarRef}
         id="admin-sidebar"
         className={[
-          "fixed top-0 left-0 h-full w-60 z-50",
+          "fixed top-0 left-0 h-full w-56 z-50",
           "border-r flex flex-col",
           "transition-transform duration-300 ease-out lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
@@ -408,7 +408,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
                     onClick={() => closeMobileMenu()}
                     onKeyDown={(e) => handleNavKeyDown(e, item.href!, navIndex)}
                     className={[
-                      "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                      "group flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200",
                       "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)]",
                       active
                         ? "border-l-[3px]"

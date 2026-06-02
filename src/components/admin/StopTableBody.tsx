@@ -22,31 +22,31 @@ export default function StopTableBody({ stops }: { stops: Stop[] }) {
           }
           className="cursor-pointer hover:bg-zinc-800"
         >
-          <td className="px-5 py-4">
+          <td className="px-3 py-2">
             <span className="font-medium text-zinc-100">
               {stop.city}, {stop.state}
             </span>
           </td>
 
-          <td className="px-5 py-4 text-zinc-300">
+          <td className="px-3 py-2 text-zinc-300">
             {stop.location}
           </td>
 
-          <td className="px-5 py-4 text-zinc-300">
+          <td className="px-3 py-2 text-zinc-300">
             {stop.date}
           </td>
 
-          <td className="px-5 py-4 text-zinc-300">
+          <td className="px-3 py-2 text-zinc-300">
             {stop.time}
           </td>
 
-          <td className="px-5 py-4 text-zinc-300">
+          <td className="px-3 py-2 text-zinc-300">
             {Array.isArray(stop.brands)
               ? stop.brands[0]?.name
               : stop.brands?.name}
           </td>
 
-          <td className="px-5 py-4">
+          <td className="px-3 py-2">
             <span className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-medium text-zinc-300">
               {stop.active ? "Active" : "Inactive"}
             </span>

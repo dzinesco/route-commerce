@@ -56,18 +56,18 @@ export default function PageHeader({
       {/* Title Row with Icon and Actions */}
       <div className="flex items-center justify-between">
         {/* Left: Icon + Title + Subtitle */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {icon && (
-            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--admin-accent-light)] text-[var(--admin-accent)] shadow-[var(--admin-shadow-sm)] transition-transform duration-200 hover:scale-105">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[var(--admin-accent-light)] text-[var(--admin-accent)] shadow-[var(--admin-shadow-sm)] transition-transform duration-200 hover:scale-105">
               {icon}
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-[var(--admin-text-primary)] tracking-tight">
+            <h1 className="text-xl font-bold text-[var(--admin-text-primary)] tracking-tight">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
+              <p className="mt-0.5 text-xs text-[var(--admin-text-muted)]">
                 {subtitle}
               </p>
             )}
