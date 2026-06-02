@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import HeroSection from "@/components/landing/HeroSection";
+import { LandingPageWrapper } from "@/components/landing/LandingPageWrapper";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -43,8 +44,10 @@ export default function LandingPageClient() {
   }, []);
 
   return (
-    <div ref={mainRef}>
-      <HeroSection />
-    </div>
+    <LandingPageWrapper>
+      <div ref={mainRef}>
+        <HeroSection />
+      </div>
+    </LandingPageWrapper>
   );
 }
