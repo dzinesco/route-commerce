@@ -9,7 +9,16 @@ import { supabase } from "@/lib/supabase";
 // Elegant warm sidebar design
 // Colors: parchment 100 bg, soft linen text, powder petal accent
 
-const TOP_LINKS = [
+// Flat admin navigation - no dropdowns
+type NavItem = {
+  href?: string;
+  label: string;
+  icon?: string;
+  divider?: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  // Main
   { href: "/admin", label: "Dashboard", icon: "grid" },
   { href: "/admin/orders", label: "Orders", icon: "shopping-cart" },
   { href: "/admin/stops", label: "Stops & Routes", icon: "map-pin" },
@@ -17,8 +26,15 @@ const TOP_LINKS = [
   { href: "/admin/route-trace", label: "Route Trace", icon: "clipboard" },
   { href: "/admin/time-tracking", label: "Time Tracking", icon: "clock" },
   { href: "/admin/communications", label: "Communications", icon: "mail" },
+  // Settings section
+  { divider: true, label: "Settings" },
   { href: "/admin/settings", label: "Settings", icon: "settings" },
-  { href: "/admin/advanced", label: "Advanced", icon: "advanced" },
+  { href: "/admin/settings/billing", label: "Billing", icon: "billing" },
+  { href: "/admin/settings/apps", label: "Add-ons", icon: "puzzle" },
+  { href: "/admin/settings/integrations", label: "Integrations", icon: "plug" },
+  { href: "/admin/settings/ai", label: "AI", icon: "sparkles" },
+  { href: "/admin/settings/shipping", label: "Shipping", icon: "truck" },
+  { href: "/admin/settings/square-sync", label: "Square Sync", icon: "square" },
 ];
 
 function GridIcon({ className }: { className?: string }) {
@@ -110,6 +126,46 @@ function HamburgerIcon() {
   );
 }
 
+function BillingIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "w-4 h-4"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 0h3m-3.75 0h3m-3.75 0h3m3.75 0h3m-3.75 0h3m3.75 0h3m3.75 0h3" />
+    </svg>
+  );
+}
+
+function PuzzleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "w-4 h-4"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z" />
+    </svg>
+  );
+}
+
+function PlugIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "w-4 h-4"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+    </svg>
+  );
+}
+
+function TruckIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "w-4 h-4"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+    </svg>
+  );
+}
+
+function SquareIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "w-4 h-4"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+    </svg>
+  );
+}
+
 const ICON_MAP: Record<string, React.ReactNode> = {
   grid: <GridIcon />,
   "shopping-cart": <CartIcon />,
@@ -120,6 +176,12 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   mail: <MailIcon />,
   settings: <SettingsCogIcon open={false} />,
   advanced: <SparkleIcon />,
+  billing: <BillingIcon />,
+  puzzle: <PuzzleIcon />,
+  plug: <PlugIcon />,
+  sparkles: <SparkleIcon />,
+  truck: <TruckIcon />,
+  square: <SquareIcon />,
 };
 
 type SidebarProps = {
@@ -205,16 +267,28 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
 
         {/* Nav links */}
         <nav className="flex-1 overflow-hidden px-3 py-5">
-          {TOP_LINKS.map((item) => {
-            const active = isActive(item.href);
+          {NAV_ITEMS.map((item, index) => {
+            // Divider with optional label
+            if (item.divider) {
+              return (
+                <div key={`divider-${index}`} className="flex items-center gap-2 px-3 py-3 mt-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(195, 195, 193, 0.5)" }}>
+                    {item.label}
+                  </span>
+                </div>
+              );
+            }
+
+            const active = isActive(item.href!);
+            const icon = item.icon ? ICON_MAP[item.icon] : null;
 
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={item.href!}
                 onClick={() => setMobileOpen(false)}
                 className={[
-                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1",
+                  "group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 mb-1",
                   active
                     ? "border-l-2"
                     : "border-l-2 border-transparent hover:border-l-2",
@@ -231,7 +305,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
                 <span className="flex-shrink-0 transition-colors" style={{
                   color: active ? "var(--admin-accent)" : "rgba(208, 203, 180, 0.6)"
                 }}>
-                  {ICON_MAP[item.icon]}
+                  {icon}
                 </span>
                 {item.label}
                 {active && (
