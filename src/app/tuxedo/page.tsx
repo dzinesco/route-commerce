@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import TuxedoVideoHero from "@/components/storefront/TuxedoVideoHero";
 import LayoutContainer from "@/components/layout/LayoutContainer";
@@ -13,6 +13,13 @@ import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import BrandStylesProvider from "@/components/storefront/BrandStylesProvider";
 import { supabase } from "@/lib/supabase";
 import { getBrandSettingsPublic } from "@/actions/brand-settings";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+// Register GSAP plugins
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 type Brand = {
   id: string;
@@ -494,6 +501,112 @@ export default function TuxedoPage() {
     document.getElementById("products")?.scrollIntoView({ behavior: "smooth" });
   }
 
+  // ─── GSAP SCROLL ANIMATIONS ──────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const ctx = gsap.context(() => {
+      // Parallax floating elements
+      gsap.utils.toArray<Element>(".parallax-float").forEach((el, i) => {
+        gsap.to(el, {
+          y: -60 - i * 15,
+          scrollTrigger: {
+            trigger: el,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 1,
+          },
+        });
+      });
+
+      // Staggered text reveal on scroll
+      const revealTextElements = gsap.utils.toArray<Element>(".reveal-text");
+      revealTextElements.forEach((el) => {
+        gsap.fromTo(
+          el,
+          { opacity: 0, y: 40, skewY: 2 },
+          {
+            opacity: 1,
+            y: 0,
+            skewY: 0,
+            duration: 1,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
+      // Scale reveal for cards
+      const revealScaleElements = gsap.utils.toArray<Element>(".reveal-scale");
+      revealScaleElements.forEach((el, i) => {
+        gsap.fromTo(
+          el,
+          { opacity: 0, scale: 0.9, y: 40 },
+          {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            duration: 0.8,
+            delay: i * 0.08,
+            ease: "back.out(1.4)",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
+      // Counter animations
+      const counterElements = gsap.utils.toArray<Element>(".counter-animate");
+      counterElements.forEach((el) => {
+        const target = parseInt(el.getAttribute("data-target") || "0", 10);
+        const obj = { val: 0 };
+        gsap.to(obj, {
+          val: target,
+          duration: 2,
+          ease: "power2.out",
+          onUpdate: () => {
+            if (el.textContent !== null) {
+              el.textContent = Math.floor(obj.val).toLocaleString();
+            }
+          },
+          scrollTrigger: {
+            trigger: el,
+            start: "top 85%",
+            toggleActions: "play none none none",
+          },
+        });
+      });
+
+      // Horizontal reveal for section headers
+      gsap.utils.toArray<Element>(".reveal-slide").forEach((el) => {
+        gsap.fromTo(
+          el,
+          { opacity: 0, x: -40 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.8,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
+
   const featuredProducts = products.slice(0, 3);
 
   return (
@@ -547,12 +660,12 @@ export default function TuxedoPage() {
           <LayoutContainer>
             <div className="mb-14 flex items-end justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Delivery Stops</p>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
+                <p className="reveal-slide text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Delivery Stops</p>
+                <h2 className="reveal-text text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
                   Upcoming<br className="hidden md:block" /> Stops
                 </h2>
-                <div className="mt-6 h-px w-12 bg-emerald-600" />
-                <p className="mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
+                <div className="reveal-scale mt-6 h-px w-12 bg-emerald-600" />
+                <p className="reveal-text mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
                   Find a nearby stop and preorder your corn. Pickup is easy and guaranteed.
                 </p>
               </div>
@@ -594,13 +707,13 @@ export default function TuxedoPage() {
 
         <section id="products" className="py-28 bg-white">
           <LayoutContainer>
-            <div className="mb-14">
+            <div className="reveal-slide mb-14">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Farm-Direct</p>
-              <h2 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
-                This Week's<br className="hidden md:block" /> Harvest
+              <h2 className="reveal-text text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
+                This Week&apos;s<br className="hidden md:block" /> Harvest
               </h2>
-              <div className="mt-6 h-px w-12 bg-emerald-600" />
-              <p className="mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
+              <div className="reveal-scale mt-6 h-px w-12 bg-emerald-600" />
+              <p className="reveal-text mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
                 Preorder for pickup at a stop, or have cooler boxes shipped directly to your door after the season.
               </p>
             </div>
@@ -638,38 +751,73 @@ export default function TuxedoPage() {
           </LayoutContainer>
         </section>
 
-        <section id="story" className="py-24 bg-stone-950">
+        <section id="story" className="py-32 bg-stone-950 relative overflow-hidden">
+          {/* Parallax decorative elements */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="parallax-float absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-5" style={{
+              background: "radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%)",
+              filter: "blur(80px)",
+            }} />
+            <div className="parallax-float absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-5" style={{
+              background: "radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%)",
+              filter: "blur(60px)",
+              animationDelay: "0.5s",
+            }} />
+          </div>
+
           <LayoutContainer>
-            <div className="text-center max-w-2xl mx-auto">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-400/60 mb-4">Our Story</p>
-              <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-[1.05] mb-6">
-                Three Generations of Sweet Corn Excellence
+            <div className="text-center max-w-3xl mx-auto relative z-10">
+              <p className="reveal-text text-[11px] font-semibold uppercase tracking-widest text-emerald-400/60 mb-4">Our Story</p>
+              <h2 className="reveal-text text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.05] mb-8">
+                Three Generations of<br className="hidden md:block" /> Sweet Corn Excellence
               </h2>
-              <div className="mx-auto mt-6 mb-8 h-px w-12 bg-emerald-600/50" />
-              <p className="text-stone-400 leading-relaxed text-lg">
-                Tuxedo Corn is the exclusive grower and shipper of Olathe Sweet Sweet Corn — developed for Colorado's high-altitude mountain climate and grown by the same family for over 40 years.
+              <div className="reveal-scale mx-auto mt-8 mb-10 h-px w-16 bg-gradient-to-r from-emerald-600 to-amber-500" />
+              <p className="reveal-text text-stone-400 leading-relaxed text-lg md:text-xl max-w-2xl mx-auto">
+                Tuxedo Corn is the exclusive grower and shipper of Olathe Sweet Sweet Corn — developed for Colorado&apos;s high-altitude mountain climate and grown by the same family for over 40 years.
               </p>
-              <div className="flex items-center justify-center gap-12 mt-10">
+
+              {/* Stats with counter animation */}
+              <div className="reveal-scale flex items-center justify-center gap-12 md:gap-16 mt-16 flex-wrap">
                 {[
-                  { stat: "40+", label: "Years" },
-                  { stat: "3", label: "Generations" },
-                  { stat: "100%", label: "Hand-Picked" },
-                ].map(({ stat, label }) => (
-                  <div key={label} className="text-center">
-                    <p className="text-3xl sm:text-4xl font-black text-white">{stat}</p>
-                    <p className="mt-1 text-xs text-stone-500 uppercase tracking-widest">{label}</p>
+                  { stat: "40", suffix: "+", label: "Years Growing" },
+                  { stat: "3", suffix: "", label: "Generations" },
+                  { stat: "100", suffix: "%", label: "Hand-Picked" },
+                ].map((item, i) => (
+                  <div key={i} className="text-center">
+                    <div className="text-4xl md:text-5xl lg:text-6xl font-black text-white" style={{ textShadow: "0 4px 30px rgba(16,185,129,0.3)" }}>
+                      <span className="counter-animate" data-target={parseInt(item.stat, 10)}>0</span>
+                      <span style={{ color: "#10b981" }}>{item.suffix}</span>
+                    </div>
+                    <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-stone-500">
+                      {item.label}
+                    </div>
                   </div>
                 ))}
               </div>
-              <Link
-                href="/tuxedo/about"
-                className="inline-flex items-center gap-2.5 mt-12 rounded-full bg-emerald-700 px-8 py-4 text-sm font-bold text-white hover:bg-emerald-600 active:bg-emerald-800 transition-colors"
-              >
-                Read Our Story
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
+
+              <div className="reveal-scale mt-16">
+                <Link
+                  href="/tuxedo/about"
+                  className="group inline-flex items-center gap-3 rounded-full px-10 py-4 text-sm font-bold transition-all duration-300"
+                  style={{
+                    background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                    boxShadow: "0 8px 32px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-3px)";
+                    e.currentTarget.style.boxShadow = "0 12px 40px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 8px 32px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)";
+                  }}
+                >
+                  <span>Read Our Story</span>
+                  <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
             </div>
           </LayoutContainer>
         </section>
