@@ -158,25 +158,33 @@ export default function HeroSection() {
         );
       });
 
-      // Counter animations
-      gsap.utils.toArray<Element>(".counter-animate").forEach((el) => {
-        const target = parseInt(el.getAttribute("data-target") || "0", 10);
-        const obj = { val: 0 };
-        gsap.to(obj, {
-          val: target,
-          duration: 2,
-          ease: "power2.out",
-          onUpdate: () => {
-            if (el.textContent !== null) {
-              el.textContent = Math.floor(obj.val).toLocaleString();
-            }
-          },
-          scrollTrigger: {
-            trigger: el,
-            start: "top 80%",
-            toggleActions: "play none none none",
-          },
-        });
+      // Counter animations with proper initialization
+      const counterElements = gsap.utils.toArray<Element>(".counter-animate");
+      counterElements.forEach((el) => {
+        const targetStr = el.getAttribute("data-target") || "0";
+        const target = parseInt(targetStr, 10);
+        
+        gsap.fromTo(
+          el,
+          { textContent: 0 },
+          {
+            textContent: target,
+            duration: 2.5,
+            ease: "power2.out",
+            snap: { textContent: 1 },
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              toggleActions: "play none none none",
+            },
+            onUpdate: function() {
+              const val = Math.floor(gsap.getProperty(el, "textContent") as number);
+              if (el.textContent !== null) {
+                el.textContent = val.toLocaleString();
+              }
+            },
+          }
+        );
       });
     }, containerRef);
 
@@ -928,6 +936,67 @@ export default function HeroSection() {
           </div>
         </div>
       </section>
+
+      {/* ─── FOOTER ─────────────────────────────────────────────────────────── */}
+      <footer className="relative py-16 overflow-hidden" style={{ background: "#1a1a1a" }}>
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: "linear-gradient(180deg, #faf8f5 0%, #1a1a1a 100%)",
+        }} />
+        
+        <div className="container mx-auto px-8 relative z-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-12 border-b border-white/10">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: "#1a4d2e" }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" />
+                </svg>
+              </div>
+              <span 
+                className="text-xl font-semibold"
+                style={{ 
+                  fontFamily: "'Playfair Display', serif",
+                  color: "#faf8f5",
+                }}
+              >
+                Route Commerce
+              </span>
+            </div>
+
+            {/* Legal Links */}
+            <nav className="flex flex-wrap items-center justify-center gap-8">
+              {[
+                { label: "Privacy Policy", href: "/privacy-policy" },
+                { label: "Terms of Service", href: "/terms-and-conditions" },
+                { label: "Security", href: "/security" },
+                { label: "Contact", href: "/contact" },
+              ].map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm transition-colors hover:text-white"
+                  style={{ color: "rgba(255,255,255,0.5)" }}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          {/* Copyright */}
+          <div className="pt-8 text-center">
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+              © {new Date().getFullYear()} Route Commerce. All rights reserved.
+            </p>
+            <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Fresh produce wholesale platform for farms, Co-ops, and distributors.
+            </p>
+          </div>
+        </div>
+      </footer>
 
       {/* ─── GLOBAL STYLES ────────────────────────────────────────────────────── */}
       <style jsx>{`
