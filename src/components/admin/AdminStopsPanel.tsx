@@ -114,7 +114,7 @@ export default function AdminStopsPanel({ stops, brandId }: Props) {
         <div className="mx-auto max-w-7xl px-6 py-5">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-stone-950 tracking-tight">Tour Stops</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-stone-950 tracking-tight">Tour Stops</h1>
               <div className="mt-2 flex items-center gap-4">
                 <span className="text-sm text-stone-500">
                   <span className="font-medium text-stone-700">{activeCount}</span> active

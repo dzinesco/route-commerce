@@ -187,7 +187,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
         className="fixed top-4 left-4 z-50 lg:hidden"
         aria-label="Open sidebar"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-md border border-[var(--admin-border)]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-md border border-[var(--admin-border)]">
           <HamburgerIcon />
         </div>
       </button>

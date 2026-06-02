@@ -110,22 +110,24 @@ export default function CommunicationsPage({
         />
 
         {/* Tab navigation */}
-        <AdminFilterTabs
-          activeTab={currentTab}
-          onTabChange={(tab) => {
-            setCurrentTab(tab as Tab);
-            setIsComposing(false);
-          }}
-          tabs={[
-            { value: "campaigns", label: "Campaigns", icon: <MailIcon /> },
-            { value: "templates", label: "Templates", icon: <FileTextIcon /> },
-            { value: "contacts", label: "Contacts", icon: <UsersIcon /> },
-            { value: "segments", label: "Segments", icon: <LayersIcon /> },
-            { value: "logs", label: "Logs", icon: <ListIcon /> },
-            { value: "analytics", label: "Analytics", icon: <ChartIcon /> },
-          ]}
-          size="md"
-        />
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
+          <AdminFilterTabs
+            activeTab={currentTab}
+            onTabChange={(tab) => {
+              setCurrentTab(tab as Tab);
+              setIsComposing(false);
+            }}
+            tabs={[
+              { value: "campaigns", label: "Campaigns", icon: <MailIcon /> },
+              { value: "templates", label: "Templates", icon: <FileTextIcon /> },
+              { value: "contacts", label: "Contacts", icon: <UsersIcon /> },
+              { value: "segments", label: "Segments", icon: <LayersIcon /> },
+              { value: "logs", label: "Logs", icon: <ListIcon /> },
+              { value: "analytics", label: "Analytics", icon: <ChartIcon /> },
+            ]}
+            size="md"
+          />
+        </div>
       </div>
 
       {/* Content */}

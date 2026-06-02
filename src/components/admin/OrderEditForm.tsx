@@ -199,7 +199,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                   </button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <AdminInput label="Qty">
                     <input
                       type="number"
@@ -245,7 +245,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
           />
         </AdminInput>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AdminInput label="Discount Amount">
             <AdminTextInput
               type="number"
@@ -282,7 +282,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
             onChange={(e) => setCustomer_name(e.target.value)}
           />
         </AdminInput>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AdminInput label="Email">
             <AdminTextInput
               type="email"

@@ -548,7 +548,7 @@ export default function TuxedoPage() {
             <div className="mb-14 flex items-end justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Delivery Stops</p>
-                <h2 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
                   Upcoming<br className="hidden md:block" /> Stops
                 </h2>
                 <div className="mt-6 h-px w-12 bg-emerald-600" />
@@ -656,7 +656,7 @@ export default function TuxedoPage() {
                   { stat: "100%", label: "Hand-Picked" },
                 ].map(({ stat, label }) => (
                   <div key={label} className="text-center">
-                    <p className="text-4xl font-black text-white">{stat}</p>
+                    <p className="text-3xl sm:text-4xl font-black text-white">{stat}</p>
                     <p className="mt-1 text-xs text-stone-500 uppercase tracking-widest">{label}</p>
                   </div>
                 ))}

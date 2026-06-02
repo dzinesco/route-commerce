@@ -2,6 +2,26 @@ import type { Metadata } from "next";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
+// BreadcrumbList schema for SEO
+const tuxedoBreadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": BASE_URL,
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Tuxedo Corn",
+      "item": `${BASE_URL}/tuxedo`,
+    },
+  ],
+};
+
 export const metadata: Metadata = {
   title: {
     default: "Tuxedo Corn | Fresh Produce Wholesale",
@@ -38,6 +58,9 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  other: {
+    "application/ld+json": JSON.stringify(tuxedoBreadcrumbSchema),
   },
 };
 

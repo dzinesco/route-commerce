@@ -142,7 +142,7 @@ export default function StorefrontHeader({
 
       {/* Mobile nav */}
       {menuOpen && (
-        <div className="border-t border-stone-100 bg-white px-6 py-6 md:hidden">
+        <div className="border-t border-stone-100 bg-white px-4 py-5 md:hidden">
           <nav className="flex flex-col gap-1 text-sm font-medium text-stone-600">
             {navLinks.map((link) => (
               <Link

@@ -472,7 +472,7 @@ export default function ProductsClient({ products, brandId }: { products: Produc
                   </>
                 ) : imagePreview ? (
                   <div className="relative">
-                    <div className="relative h-40 w-auto">
+                    <div className="relative h-32 sm:h-40 w-auto">
                       <Image src={imagePreview} alt="Product preview" fill style={{ objectFit: "contain" }} className="rounded-lg" />
                     </div>
                     <span className="block text-center text-xs text-stone-500 mt-2">Click or drop to replace</span>

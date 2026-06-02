@@ -247,7 +247,7 @@ export default function DashboardClient({
             </AdminBadge>
             <span className="text-xs text-stone-500">{brandId ? "Tuxedo Corn" : "All Brands"}</span>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[
               { label: "Users", value: `${usage.users}/${limits.max_users}`, pct: usagePct.users },
               { label: "Stops", value: `${usage.stops_this_month}/${limits.max_stops_monthly}`, pct: usagePct.stops },
@@ -286,7 +286,7 @@ export default function DashboardClient({
         />
 
         {/* Section Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {tabSections.map((section) => {
             if (section.title === "Water Log" && !isWaterLogVisible) return null;
             if (section.title === "Route Trace" && !enabledAddons["route_trace"]) return null;

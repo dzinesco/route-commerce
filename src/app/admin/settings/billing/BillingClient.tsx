@@ -41,7 +41,7 @@ export default function BillingClient({ currentTier, brandId }: Props) {
       <select
         value={selectedTier}
         onChange={(e) => setSelectedTier(e.target.value)}
-        className="rounded-xl border border-zinc-600 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-blue-500"
+        className="rounded-xl border border-zinc-600 bg-zinc-900 px-3 sm:px-4 py-3 sm:py-2 text-sm outline-none focus:border-blue-500 min-h-[44px]"
       >
         {TIERS.map((t) => (
           <option key={t.value} value={t.value}>{t.label}</option>
@@ -50,7 +50,7 @@ export default function BillingClient({ currentTier, brandId }: Props) {
       <button
         onClick={handleSaveTier}
         disabled={saving || selectedTier === currentTier}
-        className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        className="rounded-xl bg-slate-900 px-4 sm:px-5 py-3 sm:py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 active:scale-95 transition-all min-h-[44px]"
       >
         {saving ? "Saving..." : saved ? "Saved!" : "Save Tier"}
       </button>

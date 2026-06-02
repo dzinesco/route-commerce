@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
@@ -351,13 +352,13 @@ export default function IndianRiverDirectPage() {
                 <p className="text-stone-500">Products coming soon for the 2026 season!</p>
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {products.map((product) => (
                   <div key={product.id} className="rounded-2xl bg-white border-2 border-stone-200 overflow-hidden shadow-xl hover:shadow-2xl hover:-translate-y-2 hover:border-blue-200 transition-all duration-300">
                     {/* Product Image */}
                     <div className="aspect-[4/3] bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center relative">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                       ) : (
                         <div className="text-6xl opacity-30">🍑</div>
                       )}

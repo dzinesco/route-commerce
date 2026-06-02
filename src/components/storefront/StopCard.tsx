@@ -38,7 +38,7 @@ export default function StopCard({
             <h3 className="text-2xl font-black text-stone-950 leading-tight tracking-tight">
               {city}, {state}
             </h3>
-            <p className="mt-1 text-sm text-stone-500 leading-relaxed line-clamp-1">{location}</p>
+            <p className="mt-1 text-xs sm:text-sm text-stone-500 leading-relaxed line-clamp-2">{location}</p>
           </div>
         </div>
 

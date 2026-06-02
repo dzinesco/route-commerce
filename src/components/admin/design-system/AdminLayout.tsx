@@ -20,7 +20,7 @@ const maxWidthClasses = {
 export default function AdminLayout({ children, maxWidth = "2xl", className = "" }: AdminLayoutProps) {
   return (
     <main className="min-h-screen admin-section" style={{ backgroundColor: "var(--admin-bg)" }}>
-      <div className={`mx-auto px-6 py-10 ${maxWidthClasses[maxWidth]} ${className}`}>
+      <div className={`mx-auto px-4 sm:px-6 py-6 sm:py-10 ${maxWidthClasses[maxWidth]} ${className}`}>
         {children}
       </div>
     </main>

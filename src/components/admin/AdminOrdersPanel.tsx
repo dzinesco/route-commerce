@@ -195,15 +195,15 @@ export default function AdminOrdersPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Total</p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-text-primary)] mt-1">{orders.length}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--admin-text-primary)] mt-1">{orders.length}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Pending</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Picked Up</p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-accent)] mt-1">{pickedUpCount}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--admin-accent)] mt-1">{pickedUpCount}</p>
         </div>
       </div>
 

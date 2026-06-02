@@ -88,3 +88,32 @@ export async function publishStop(
 
   return { success: true };
 }
+
+/**
+ * Fetch active stops for sitemap generation.
+ * This is a public function that doesn't require authentication.
+ */
+export type StopForSitemap = {
+  slug: string;
+  brand_slug: string;
+  last_modified: string;
+};
+
+export async function getActiveStopsForSitemap(): Promise<StopForSitemap[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  // Get all active stops with their brand slug
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/get_active_stops_with_brand`,
+    {
+      method: "POST",
+      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+    }
+  );
+
+  if (!response.ok) return [];
+
+  const stops = await response.json();
+  return Array.isArray(stops) ? stops : [];
+}

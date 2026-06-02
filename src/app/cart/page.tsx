@@ -272,12 +272,12 @@ export default function CartPage() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => decreaseQuantity(item.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-all text-lg font-medium"
+                          className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all text-xl font-medium"
                         >−</button>
-                        <span className="w-8 text-center font-semibold text-white">{item.quantity}</span>
+                        <span className="w-10 text-center font-semibold text-white">{item.quantity}</span>
                         <button
                           onClick={() => increaseQuantity(item.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white hover:bg-emerald-400 transition-all text-lg font-medium shadow-lg shadow-emerald-500/20"
+                          className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500 text-white hover:bg-emerald-400 active:scale-95 transition-all text-xl font-medium shadow-lg shadow-emerald-500/20"
                         >+</button>
                       </div>
                     </div>

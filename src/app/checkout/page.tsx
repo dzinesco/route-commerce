@@ -153,7 +153,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-stone-50">
       <StorefrontHeader brandName="Checkout" brandSlug="tuxedo" />
       <main className="px-6 py-12">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_400px]">
+        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[1fr_400px]">
           <div>
             <h1 className="text-4xl font-bold text-slate-900">
               Checkout
