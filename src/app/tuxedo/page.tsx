@@ -656,42 +656,74 @@ export default function TuxedoPage() {
           onSecondaryClick={scrollToStory}
         />
 
+        {/* ─── CINEMATIC PRODUCT SHOWCASE ────────────────────────────────── */}
+        <CinematicShowcase
+          products={featuredProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description ?? "",
+            price: `$${p.price}`,
+            type: p.type,
+            imageUrl: p.image_url,
+          }))}
+          brandSlug="tuxedo"
+        />
+
         <WhyTuxedoCorn />
 
-        <section id="stops" className="py-28 bg-gradient-to-b from-stone-100 to-stone-50 scroll-mt-20">
-          <LayoutContainer>
-            <div className="mb-14 flex items-end justify-between">
-              <div>
-                <p className="reveal-slide text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Delivery Stops</p>
-                <h2 className="reveal-text text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
-                  Upcoming<br className="hidden md:block" /> Stops
-                </h2>
-                <div className="reveal-scale mt-6 h-px w-12 bg-emerald-600" />
-                <p className="reveal-text mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
-                  Find a nearby stop and preorder your corn. Pickup is easy and guaranteed.
-                </p>
+        <section id="stops" className="relative bg-gradient-to-b from-stone-100 to-stone-50 scroll-mt-20">
+          {/* Parallax background layers */}
+          <ParallaxLayer speed={0.2} className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-emerald-50/30 to-transparent" />
+          </ParallaxLayer>
+
+          <div className="relative py-28">
+            <LayoutContainer>
+              <div className="mb-14 flex items-end justify-between">
+                <div>
+                  <FadeOnScroll from="left">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Delivery Stops</p>
+                  </FadeOnScroll>
+                  <FadeOnScroll from="up" delay={0.1}>
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
+                      Upcoming<br className="hidden md:block" /> Stops
+                    </h2>
+                  </FadeOnScroll>
+                  <FadeOnScroll from="up" delay={0.15}>
+                    <div className="mt-6 h-px w-12 bg-emerald-600" />
+                  </FadeOnScroll>
+                  <FadeOnScroll from="up" delay={0.2}>
+                    <p className="mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
+                      Find a nearby stop and preorder your corn. Pickup is easy and guaranteed.
+                    </p>
+                  </FadeOnScroll>
+                </div>
+                {showSchedulePdf && (
+                  <FadeOnScroll from="right" delay={0.3}>
+                    <a
+                      href="/api/tuxedo/schedule-pdf"
+                      download
+                      className="shrink-0 hidden md:inline-flex items-center gap-2.5 rounded-2xl bg-stone-900 px-6 py-3.5 text-sm font-semibold text-white hover:bg-stone-800 active:bg-stone-950 transition-colors"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download Schedule
+                    </a>
+                  </FadeOnScroll>
+                )}
               </div>
-              {showSchedulePdf && (
-                <a
-                  href="/api/tuxedo/schedule-pdf"
-                  download
-                  className="shrink-0 hidden md:inline-flex items-center gap-2.5 rounded-2xl bg-stone-900 px-6 py-3.5 text-sm font-semibold text-white hover:bg-stone-800 active:bg-stone-950 transition-colors"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Download Schedule
-                </a>
-              )}
-            </div>
-            {stops.length === 0 ? (
-              <div className="rounded-3xl bg-white p-14 text-center ring-1 ring-stone-200/60">
-                <p className="text-stone-500">No upcoming stops scheduled. Check back soon!</p>
-              </div>
-            ) : (
-              <PaginatedStops stops={stops} brandSlug="tuxedo" brandAccent="green" />
-            )}
-          </LayoutContainer>
+              <FadeOnScroll from="up" delay={0.3}>
+                {stops.length === 0 ? (
+                  <div className="rounded-3xl bg-white p-14 text-center ring-1 ring-stone-200/60">
+                    <p className="text-stone-500">No upcoming stops scheduled. Check back soon!</p>
+                  </div>
+                ) : (
+                  <PaginatedStops stops={stops} brandSlug="tuxedo" brandAccent="green" />
+                )}
+              </FadeOnScroll>
+            </LayoutContainer>
+          </div>
         </section>
 
         {/* Section divider */}
@@ -707,25 +739,41 @@ export default function TuxedoPage() {
           </div>
         </div>
 
-        <section id="products" className="py-28 bg-white">
-          <LayoutContainer>
-            <div className="reveal-slide mb-14">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Farm-Direct</p>
-              <h2 className="reveal-text text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
-                This Week&apos;s<br className="hidden md:block" /> Harvest
-              </h2>
-              <div className="reveal-scale mt-6 h-px w-12 bg-emerald-600" />
-              <p className="reveal-text mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
-                Preorder for pickup at a stop, or have cooler boxes shipped directly to your door after the season.
-              </p>
-            </div>
-            {featuredProducts.length === 0 ? (
-              <div className="rounded-3xl bg-stone-50 p-14 text-center ring-1 ring-stone-200/60">
-                <p className="text-stone-500">No products available at this time.</p>
-              </div>
-            ) : (
-              <div className="grid gap-8 md:grid-cols-3">
-                {featuredProducts.map((product) => (
+        <section id="products" className="relative bg-white">
+          {/* Scroll-driven reveal for section header */}
+          <div className="py-20 bg-gradient-to-b from-stone-50 to-white">
+            <LayoutContainer>
+              <ScrollReveal from="up" className="mb-14">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Farm-Direct</p>
+                <h2 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
+                  This Week&apos;s<br className="hidden md:block" /> Harvest
+                </h2>
+                <div className="mt-6 h-px w-12 bg-emerald-600" />
+                <p className="mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
+                  Preorder for pickup at a stop, or have cooler boxes shipped directly to your door after the season.
+                </p>
+              </ScrollReveal>
+            </LayoutContainer>
+          </div>
+
+          {/* Cinematic showcase replaces static grid */}
+          <CinematicShowcase
+            products={products.slice(0, 3).map((p) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description ?? "",
+              price: `$${p.price}`,
+              type: p.type,
+              imageUrl: p.image_url,
+            }))}
+            brandSlug="tuxedo"
+          />
+
+          {/* Mobile-friendly fallback grid for smaller screens */}
+          <div className="md:hidden py-16 bg-stone-50">
+            <LayoutContainer>
+              <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {products.slice(0, 6).map((product) => (
                   <ProductCard
                     key={product.id}
                     id={product.id}
@@ -744,82 +792,108 @@ export default function TuxedoPage() {
                   />
                 ))}
               </div>
-            )}
-            {products.length > 3 && (
-              <div className="mt-10 text-center">
-                <p className="text-sm text-stone-400">{products.length - 3} more products available in the full catalog.</p>
-              </div>
-            )}
-          </LayoutContainer>
+            </LayoutContainer>
+          </div>
+
+          {products.length > 3 && (
+            <div className="mt-10 text-center pb-16">
+              <p className="text-sm text-stone-400">{products.length - 3} more products available in the full catalog.</p>
+            </div>
+          )}
         </section>
 
         <section id="story" className="py-32 bg-stone-950 relative overflow-hidden">
           {/* Parallax decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="parallax-float absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-5" style={{
+            <ParallaxLayer speed={0.3} className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-5" style={{
               background: "radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%)",
               filter: "blur(80px)",
-            }} />
-            <div className="parallax-float absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-5" style={{
+            }}>
+              <div />
+            </ParallaxLayer>
+            <ParallaxLayer speed={0.5} className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-5" style={{
               background: "radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%)",
               filter: "blur(60px)",
-              animationDelay: "0.5s",
-            }} />
+            }}>
+              <div />
+            </ParallaxLayer>
+          </div>
+
+          {/* Large background text for parallax depth */}
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden opacity-5 pointer-events-none">
+            <ParallaxLayer speed={0.2}>
+              <span className="text-[20vw] font-black text-white leading-none">SINCE</span>
+            </ParallaxLayer>
           </div>
 
           <LayoutContainer>
             <div className="text-center max-w-3xl mx-auto relative z-10">
-              <p className="reveal-text text-[11px] font-semibold uppercase tracking-widest text-emerald-400/60 mb-4">Our Story</p>
-              <h2 className="reveal-text text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.05] mb-8">
-                Three Generations of<br className="hidden md:block" /> Sweet Corn Excellence
-              </h2>
-              <div className="reveal-scale mx-auto mt-8 mb-10 h-px w-16 bg-gradient-to-r from-emerald-600 to-amber-500" />
-              <p className="reveal-text text-stone-400 leading-relaxed text-lg md:text-xl max-w-2xl mx-auto">
-                Tuxedo Corn is the exclusive grower and shipper of Olathe Sweet Sweet Corn — developed for Colorado&apos;s high-altitude mountain climate and grown by the same family for over 40 years.
-              </p>
+              <FadeOnScroll from="up" className="mb-8">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-400/60 mb-4">Our Story</p>
+              </FadeOnScroll>
+
+              <FadeOnScroll from="up" delay={0.1}>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.05] mb-8">
+                  Three Generations of<br className="hidden md:block" /> Sweet Corn Excellence
+                </h2>
+              </FadeOnScroll>
+
+              <FadeOnScroll from="up" delay={0.2}>
+                <div className="mx-auto mt-8 mb-10 h-px w-16 bg-gradient-to-r from-emerald-600 to-amber-500" />
+              </FadeOnScroll>
+
+              <FadeOnScroll from="up" delay={0.3}>
+                <p className="text-stone-400 leading-relaxed text-lg md:text-xl max-w-2xl mx-auto">
+                  Tuxedo Corn is the exclusive grower and shipper of Olathe Sweet Sweet Corn — developed for Colorado&apos;s high-altitude mountain climate and grown by the same family for over 40 years.
+                </p>
+              </FadeOnScroll>
 
               {/* Stats with counter animation */}
-              <div className="reveal-scale flex items-center justify-center gap-12 md:gap-16 mt-16 flex-wrap">
-                {[
-                  { stat: "40", suffix: "+", label: "Years Growing" },
-                  { stat: "3", suffix: "", label: "Generations" },
-                  { stat: "100", suffix: "%", label: "Hand-Picked" },
-                ].map((item, i) => (
-                  <div key={i} className="text-center">
-                    <div className="text-4xl md:text-5xl lg:text-6xl font-black text-white" style={{ textShadow: "0 4px 30px rgba(16,185,129,0.3)" }}>
-                      <span className="counter-animate" data-target={parseInt(item.stat, 10)}>0</span>
-                      <span style={{ color: "#10b981" }}>{item.suffix}</span>
+              <FadeOnScroll from="up" delay={0.4}>
+                <div className="flex items-center justify-center gap-12 md:gap-16 mt-16 flex-wrap">
+                  {[
+                    { stat: "40", suffix: "+", label: "Years Growing" },
+                    { stat: "3", suffix: "", label: "Generations" },
+                    { stat: "100", suffix: "%", label: "Hand-Picked" },
+                  ].map((item, i) => (
+                    <div key={i} className="text-center">
+                      <div className="text-4xl md:text-5xl lg:text-6xl font-black text-white" style={{ textShadow: "0 4px 30px rgba(16,185,129,0.3)" }}>
+                        <span className="counter-animate" data-target={parseInt(item.stat, 10)}>0</span>
+                        <span style={{ color: "#10b981" }}>{item.suffix}</span>
+                      </div>
+                      <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-stone-500">
+                        {item.label}
+                      </div>
                     </div>
-                    <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-stone-500">
-                      {item.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </FadeOnScroll>
 
-              <div className="reveal-scale mt-16">
-                <Link
-                  href="/tuxedo/about"
-                  className="group inline-flex items-center gap-3 rounded-full px-10 py-4 text-sm font-bold transition-all duration-300"
-                  style={{
-                    background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
-                    boxShadow: "0 8px 32px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-3px)";
-                    e.currentTarget.style.boxShadow = "0 12px 40px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 8px 32px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)";
-                  }}
-                >
-                  <span>Read Our Story</span>
-                  <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
+              <FadeOnScroll from="up" delay={0.5}>
+                <div className="mt-16">
+                  <Link
+                    href="/tuxedo/about"
+                    className="group inline-flex items-center gap-3 rounded-full px-10 py-4 text-sm font-bold transition-all duration-300"
+                    style={{
+                      background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                      boxShadow: "0 8px 32px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-3px)";
+                      e.currentTarget.style.boxShadow = "0 12px 40px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)";
+                    }}
+                  >
+                    <span>Read Our Story</span>
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+              </FadeOnScroll>
             </div>
           </LayoutContainer>
         </section>

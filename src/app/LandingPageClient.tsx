@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import HeroSection from "@/components/landing/HeroSection";
-import FeaturesAndStats from "@/components/landing/FeaturesAndStats";
-import TestimonialsAndCTA from "@/components/landing/TestimonialsAndCTA";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -20,21 +18,6 @@ export default function LandingPageClient() {
     if (typeof window === "undefined" || !mainRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Parallax sections
-      const parallaxElements = gsap.utils.toArray<Element>(".parallax-section");
-      parallaxElements.forEach((el) => {
-        gsap.to(el, {
-          y: -50,
-          ease: "none",
-          scrollTrigger: {
-            trigger: el,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: 1,
-          },
-        });
-      });
-
       // Reveal animations for sections
       const revealElements = gsap.utils.toArray<Element>(".scroll-reveal");
       revealElements.forEach((el) => {
@@ -62,8 +45,6 @@ export default function LandingPageClient() {
   return (
     <div ref={mainRef}>
       <HeroSection />
-      <FeaturesAndStats />
-      <TestimonialsAndCTA />
     </div>
   );
 }

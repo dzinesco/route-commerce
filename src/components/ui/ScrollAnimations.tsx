@@ -69,6 +69,7 @@ interface ScrollRevealProps {
   className?: string;
   stagger?: boolean;
   direction?: "up" | "down" | "left" | "right" | "scale";
+  from?: "up" | "down" | "left" | "right" | "scale";
   delay?: number;
 }
 
@@ -77,9 +78,11 @@ export function ScrollReveal({
   className = "",
   stagger = false,
   direction = "up",
+  from,
   delay = 0,
 }: ScrollRevealProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const effectiveDirection = from ?? direction;
 
   useEffect(() => {
     if (typeof window === "undefined" || !containerRef.current) return;
@@ -111,7 +114,7 @@ export function ScrollReveal({
       // Staggered reveal
       const animProps: gsap.TweenVars = { opacity: 0 };
 
-      switch (direction) {
+      switch (effectiveDirection) {
         case "up":
           animProps.y = 60;
           break;
@@ -150,7 +153,7 @@ export function ScrollReveal({
     }, containerRef);
 
     return () => ctx.revert();
-  }, [direction, stagger, delay]);
+  }, [effectiveDirection, stagger, delay]);
 
   return (
     <div ref={containerRef} className={className}>
@@ -166,12 +169,14 @@ interface ParallaxLayerProps {
   children: React.ReactNode;
   speed?: number; // 0-1, higher = more movement
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function ParallaxLayer({
   children,
   speed = 0.5,
   className = "",
+  style,
 }: ParallaxLayerProps) {
   const layerRef = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState(false);
@@ -202,11 +207,11 @@ export function ParallaxLayer({
   }, [isClient, speed]);
 
   if (!isClient) {
-    return <div className={className}>{children}</div>;
+    return <div className={className} style={style}>{children}</div>;
   }
 
   return (
-    <div ref={layerRef} className={className}>
+    <div ref={layerRef} className={className} style={style}>
       {children}
     </div>
   );
@@ -271,17 +276,21 @@ export function ProgressIndicator({
 interface FadeOnScrollProps {
   children: React.ReactNode;
   className?: string;
-  from?: "top" | "bottom" | "left" | "right";
+  from?: "top" | "bottom" | "left" | "right" | "up" | "down";
+  to?: "top" | "bottom" | "left" | "right";
   distance?: number;
   duration?: number;
+  delay?: number;
 }
 
 export function FadeOnScroll({
   children,
   className = "",
   from = "bottom",
+  to,
   distance = 100,
   duration = 1,
+  delay = 0,
 }: FadeOnScrollProps) {
   const elementRef = useRef<HTMLDivElement>(null);
 
@@ -293,6 +302,7 @@ export function FadeOnScroll({
       let fromY = 0;
       let fromX = 0;
 
+      // Use 'from' direction for the starting position
       switch (from) {
         case "top":
           fromY = distance;
@@ -320,6 +330,7 @@ export function FadeOnScroll({
           y: 0,
           duration,
           ease: "power3.out",
+          delay,
           scrollTrigger: {
             trigger: elementRef.current,
             start: "top 85%",
@@ -330,7 +341,7 @@ export function FadeOnScroll({
     }, elementRef);
 
     return () => ctx.revert();
-  }, [from, distance, duration]);
+  }, [from, distance, duration, delay]);
 
   return (
     <div ref={elementRef} className={className}>
