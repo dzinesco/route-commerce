@@ -3,10 +3,33 @@
 
 import Stripe from "stripe";
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-05-27.dahlia",
-});
+// Lazy-initialize Stripe client to avoid build-time errors when env vars aren't set
+let _stripe: Stripe | null = null;
+
+function getStripeClient(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+    }
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2026-05-27.dahlia",
+    });
+  }
+  return _stripe;
+}
+
+// Export stripe proxy that lazily initializes
+export const stripe = {
+  get customers() { return getStripeClient().customers; },
+  get subscriptions() { return getStripeClient().subscriptions; },
+  get invoices() { return getStripeClient().invoices; },
+  get checkout() { return getStripeClient().checkout; },
+  get billingPortal() { return getStripeClient().billingPortal; },
+  get paymentMethods() { return getStripeClient().paymentMethods; },
+  get paymentIntents() { return getStripeClient().paymentIntents; },
+  get refunds() { return getStripeClient().refunds; },
+  get webhooks() { return getStripeClient().webhooks; },
+};
 
 // Plan tier configurations
 export const PLANS = {
@@ -666,8 +689,6 @@ export async function getUsageSummary(subscriptionItemId: string) {
 // ============================================
 // EXPORT STRIPE INSTANCE AND HELPERS
 // ============================================
-
-export { stripe };
 
 export async function getSubscription(subscriptionId: string) {
   return await stripe.subscriptions.retrieve(subscriptionId);
