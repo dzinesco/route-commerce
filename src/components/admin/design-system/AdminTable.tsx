@@ -27,12 +27,12 @@ export default function AdminTable<T extends Record<string, unknown>>({
   className = "",
 }: AdminTableProps<T>) {
   return (
-    <div className={`overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-sm)] ${className}`}>
-      <table className="w-full text-left text-sm">
+    <div className={`overflow-x-auto rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-sm)] ${className}`}>
+      <table className="w-full text-left text-sm min-w-[600px]">
         <thead>
           <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
             {columns.map((col) => (
-              <th key={col.key} className={`px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)] ${col.className ?? ""}`}>
+              <th key={col.key} className={`px-3 sm:px-5 py-3 text-xs sm:text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)] whitespace-nowrap ${col.className ?? ""}`}>
                 {col.header}
               </th>
             ))}

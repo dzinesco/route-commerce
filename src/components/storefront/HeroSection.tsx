@@ -47,25 +47,25 @@ export default function HeroSection({
             : "linear-gradient(135deg, rgba(0,0,0,0.20) 0%, transparent 45%), linear-gradient(to top, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)"
         }} />
 
-        <div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 relative z-10">
           {eyebrow && (
-            <p className={`text-xs font-bold uppercase tracking-[0.25em] mb-6 ${isBlue ? "text-blue-200" : "text-white/60"}`}>
+            <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mb-4 sm:mb-6 ${isBlue ? "text-blue-200" : "text-white/60"}`}>
               {eyebrow}
             </p>
           )}
-          <h1 className="text-7xl md:text-8xl font-black tracking-tight text-white leading-[1.0] max-w-3xl">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-3xl">
             {title}
           </h1>
-          <p className="mt-8 text-2xl text-white/70 leading-relaxed max-w-lg font-light">
+          <p className="mt-6 sm:mt-8 text-lg sm:text-xl md:text-2xl text-white/70 leading-relaxed max-w-lg font-light">
             {description}
           </p>
 
           {(primaryButton || secondaryButton) && (
-            <div className="mt-12 flex flex-wrap gap-4">
+            <div className="mt-10 sm:mt-12 flex flex-wrap gap-3 sm:gap-4">
               {primaryButton && (
                 <button
                   onClick={onPrimaryClick}
-                  className={`rounded-full ${btnBg} px-10 py-4 text-sm font-bold tracking-wider text-white transition-all hover:-translate-y-0.5`}
+                  className={`rounded-2xl ${btnBg} active:scale-95 px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold tracking-wide text-white transition-all`}
                 >
                   {primaryButton}
                 </button>
@@ -73,7 +73,7 @@ export default function HeroSection({
               {secondaryButton && (
                 <button
                   onClick={onSecondaryClick}
-                  className="rounded-full bg-white/10 backdrop-blur-sm border border-white/25 px-10 py-4 text-sm font-bold tracking-wider text-white hover:bg-white/20 hover:border-white/40 transition-all"
+                  className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/25 px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold tracking-wide text-white hover:bg-white/20 hover:border-white/40 active:scale-95 transition-all"
                 >
                   {secondaryButton}
                 </button>
@@ -100,25 +100,25 @@ export default function HeroSection({
           background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.6) 72%, rgba(0,0,0,0.88) 100%)"
         }} />
 
-        <div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 relative z-10">
           {eyebrow && (
-            <p className="text-xs font-bold uppercase tracking-[0.25em] mb-6 text-blue-200">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mb-4 sm:mb-6 text-blue-200">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-7xl md:text-8xl font-black tracking-tight text-white leading-[1.0] max-w-3xl">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-3xl">
             {title}
           </h1>
-          <p className="mt-8 text-2xl text-white/70 leading-relaxed max-w-lg font-light">
+          <p className="mt-6 sm:mt-8 text-lg sm:text-xl md:text-2xl text-white/70 leading-relaxed max-w-lg font-light">
             {description}
           </p>
 
           {(primaryButton || secondaryButton) && (
-            <div className="mt-12 flex flex-wrap gap-4">
+            <div className="mt-10 sm:mt-12 flex flex-wrap gap-3 sm:gap-4">
               {primaryButton && (
                 <button
                   onClick={onPrimaryClick}
-                  className="rounded-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 px-10 py-4 text-sm font-bold tracking-wider text-white transition-all hover:-translate-y-0.5"
+                  className="rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 active:scale-95 px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold tracking-wide text-white transition-all"
                 >
                   {primaryButton}
                 </button>
@@ -126,7 +126,7 @@ export default function HeroSection({
               {secondaryButton && (
                 <button
                   onClick={onSecondaryClick}
-                  className="rounded-full bg-white/10 backdrop-blur-sm border border-white/25 px-10 py-4 text-sm font-bold tracking-wider text-white hover:bg-white/20 hover:border-white/40 transition-all"
+                  className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/25 px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold tracking-wide text-white hover:bg-white/20 hover:border-white/40 active:scale-95 transition-all"
                 >
                   {secondaryButton}
                 </button>
@@ -139,26 +139,26 @@ export default function HeroSection({
   }
 
   return (
-    <section className="py-28 px-6 bg-gradient-to-br from-stone-100 via-stone-50 to-stone-100">
+    <section className="py-16 sm:py-20 md:py-28 px-4 sm:px-6 bg-gradient-to-br from-stone-100 via-stone-50 to-stone-100">
       <div className="mx-auto max-w-6xl">
         {eyebrow && (
-          <p className={`text-xs font-bold uppercase tracking-[0.25em] mb-6 ${isBlue ? "text-blue-500" : "text-emerald-600"}`}>
+          <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mb-4 sm:mb-6 ${isBlue ? "text-blue-500" : "text-emerald-600"}`}>
             {eyebrow}
           </p>
         )}
-        <h1 className="text-7xl md:text-8xl font-black tracking-tight leading-[1.0] max-w-3xl text-stone-950">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] max-w-3xl text-stone-950">
           {title}
         </h1>
-        <p className="mt-8 text-2xl leading-relaxed max-w-lg font-light text-stone-600">
+        <p className="mt-6 sm:mt-8 text-lg sm:text-xl md:text-2xl leading-relaxed max-w-lg font-light text-stone-600">
           {description}
         </p>
 
         {(primaryButton || secondaryButton) && (
-          <div className="mt-12 flex flex-wrap gap-4">
+          <div className="mt-10 sm:mt-12 flex flex-wrap gap-3 sm:gap-4">
             {primaryButton && (
               <button
                 onClick={onPrimaryClick}
-                className={`rounded-full ${btnBg} px-10 py-4 text-sm font-bold tracking-wider text-white transition-all hover:-translate-y-0.5`}
+                className={`rounded-2xl ${btnBg} active:scale-95 px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold tracking-wide text-white transition-all`}
               >
                 {primaryButton}
               </button>
@@ -166,7 +166,7 @@ export default function HeroSection({
             {secondaryButton && (
               <button
                 onClick={onSecondaryClick}
-                className="rounded-full bg-white px-10 py-4 text-sm font-bold tracking-wider text-stone-950 ring-1 ring-stone-300 hover:bg-stone-50 transition-all"
+                className="rounded-2xl bg-white px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold tracking-wide text-stone-950 ring-1 ring-stone-300 hover:bg-stone-50 active:scale-95 transition-all"
               >
                 {secondaryButton}
               </button>

@@ -266,7 +266,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
       </div>
 
       {/* Label */}
-      <p className={`hidden sm:block text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-300 ${
+      <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-300 ${
         feature.color === "emerald"
           ? "text-emerald-600/60 group-hover:text-emerald-400/80"
           : "text-amber-600/60 group-hover:text-amber-400/80"
@@ -317,9 +317,9 @@ function WhyTuxedoCorn() {
             initial={{ opacity: 0, y: 16 }}
             animate={headerInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.05] mb-6"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.05] mb-6"
           >
-            Why Choose<br />Tuxedo Corn
+            Why Choose<br className="hidden sm:block" />Tuxedo Corn
           </motion.h2>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -339,7 +339,7 @@ function WhyTuxedoCorn() {
         </div>
 
         {/* Asymmetric masonry grid with staggered offsets */}
-        <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* Row 1: tall, normal, tall, normal — with vertical offset stagger */}
           <div>
             <FeatureCard feature={FEATURES[0]} index={0} />
@@ -397,15 +397,15 @@ function SectionHeader({
   accent?: "emerald" | "stone";
 }) {
   return (
-    <div className="mb-14">
-      <p className={`text-[11px] font-semibold uppercase tracking-widest ${accent === "emerald" ? "text-emerald-600" : "text-stone-500"} mb-4`}>
+    <div className="mb-10 sm:mb-14">
+      <p className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest ${accent === "emerald" ? "text-emerald-600" : "text-stone-500"} mb-3 sm:mb-4`}>
         {eyebrow}
       </p>
-      <h2 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
+      <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-[1.05]">
         {headline}
       </h2>
-      <div className="mt-6 h-px w-12 bg-emerald-600" />
-      <p className="mt-6 max-w-2xl text-lg text-stone-500 leading-relaxed">
+      <div className="mt-5 sm:mt-6 h-px w-10 sm:w-12 bg-emerald-600" />
+      <p className="mt-5 sm:mt-6 max-w-2xl text-base sm:text-lg text-stone-500 leading-relaxed">
         {subtext}
       </p>
     </div>

@@ -31,11 +31,11 @@ type AdminFilterTabsProps = {
 const sizeClasses = {
   sm: {
     container: "p-0.5 gap-0.5",
-    tab: "px-2.5 py-1.5 text-[10px]",
+    tab: "px-2.5 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-[10px]",
   },
   md: {
     container: "p-1 gap-0.5",
-    tab: "px-3 py-1.5 text-xs",
+    tab: "px-3 sm:px-4 py-2.5 sm:py-1.5 text-sm sm:text-xs",
   },
 };
 

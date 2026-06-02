@@ -1,12 +1,43 @@
 import type { Metadata } from "next";
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
+
 export const metadata: Metadata = {
-  title: "Tuxedo Corn | Fresh Produce Wholesale",
+  title: {
+    default: "Tuxedo Corn | Fresh Produce Wholesale",
+    template: "%s | Tuxedo Corn",
+  },
   description: "Premium sweet corn and seasonal produce delivered fresh from the farm to pickup stops near you. Shop wholesale pricing on Tuxedo Corn.",
+  keywords: ["sweet corn", "Olathe Sweet", "Colorado produce", "wholesale corn", "farm fresh", "pickup stops", "wholesale produce"],
   openGraph: {
-    title: "Tuxedo Corn",
-    description: "Premium sweet corn and seasonal produce, delivered fresh from our farm to your community.",
-    siteName: "Route Commerce",
+    title: "Tuxedo Corn | Olathe Sweet Sweet Corn",
+    description: "Premium sweet corn and seasonal produce, delivered fresh from our Colorado farm to pickup stops near you.",
+    url: `${BASE_URL}/tuxedo`,
+    siteName: "Tuxedo Corn",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/og-tuxedo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Tuxedo Corn - Olathe Sweet Sweet Corn",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tuxedo Corn | Fresh Produce Wholesale",
+    description: "Premium sweet corn and seasonal produce delivered fresh from our Colorado farm to pickup stops near you.",
+    site: "@TuxedoCorn",
+    images: ["/og-tuxedo.jpg"],
+  },
+  alternates: {
+    canonical: `${BASE_URL}/tuxedo`,
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

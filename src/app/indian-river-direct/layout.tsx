@@ -1,8 +1,44 @@
 import type { Metadata } from "next";
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
+
 export const metadata: Metadata = {
-  title: "Indian River Direct | Peach & Citrus Truckload",
+  title: {
+    default: "Indian River Direct | Peach & Citrus Truckload",
+    template: "%s | Indian River Direct",
+  },
   description: "Fresh peaches and citrus from our Florida groves to truckload sales in your neighborhood. Family-owned since 1985. Pre-order now for 2026 season.",
+  keywords: ["peaches", "citrus", "Florida produce", "truckload sales", "fresh fruit", "Indian River", "wholesale peaches"],
+  openGraph: {
+    title: "Indian River Direct | Fresh Peaches & Citrus",
+    description: "Fresh peaches and citrus from our Florida groves to truckload sales in your neighborhood. Family-owned since 1985.",
+    url: `${BASE_URL}/indian-river-direct`,
+    siteName: "Indian River Direct",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/og-indian-river.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Indian River Direct - Fresh Peaches & Citrus",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Indian River Direct | Peach & Citrus Truckload",
+    description: "Fresh peaches and citrus from our Florida groves. Family-owned since 1985. Pre-order for 2026 season.",
+    site: "@IndianRiverDirect",
+    images: ["/og-indian-river.jpg"],
+  },
+  alternates: {
+    canonical: `${BASE_URL}/indian-river-direct`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function IndianRiverLayout({ children }: { children: React.ReactNode }) {

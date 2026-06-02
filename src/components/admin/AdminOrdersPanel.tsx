@@ -306,8 +306,8 @@ export default function AdminOrdersPanel({
           <p className="text-xs text-stone-400 mt-1">Try adjusting your filters</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--admin-border)] bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-[var(--admin-border)] bg-white">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-stone-50">
               <tr className="border-b border-[var(--admin-border)]">
                 <th className="text-left px-4 py-3 font-semibold text-[var(--admin-text-muted)] text-xs">Order</th>
