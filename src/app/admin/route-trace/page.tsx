@@ -71,13 +71,19 @@ export default async function RouteTraceDashboardPage() {
   const recentActivity = eventsResult.success ? eventsResult.events : [];
 
   return (
-    <main className="min-h-screen bg-[var(--admin-bg)]">
+    <main className="min-h-screen bg-[var(--admin-bg)] relative">
+      {/* Subtle decorative background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-emerald-50/30 via-transparent to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-gradient-to-tr from-amber-50/20 via-transparent to-transparent rounded-full blur-2xl" />
+      </div>
+      
       {/* Header */}
-      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 relative z-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-4 mb-4 sm:mb-6">
           <div className="space-y-1 flex-1 min-w-0">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-emerald-600">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30">
                 {Icons.routeTrace("h-5 w-5 sm:h-6 sm:w-6 text-white")}
               </div>
               <div>

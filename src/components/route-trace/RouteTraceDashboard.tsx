@@ -213,7 +213,7 @@ function ActivityFeed({ events }: { events: RecentLotEvent[] }) {
   if (events.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-sm)] overflow-hidden">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-md)] overflow-hidden transition-all duration-200 hover:shadow-[var(--admin-shadow-lg)]">
       <div className="border-b border-[var(--admin-border-light)] px-5 py-3.5 flex items-center justify-between bg-[var(--admin-bg-subtle)]">
         <div className="flex items-center gap-2">
           <span className="text-[var(--admin-accent)]">{Icons.zap("w-4 h-4")}</span>
@@ -223,7 +223,7 @@ function ActivityFeed({ events }: { events: RecentLotEvent[] }) {
       </div>
       <div className="divide-y divide-[var(--admin-border-light)]">
         {events.map((evt) => (
-          <div key={evt.event_id} className="px-5 py-3.5 hover:bg-[var(--admin-bg-subtle)]/40 transition-colors flex items-start gap-3.5">
+          <div key={evt.event_id} className="px-5 py-3.5 hover:bg-[var(--admin-bg-subtle)]/40 transition-all duration-150 flex items-start gap-3.5 cursor-pointer hover:pl-6">
             <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm ${
               evt.event_type === "harvested" || evt.event_type === "field_packed" ? "bg-[var(--admin-accent-light)] text-[var(--admin-accent-text)]" :
               evt.event_type === "in_transit" || evt.event_type === "bin_tagged" ? "bg-amber-100 text-amber-700" :
@@ -281,20 +281,27 @@ function HaulingColumn({
   emptyMessage: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-sm)] overflow-hidden flex-1 min-w-[260px]">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-md)] overflow-hidden flex-1 min-w-[260px] transition-all duration-200 hover:shadow-[var(--admin-shadow-lg)]">
       <div className={`px-4 py-3 border-b border-[var(--admin-border-light)] flex items-center gap-2 ${bgHeader}`}>
         <span className="text-[var(--admin-text-secondary)]">{icon}</span>
         <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">{title}</h3>
-        <span className="ml-auto rounded-full bg-white/80 text-[var(--admin-text-secondary)] text-xs font-bold px-2 py-0.5">
+        <span className="ml-auto rounded-full bg-white/80 text-[var(--admin-text-secondary)] text-xs font-bold px-2 py-0.5 shadow-sm">
           {lots.length}
         </span>
       </div>
       {lots.length === 0 ? (
-        <div className="p-5 text-center text-xs text-[var(--admin-text-muted)]">{emptyMessage}</div>
+        <div className="p-5 text-center text-xs text-[var(--admin-text-muted)]">
+          <div className="flex flex-col items-center gap-2">
+            <svg className="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            {emptyMessage}
+          </div>
+        </div>
       ) : (
         <div className="divide-y divide-[var(--admin-border-light)]">
           {lots.map((lot) => (
-            <div key={lot.lot_id} className="px-4 py-3 hover:bg-[var(--admin-bg-subtle)]/40 transition-colors">
+            <div key={lot.lot_id} className="px-4 py-3 hover:bg-[var(--admin-bg-subtle)]/50 transition-all duration-150 group">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <Link
@@ -360,7 +367,7 @@ function InventoryByCropSection({ inventoryByCrop }: { inventoryByCrop: Inventor
   const cropEntries = Object.entries(byCrop).slice(0, 12);
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden shadow-[var(--admin-shadow-sm)]">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden shadow-[var(--admin-shadow-md)] transition-all duration-200 hover:shadow-[var(--admin-shadow-lg)]">
       <div className="border-b border-[var(--admin-border-light)] px-6 py-4 flex items-center justify-between bg-[var(--admin-bg-subtle)]">
         <div className="flex items-center gap-2">
           <span className="text-[var(--admin-text-secondary)]">{Icons.box("w-4 h-4")}</span>
@@ -382,7 +389,7 @@ function InventoryByCropSection({ inventoryByCrop }: { inventoryByCrop: Inventor
           const packed = byStatus["packed"] ?? 0;
 
           return (
-            <div key={crop} className="px-6 py-4">
+            <div key={crop} className="px-6 py-4 transition-all duration-150 hover:bg-[var(--admin-bg-subtle)]/30">
               <div className="flex items-center justify-between mb-1">
                 <div>
                   <p className="text-sm font-bold text-[var(--admin-text-primary)]">{crop}</p>
@@ -439,7 +446,7 @@ function FieldYieldTable({ fieldYield }: { fieldYield: FieldYieldSummary[] }) {
   if (fieldYield.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden shadow-[var(--admin-shadow-sm)]">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden shadow-[var(--admin-shadow-md)] transition-all duration-200 hover:shadow-[var(--admin-shadow-lg)]">
       <div className="border-b border-[var(--admin-border-light)] px-6 py-4 flex items-center justify-between bg-[var(--admin-bg-subtle)]">
         <div className="flex items-center gap-2">
           <span className="text-[var(--admin-text-secondary)]">{Icons.chart("w-4 h-4")}</span>
@@ -457,7 +464,7 @@ function FieldYieldTable({ fieldYield }: { fieldYield: FieldYieldSummary[] }) {
         </thead>
         <tbody>
           {fieldYield.map((row, idx) => (
-            <tr key={idx} className="border-b border-[var(--admin-border-light)] last:border-0 hover:bg-[var(--admin-bg-subtle)]/30 transition-colors">
+            <tr key={idx} className="border-b border-[var(--admin-border-light)] last:border-0 hover:bg-[var(--admin-bg-subtle)]/40 transition-all duration-150">
               <td className="px-6 py-3.5">
                 <p className="text-sm font-semibold text-[var(--admin-text-primary)]">{row.field_location}</p>
                 {row.field_block !== "N/A" && <p className="text-[10px] text-[var(--admin-text-muted)]">Block {row.field_block}</p>}
@@ -527,7 +534,7 @@ export default function RouteTraceDashboard({
         {statEntries.map(({ key, value }) => {
           const cfg = STATUS_CONFIG[key];
           return (
-            <div key={key} className={`rounded-xl sm:rounded-2xl ${cfg.bg} border border-transparent px-3 sm:px-5 py-3 sm:py-4`}>
+            <div key={key} className={`rounded-xl sm:rounded-2xl ${cfg.bg} border border-transparent px-3 sm:px-5 py-3 sm:py-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className={`${cfg.iconColor} scale-75 sm:scale-100`}>{cfg.icon}</span>
                 <span className="text-[8px] sm:text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-wider truncate">{cfg.label}</span>
@@ -537,7 +544,7 @@ export default function RouteTraceDashboard({
           );
         })}
         {/* Total lots — spans across */}
-        <div className="rounded-xl sm:rounded-2xl bg-[var(--admin-bg-subtle)] border border-[var(--admin-border)] px-3 sm:px-5 py-3 sm:py-4">
+        <div className="rounded-xl sm:rounded-2xl bg-[var(--admin-card-bg)] border border-[var(--admin-border)] px-3 sm:px-5 py-3 sm:py-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 shadow-[var(--admin-shadow-sm)]">
           <div className="flex items-center gap-1 sm:gap-1.5">
             <span className="text-[var(--admin-text-secondary)]">{Icons.clipboard("w-3.5 h-3.5 sm:w-4 sm:h-4")}</span>
             <span className="text-[8px] sm:text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-wider truncate">Total Lots</span>
