@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrder, updateOrderItem, deleteOrderItem } from "@/actions/orders/update-order";
-import { AdminInput, AdminTextInput, AdminTextarea } from "./design-system";
+import { AdminInput, AdminTextInput, AdminTextarea, useToast, AdminButton } from "./design-system";
 
 type OrderItem = {
   id: string;
@@ -56,6 +56,7 @@ function formatCurrency(amount: number) {
 
 export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
   const router = useRouter();
+  const { success: showSuccess, error: showError } = useToast();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -87,10 +88,34 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
   );
   const total = Math.max(0, subtotal - discount_amount);
 
+  // Validation
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  function validateForm(): boolean {
+    const errors: Record<string, string> = {};
+
+    if (!customer_name.trim()) {
+      errors.customer_name = "Customer name is required";
+    }
+
+    if (discount_amount < 0) {
+      errors.discount_amount = "Discount cannot be negative";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   function updateItem(id: string, field: "quantity" | "price", value: number) {
     setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
     );
+    // Clear error for the field when changed
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   }
 
   function removeItem(id: string) {
@@ -100,6 +125,11 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
   }
 
   async function handleSave() {
+    if (!validateForm()) {
+      showError("Validation failed", "Please fix the errors below");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -107,69 +137,72 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
     const toSave = items.filter((i) => !i.removed);
     const toRemove = items.filter((i) => i.removed);
 
-    for (const item of toRemove) {
-      const result = await deleteOrderItem(item.id);
-      if (!result.success) {
-        setError(result.error ?? "Failed to remove item");
-        setSaving(false);
-        return;
-      }
-    }
-
-    for (const item of toSave) {
-      const orig = order.order_items.find((o) => o.id === item.id);
-      if (!orig) continue;
-      if (
-        Number(orig.quantity) !== item.quantity ||
-        Number(orig.price) !== item.price
-      ) {
-        const result = await updateOrderItem(item.id, {
-          quantity: item.quantity,
-          price: Number(item.price),
-        });
+    try {
+      for (const item of toRemove) {
+        const result = await deleteOrderItem(item.id);
         if (!result.success) {
-          setError(result.error ?? "Failed to update item");
+          showError("Failed to remove item", result.error ?? "Please try again");
           setSaving(false);
           return;
         }
       }
-    }
 
-    const result = await updateOrder(order.id, brandId, {
-      customer_name,
-      customer_email: customer_email || null,
-      customer_phone: customer_phone || null,
-      discount_amount,
-      discount_reason: discount_reason || null,
-      internal_notes: internal_notes || null,
-      status,
-      pickup_complete,
-      pickup_completed_at: pickup_complete ? new Date().toISOString() : null,
-      subtotal,
-    });
+      for (const item of toSave) {
+        const orig = order.order_items.find((o) => o.id === item.id);
+        if (!orig) continue;
+        if (
+          Number(orig.quantity) !== item.quantity ||
+          Number(orig.price) !== item.price
+        ) {
+          const result = await updateOrderItem(item.id, {
+            quantity: item.quantity,
+            price: Number(item.price),
+          });
+          if (!result.success) {
+            showError("Failed to update item", result.error ?? "Please try again");
+            setSaving(false);
+            return;
+          }
+        }
+      }
 
-    if (!result.success) {
-      setError(result.error ?? "Failed to save");
+      const result = await updateOrder(order.id, brandId, {
+        customer_name,
+        customer_email: customer_email || null,
+        customer_phone: customer_phone || null,
+        discount_amount,
+        discount_reason: discount_reason || null,
+        internal_notes: internal_notes || null,
+        status,
+        pickup_complete,
+        pickup_completed_at: pickup_complete ? new Date().toISOString() : null,
+        subtotal,
+      });
+
+      if (!result.success) {
+        showError("Failed to save", result.error ?? "Please try again");
+        setSaving(false);
+        return;
+      }
+
+      showSuccess("Order updated", "Changes have been saved");
+      setSaved(true);
       setSaving(false);
-      return;
+      router.refresh();
+    } catch (err) {
+      showError("Network error", "Please check your connection and try again");
+      setSaving(false);
     }
-
-    setSaved(true);
-    setSaving(false);
-    router.refresh();
   }
 
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-600">
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-600 flex items-start gap-3">
+          <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {error}
-        </div>
-      )}
-
-      {saved && (
-        <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-700">
-          ✓ Order updated successfully
         </div>
       )}
 
@@ -200,7 +233,8 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                 </div>
 
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <AdminInput label="Qty">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1">Qty</label>
                     <input
                       type="number"
                       min="1"
@@ -208,20 +242,25 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                       onChange={(e) =>
                         updateItem(item.id, "quantity", Number(e.target.value))
                       }
-                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
                     />
-                  </AdminInput>
-                  <AdminInput label="Price">
-                    <AdminTextInput
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={item.price}
-                      onChange={(e) =>
-                        updateItem(item.id, "price", Number(e.target.value))
-                      }
-                    />
-                  </AdminInput>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1">Price</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={item.price}
+                        onChange={(e) =>
+                          updateItem(item.id, "price", Number(e.target.value))
+                        }
+                        className="w-full rounded-xl border border-stone-200 bg-stone-50 pl-8 pr-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <p className="mt-2 text-right text-sm font-semibold text-stone-900">
@@ -246,22 +285,37 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
         </AdminInput>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <AdminInput label="Discount Amount">
-            <AdminTextInput
-              type="number"
-              step="0.01"
-              min="0"
-              value={discount_amount}
-              onChange={(e) => setDiscount_amount(Number(e.target.value))}
-            />
-          </AdminInput>
-          <AdminInput label="Discount Reason">
-            <AdminTextInput
+          <div>
+            <label className="block text-xs font-semibold text-stone-500 mb-1.5">Discount Amount</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={discount_amount}
+                onChange={(e) => setDiscount_amount(Number(e.target.value))}
+                className={`w-full rounded-xl border px-8 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 ${
+                  fieldErrors.discount_amount
+                    ? "border-red-400 bg-red-50"
+                    : "border-stone-200 bg-white focus:border-[var(--admin-accent)]"
+                }`}
+              />
+            </div>
+            {fieldErrors.discount_amount && (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.discount_amount}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-stone-500 mb-1.5">Discount Reason</label>
+            <input
+              type="text"
               value={discount_reason}
               onChange={(e) => setDiscount_reason(e.target.value)}
               placeholder="Optional"
+              className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
             />
-          </AdminInput>
+          </div>
         </div>
 
         <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
@@ -276,12 +330,31 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
 
       {/* Customer fields */}
       <div className="space-y-4">
-        <AdminInput label="Name">
-          <AdminTextInput
+        <div>
+          <label className="block text-xs font-semibold text-stone-500 mb-1.5">
+            Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
             value={customer_name}
-            onChange={(e) => setCustomer_name(e.target.value)}
+            onChange={(e) => {
+              setCustomer_name(e.target.value);
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.customer_name;
+                return next;
+              });
+            }}
+            className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 ${
+              fieldErrors.customer_name
+                ? "border-red-400 bg-red-50"
+                : "border-stone-200 bg-white focus:border-[var(--admin-accent)]"
+            }`}
           />
-        </AdminInput>
+          {fieldErrors.customer_name && (
+            <p className="mt-1 text-xs text-red-500">{fieldErrors.customer_name}</p>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AdminInput label="Email">
             <AdminTextInput
@@ -308,10 +381,11 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
             {["pending", "confirmed", "cancelled"].map((s) => (
               <button
                 key={s}
+                type="button"
                 onClick={() => setStatus(s)}
                 className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${
                   status === s
-                    ? "bg-emerald-600 text-white"
+                    ? "bg-[var(--admin-accent)] text-white"
                     : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
                 }`}
               >
@@ -324,6 +398,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
         <div>
           <label className="mb-2 block text-xs font-semibold text-stone-500">Pickup</label>
           <button
+            type="button"
             onClick={() => setPickup_complete((v) => !v)}
             className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
               pickup_complete
@@ -346,13 +421,16 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
         />
       </AdminInput>
 
-      <button
+      <AdminButton
         onClick={handleSave}
         disabled={saving}
-        className="w-full rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+        isLoading={saving}
+        variant="primary"
+        fullWidth
+        size="lg"
       >
         {saving ? "Saving..." : "Save Changes"}
-      </button>
+      </AdminButton>
     </div>
   );
 }

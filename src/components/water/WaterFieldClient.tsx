@@ -121,7 +121,7 @@ function WaterFieldInner() {
   const qrHeadgateToken = searchParams.get("h");
 
   const [lang, setLang] = useState<Language>("en");
-  const [step, setStep] = useState<"lang" | "role" | "pin" | "form">("lang");
+  const [step, setStep] = useState<"loading" | "lang" | "role" | "pin" | "form">("loading");
   const [pin, setPin] = useState("");
   const [irrigatorName, setIrrigatorName] = useState("");
   const [selectedRole, setSelectedRole] = useState<"irrigator" | "water_admin" | null>(null);
@@ -146,18 +146,18 @@ function WaterFieldInner() {
 
   const t = LABELS[lang];
 
-  // Detect saved language preference
+  // Detect saved language preference + check session
   useEffect(() => {
     const saved = document.cookie.match(/wl_lang=(en|es)/)?.[1] as Language | undefined;
     if (saved) setLang(saved);
-  }, []);
 
-  // Check if already logged in (session cookie)
-  useEffect(() => {
     const match = document.cookie.match(/wl_session=([^;]+)/);
     if (match) {
-      setStep("form");
+      // Already logged in
       loadHeadgates();
+      setStep("form");
+    } else {
+      setStep("lang");
     }
   }, []);
 
@@ -176,6 +176,9 @@ function WaterFieldInner() {
     const hgs = await getWaterHeadgates(TUXEDO_BRAND_ID, true);
     setHeadgates(hgs.filter((h) => h.active));
   }
+
+  // Show loading spinner next to headgate dropdown
+  const isLoadingHeadgates = step === "form" && headgates.length === 0;
 
   async function handleLangSelect(lang: Language) {
     setLang(lang);
@@ -334,6 +337,18 @@ function WaterFieldInner() {
   }
 
   // Language selection screen
+  if (step === "loading") {
+    return (
+      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-xs text-center">
+          <div className="w-12 h-12 rounded-full border-3 border-stone-300 border-t-stone-600 animate-spin mx-auto mb-4" />
+          <p className="text-stone-500 text-base">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Language selection screen
   if (step === "lang") {
     return (
       <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6">
@@ -448,10 +463,29 @@ function WaterFieldInner() {
           </div>
           <button
             onClick={handleLogout}
-            className="rounded-lg bg-stone-700 px-3 py-2 text-sm font-medium text-white hover:bg-stone-600"
+            className="rounded-lg bg-stone-700 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-600 transition-colors min-h-[44px]"
           >
             {t.logout}
           </button>
+        </div>
+      </div>
+
+      {/* Step progress indicator */}
+      <div className="bg-stone-100 border-b border-stone-200 px-4 py-2">
+        <div className="mx-auto max-w-lg">
+          <div className="flex items-center gap-1.5">
+            {["lang", "role", "pin", "form"].map((s, i) => {
+              const stepIndex = ["lang", "role", "pin", "form"].indexOf(step as string);
+              const isActive = step === s;
+              const isPast = stepIndex > i;
+              return (
+                <div key={s} className="flex items-center gap-1.5">
+                  <div className={`w-2 h-2 rounded-full ${isActive ? "bg-green-600" : isPast ? "bg-green-400" : "bg-stone-300"}`} />
+                  {i < 3 && <div className={`w-6 h-0.5 ${isPast ? "bg-green-400" : "bg-stone-300"}`} />}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -478,6 +512,9 @@ function WaterFieldInner() {
           {headgateLocked ? (
             <div className="w-full rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-4 text-lg font-bold text-stone-900">
               <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
                 {selectedHg?.name ?? selectedHeadgate}
                 <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">
                   🔒 {t.locked}
@@ -487,14 +524,20 @@ function WaterFieldInner() {
                 <ThresholdBadge high={selectedHg.high_threshold} low={selectedHg.low_threshold} t={t} />
               )}
             </div>
+          ) : isLoadingHeadgates ? (
+            <div className="w-full rounded-xl border-2 border-stone-300 bg-stone-100 px-4 py-5 flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full border-2 border-stone-400 border-t-stone-700 animate-spin" />
+              <span className="text-stone-500 text-base font-medium">Loading headgates...</span>
+            </div>
           ) : (
             <select
               value={selectedHeadgate}
               onChange={(e) => setSelectedHeadgate(e.target.value)}
               required
-              className="w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-4 text-lg outline-none focus:border-stone-900 min-h-[56px]"
+              className="w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-4 text-lg outline-none focus:border-stone-900 min-h-[56px] appearance-none"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2371717b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 16px center", backgroundSize: "20px" }}
             >
-              <option value="">{t.selectHeadgate}</option>
+              <option value="" disabled>{t.selectHeadgate}</option>
               {headgates.length === 0 && <option disabled>{t.noHeadgates}</option>}
               {headgates.map((hg) => (
                 <option key={hg.id} value={hg.id}>
@@ -619,15 +662,25 @@ function WaterFieldInner() {
         <button
           type="submit"
           disabled={!selectedHeadgate || !measurement || loading}
-          className="w-full rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white disabled:opacity-50 active:bg-green-700 min-h-[64px] shadow-lg"
+          className="w-full rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white disabled:opacity-50 active:bg-green-700 min-h-[64px] shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
         >
           {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+            <>
+              <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
               {t.submitting}
-            </span>
-          ) : t.submit}
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              {t.submit}
+            </>
+          )}
         </button>
+        {loading && (
+          <p className="text-center text-xs text-stone-400 mt-1">Submitting your reading...</p>
+        )}
       </div>
     </div>
   );

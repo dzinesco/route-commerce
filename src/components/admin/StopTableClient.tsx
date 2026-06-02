@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { publishStop } from "@/actions/stops";
-import { AdminSearchInput, AdminFilterTabs, AdminButton, AdminIconButton } from "@/components/admin/design-system";
+import { AdminSearchInput, AdminFilterTabs, AdminButton, AdminIconButton, useToast, Skeleton } from "@/components/admin/design-system";
 
 type Stop = {
   id: string;
@@ -26,12 +26,23 @@ type Props = {
 
 export default function StopTableClient({ stops }: Props) {
   const router = useRouter();
+  const { success: showSuccess, error: showError } = useToast();
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "draft">("all");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedStops, setSelectedStops] = useState<Set<string>>(new Set());
+  const [bulkPublishing, setBulkPublishing] = useState(false);
   const PAGE_SIZE = 50;
+
+  // Simulate loading when filters change
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [page, statusFilter, search]);
 
   const filtered = stops.filter((s) => {
     const matchesSearch =
@@ -62,6 +73,59 @@ export default function StopTableClient({ stops }: Props) {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginatedStops = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const draftStops = stops.filter(s => s.status === "draft" && s.active);
+
+  // Bulk selection
+  const toggleSelectAll = () => {
+    if (selectedStops.size === paginatedStops.length) {
+      setSelectedStops(new Set());
+    } else {
+      setSelectedStops(new Set(paginatedStops.map(s => s.id)));
+    }
+  };
+
+  const toggleStopSelection = (stopId: string) => {
+    setSelectedStops(prev => {
+      const next = new Set(prev);
+      if (next.has(stopId)) {
+        next.delete(stopId);
+      } else {
+        next.add(stopId);
+      }
+      return next;
+    });
+  };
+
+  async function handleBulkPublish() {
+    if (selectedStops.size === 0) return;
+    
+    setBulkPublishing(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const stopId of selectedStops) {
+      const stop = stops.find(s => s.id === stopId);
+      if (stop && stop.status === "draft") {
+        const result = await publishStop(stopId, stop.brand_id);
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+    }
+    
+    setBulkPublishing(false);
+    setSelectedStops(new Set());
+    
+    if (failCount === 0) {
+      showSuccess(`${successCount} stop${successCount !== 1 ? 's' : ''} published`);
+    } else {
+      showError("Some stops failed", `${successCount} succeeded, ${failCount} failed`);
+    }
+    
+    startTransition(() => router.refresh());
+  }
 
   function handleDeleted() {
     setDeleteError(null);
@@ -97,7 +161,7 @@ export default function StopTableClient({ stops }: Props) {
               size="sm"
               label="Previous page"
               onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
+              disabled={page === 0 || isLoading}
               className="!rounded-lg border border-[var(--admin-border)]"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -108,7 +172,7 @@ export default function StopTableClient({ stops }: Props) {
               size="sm"
               label="Next page"
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
+              disabled={page >= totalPages - 1 || isLoading}
               className="!rounded-lg border border-[var(--admin-border)]"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -116,6 +180,31 @@ export default function StopTableClient({ stops }: Props) {
           </div>
         )}
       </div>
+
+      {/* Bulk actions bar */}
+      {selectedStops.size > 0 && (
+        <div className="mx-5 my-3 flex items-center justify-between rounded-xl border border-[var(--admin-accent)] bg-[var(--admin-accent-light)] px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-[var(--admin-accent-text)]">
+              {selectedStops.size} stop{selectedStops.size !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => setSelectedStops(new Set())}
+              className="text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"
+            >
+              Clear
+            </button>
+          </div>
+          <AdminButton
+            variant="primary"
+            size="sm"
+            onClick={handleBulkPublish}
+            isLoading={bulkPublishing}
+          >
+            Publish Selected
+          </AdminButton>
+        </div>
+      )}
 
       {/* Delete error */}
       {deleteError && (
@@ -131,6 +220,14 @@ export default function StopTableClient({ stops }: Props) {
       <table className="w-full text-left text-sm">
         <thead className="bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)]">
           <tr>
+            <th className="w-10 px-5 py-4">
+              <input
+                type="checkbox"
+                checked={selectedStops.size === paginatedStops.length && paginatedStops.length > 0}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-stone-300 text-[var(--admin-accent)] focus:ring-[var(--admin-accent)] cursor-pointer"
+              />
+            </th>
             <th className="px-5 py-4 font-semibold">City</th>
             <th className="px-5 py-4 font-semibold">Location</th>
             <th className="px-5 py-4 font-semibold">Date</th>
@@ -141,7 +238,20 @@ export default function StopTableClient({ stops }: Props) {
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--admin-border)]">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <tr key={i} className="hover:bg-[var(--admin-bg-subtle)] transition-colors">
+                <td className="px-5 py-4"><Skeleton variant="rect" className="h-5 w-5" /></td>
+                <td className="px-5 py-4"><Skeleton variant="text" className="w-24 h-4" /></td>
+                <td className="px-5 py-4"><Skeleton variant="text" className="w-32 h-4" /></td>
+                <td className="px-5 py-4"><Skeleton variant="text" className="w-16 h-4" /></td>
+                <td className="px-5 py-4"><Skeleton variant="text" className="w-16 h-4" /></td>
+                <td className="px-5 py-4"><Skeleton variant="text" className="w-20 h-4" /></td>
+                <td className="px-5 py-4"><Skeleton variant="rect" className="w-16 h-6 rounded-full" /></td>
+                <td className="px-5 py-4"><Skeleton variant="rect" className="w-12 h-6" /></td>
+              </tr>
+            ))
+          ) : filtered.length === 0 ? (
             <tr>
               <td colSpan={7} className="px-5 py-10 text-center text-sm text-[var(--admin-text-muted)]">
                 {search || statusFilter !== "all"
@@ -156,6 +266,8 @@ export default function StopTableClient({ stops }: Props) {
                 stop={stop}
                 onDeleted={handleDeleted}
                 onDeleteError={setDeleteError}
+                isSelected={selectedStops.has(stop.id)}
+                onToggleSelect={() => toggleStopSelection(stop.id)}
               />
             ))
           )}
@@ -169,12 +281,17 @@ function StopRowBase({
   stop,
   onDeleted,
   onDeleteError,
+  isSelected,
+  onToggleSelect,
 }: {
   stop: Stop;
   onDeleted: () => void;
   onDeleteError: (msg: string) => void;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }) {
   const router = useRouter();
+  const { success: showSuccess, error: showError } = useToast();
   const [, startTransition] = useTransition();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -187,7 +304,10 @@ function StopRowBase({
     const result = await publishStop(stopId, stop.brand_id);
     setPublishingId(null);
     if (result.success) {
+      showSuccess("Stop published", "The stop is now visible on the storefront");
       startTransition(() => router.refresh());
+    } else {
+      showError("Failed to publish", result.error ?? "Please try again");
     }
   }
 
@@ -209,6 +329,7 @@ function StopRowBase({
     setConfirmDelete(null);
     setOpenMenu(null);
     if (data.success) {
+      showSuccess("Stop deleted", "The stop has been removed");
       onDeleted();
     } else {
       onDeleteError(data.error ?? "Delete failed");
@@ -216,7 +337,15 @@ function StopRowBase({
   }
 
   return (
-    <tr className="hover:bg-[var(--admin-bg-subtle)] transition-colors relative">
+    <tr className={`hover:bg-[var(--admin-bg-subtle)] transition-colors relative ${isSelected ? 'bg-[var(--admin-accent-light)]/30' : ''}`}>
+      <td className="px-5 py-4">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="h-4 w-4 rounded border-stone-300 text-[var(--admin-accent)] focus:ring-[var(--admin-accent)] cursor-pointer"
+        />
+      </td>
       <td className="px-5 py-4">
         <Link
           href={`/admin/stops/${stop.id}`}

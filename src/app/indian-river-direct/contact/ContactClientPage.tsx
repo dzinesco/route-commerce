@@ -156,7 +156,7 @@ export default function IndianRiverContactPage() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6" aria-label="Contact form">
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-stone-700 mb-2">Your Name</label>
@@ -166,6 +166,7 @@ export default function IndianRiverContactPage() {
                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                         className="w-full rounded-xl border-2 border-stone-200 bg-white px-5 py-4 text-base text-stone-900 placeholder:text-stone-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-colors"
                         placeholder="Jane Smith"
+                        autoComplete="name"
                       />
                     </div>
                     <div>
@@ -177,6 +178,7 @@ export default function IndianRiverContactPage() {
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
                         className="w-full rounded-xl border-2 border-stone-200 bg-white px-5 py-4 text-base text-stone-900 placeholder:text-stone-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-colors"
                         placeholder="jane@example.com"
+                        autoComplete="email"
                       />
                     </div>
                   </div>

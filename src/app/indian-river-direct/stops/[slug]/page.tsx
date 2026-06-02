@@ -101,7 +101,12 @@ export default function StopPage() {
           <div className="max-w-5xl mx-auto">
 
             {/* Back navigation */}
-            <div className="mb-10 flex items-center gap-2">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4 }}
+              className="mb-10 flex items-center gap-2"
+            >
               <Link
                 href={`/${brandSlug}#stops`}
                 className="flex items-center gap-2 text-sm font-medium text-stone-500 hover:text-stone-800 transition-colors group"
@@ -119,13 +124,13 @@ export default function StopPage() {
               </Link>
               <span className="text-stone-300">/</span>
               <span className="text-sm text-stone-700 font-medium">{stop.city}, {stop.state}</span>
-            </div>
+            </motion.div>
 
             {/* Stop header with animation */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.6, ease: [0.22, 0.61, 0.36, 1] }}
               className="backdrop-blur-sm bg-white/60 border border-white/50 rounded-3xl p-8 mb-12"
             >
               <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-4">
@@ -135,16 +140,28 @@ export default function StopPage() {
                 {stop.city},<br className="hidden md:block" /> {stop.state}
               </h1>
               <p className="mt-5 max-w-xl text-lg text-stone-500 leading-relaxed">
-                Order fresh Florida citrus for pickup at this stop.
+                {isBlue
+                  ? "Order fresh Florida citrus for pickup at this stop."
+                  : "Order fresh Olathe Sweet™ sweet corn for pickup at this stop."}
               </p>
               <div className="mt-6 h-px w-12 bg-blue-600" />
             </motion.div>
 
             {/* Stop info */}
-            <div className="backdrop-blur-md bg-white/80 border border-white/50 rounded-3xl p-8 mb-14 shadow-xl shadow-stone-200/50">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 0.61, 0.36, 1] }}
+              className="backdrop-blur-md bg-white/80 border border-white/50 rounded-3xl p-8 mb-14 shadow-xl shadow-stone-200/50"
+            >
               <div className="grid gap-4 md:grid-cols-3">
                 {/* Date */}
-                <div className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                  className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50"
+                >
                   <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${isBlue ? "bg-blue-50" : "bg-emerald-50"}`}>
                     <svg className={`h-5 w-5 ${isBlue ? "text-blue-500" : "text-emerald-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
@@ -154,9 +171,14 @@ export default function StopPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">Date</p>
                     <p className="font-bold text-stone-950">{formatDate(stop.date)}</p>
                   </div>
-                </div>
+                </motion.div>
                 {/* Time */}
-                <div className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50"
+                >
                   <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${isBlue ? "bg-blue-50" : "bg-emerald-50"}`}>
                     <svg className={`h-5 w-5 ${isBlue ? "text-blue-500" : "text-emerald-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -166,9 +188,14 @@ export default function StopPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">Time</p>
                     <p className="font-bold text-stone-950">{stop.time}</p>
                   </div>
-                </div>
+                </motion.div>
                 {/* Location */}
-                <div className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.4 }}
+                  className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50"
+                >
                   <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${isBlue ? "bg-blue-50" : "bg-emerald-50"}`}>
                     <svg className={`h-5 w-5 ${isBlue ? "text-blue-500" : "text-emerald-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -179,12 +206,16 @@ export default function StopPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">Location</p>
                     <p className="font-bold text-stone-950 leading-tight">{stop.location}</p>
                   </div>
-                </div>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Available Products — editorial header */}
-            <section>
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
+            >
               <div className="mb-10">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-4">Farm-Direct</p>
                 <h2 className="text-4xl md:text-5xl font-black tracking-tight text-stone-950 leading-tight">
@@ -220,7 +251,7 @@ export default function StopPage() {
                   ))}
                 </div>
               )}
-            </section>
+            </motion.section>
           </div>
         </LayoutContainer>
       </main>

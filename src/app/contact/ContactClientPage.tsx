@@ -14,6 +14,7 @@ export default function ContactClientPage() {
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState<FormState>({ name: "", email: "", topic: "general", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,8 +30,8 @@ export default function ContactClientPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-[#e5e5e5]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center shadow-lg shadow-[#1a4d2e]/20">
+          <Link href="/" className="flex items-center gap-3" aria-label="Route Commerce home">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center shadow-lg shadow-[#1a4d2e]/20" aria-hidden="true">
               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
@@ -57,8 +58,8 @@ export default function ContactClientPage() {
 
         {/* Contact info cards */}
         <div className="grid gap-6 md:grid-cols-3 mb-16">
-          <div className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0fdf4] mb-5 shadow-md">
+          <article className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0fdf4] mb-5 shadow-md" aria-hidden="true">
               <svg className="h-6 w-6 text-[#1a4d2e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
@@ -66,27 +67,27 @@ export default function ContactClientPage() {
             </div>
             <h3 className="text-lg font-bold text-[#0a0a0a] mb-3">Address</h3>
             <p className="text-[#666] leading-relaxed">Serving farms and trucking routes across the nation</p>
-          </div>
+          </article>
 
-          <div className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0fdf4] mb-5 shadow-md">
+          <article className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0fdf4] mb-5 shadow-md" aria-hidden="true">
               <svg className="h-6 w-6 text-[#1a4d2e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.184-.046-.379-.041-.545.114L18 10.48a2.25 2.25 0 00-.545-.114l-4.423 1.106c-.5.119-.852.575-.852 1.091v1.372a2.25 2.25 0 01-2.25 2.25h-2.25a15 15 0 01-15-15z" />
               </svg>
             </div>
             <h3 className="text-lg font-bold text-[#0a0a0a] mb-3">Phone</h3>
             <p className="text-[#666] leading-relaxed">support@routecommerce.com</p>
-          </div>
+          </article>
 
-          <div className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0fdf4] mb-5 shadow-md">
+          <article className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0fdf4] mb-5 shadow-md" aria-hidden="true">
               <svg className="h-6 w-6 text-[#1a4d2e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
               </svg>
             </div>
             <h3 className="text-lg font-bold text-[#0a0a0a] mb-3">Email</h3>
             <p className="text-[#666] leading-relaxed">hello@routecommerce.com</p>
-          </div>
+          </article>
         </div>
 
         {/* Contact form */}
@@ -96,12 +97,12 @@ export default function ContactClientPage() {
             <h2 className="text-3xl font-black text-[#0a0a0a] tracking-tight leading-tight">
               Get in Touch
             </h2>
-            <div className="mt-4 h-1 w-12 bg-[#1a4d2e]" />
+            <div className="mt-4 h-1 w-12 bg-[#1a4d2e]" aria-hidden="true" />
           </div>
 
           {submitted ? (
-            <div className="rounded-2xl bg-[#f0fdf4] border border-[#bbf7d0] p-10 text-center">
-              <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#dcfce7] mb-4 shadow-md">
+            <div className="rounded-2xl bg-[#f0fdf4] border border-[#bbf7d0] p-10 text-center" role="status" aria-live="polite">
+              <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#dcfce7] mb-4 shadow-md" aria-hidden="true">
                 <svg className="h-7 w-7 text-[#1a4d2e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
@@ -113,43 +114,67 @@ export default function ContactClientPage() {
                   setSubmitted(false);
                   setForm({ name: "", email: "", topic: "general", message: "" });
                 }}
-                className="mt-5 text-sm font-semibold text-[#1a4d2e] underline hover:text-[#2d6a4f]"
+                className="mt-5 text-sm font-semibold text-[#1a4d2e] underline hover:text-[#2d6a4f] transition-colors"
               >
                 Send another message
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" aria-label="Contact form">
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-[#333] mb-2">Your Name</label>
+                  <label htmlFor="contact-name" className="block text-sm font-semibold text-[#333] mb-2">
+                    Your Name
+                  </label>
                   <input
+                    id="contact-name"
+                    type="text"
                     required
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full rounded-xl border-2 border-[#e5e5e5] bg-white px-5 py-4 text-base text-[#1a1a1a] placeholder:text-[#999] outline-none focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10 transition-colors"
+                    onFocus={() => setFocusedField("name")}
+                    onBlur={() => setFocusedField(null)}
+                    className={`w-full rounded-xl border-2 px-5 py-4 text-base text-[#1a1a1a] placeholder:text-[#999] outline-none transition-colors ${
+                      focusedField === "name" ? "border-[#1a4d2e] ring-4 ring-[#1a4d2e]/10" : "border-[#e5e5e5] focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10"
+                    }`}
                     placeholder="Jane Smith"
+                    aria-required="true"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-[#333] mb-2">Email</label>
+                  <label htmlFor="contact-email" className="block text-sm font-semibold text-[#333] mb-2">
+                    Email
+                  </label>
                   <input
-                    required
+                    id="contact-email"
                     type="email"
+                    required
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full rounded-xl border-2 border-[#e5e5e5] bg-white px-5 py-4 text-base text-[#1a1a1a] placeholder:text-[#999] outline-none focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10 transition-colors"
+                    onFocus={() => setFocusedField("email")}
+                    onBlur={() => setFocusedField(null)}
+                    className={`w-full rounded-xl border-2 px-5 py-4 text-base text-[#1a1a1a] placeholder:text-[#999] outline-none transition-colors ${
+                      focusedField === "email" ? "border-[#1a4d2e] ring-4 ring-[#1a4d2e]/10" : "border-[#e5e5e5] focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10"
+                    }`}
                     placeholder="jane@example.com"
+                    aria-required="true"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#333] mb-2">Topic</label>
+                <label htmlFor="contact-topic" className="block text-sm font-semibold text-[#333] mb-2">
+                  Topic
+                </label>
                 <select
+                  id="contact-topic"
                   value={form.topic}
                   onChange={(e) => setForm({ ...form, topic: e.target.value })}
-                  className="w-full rounded-xl border-2 border-[#e5e5e5] bg-white px-5 py-4 text-base text-[#1a1a1a] outline-none focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10 transition-colors appearance-none"
+                  onFocus={() => setFocusedField("topic")}
+                  onBlur={() => setFocusedField(null)}
+                  className={`w-full rounded-xl border-2 px-5 py-4 text-base text-[#1a1a1a] outline-none transition-colors appearance-none cursor-pointer ${
+                    focusedField === "topic" ? "border-[#1a4d2e] ring-4 ring-[#1a4d2e]/10" : "border-[#e5e5e5] focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10"
+                  }`}
                 >
                   <option value="general">General Question</option>
                   <option value="orders">Orders & Pickup</option>
@@ -160,14 +185,22 @@ export default function ContactClientPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#333] mb-2">Message</label>
+                <label htmlFor="contact-message" className="block text-sm font-semibold text-[#333] mb-2">
+                  Message
+                </label>
                 <textarea
+                  id="contact-message"
                   required
                   rows={5}
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  className="w-full rounded-xl border-2 border-[#e5e5e5] bg-white px-5 py-4 text-base text-[#1a1a1a] placeholder:text-[#999] outline-none focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10 transition-colors resize-none"
+                  onFocus={() => setFocusedField("message")}
+                  onBlur={() => setFocusedField(null)}
+                  className={`w-full rounded-xl border-2 px-5 py-4 text-base text-[#1a1a1a] placeholder:text-[#999] outline-none transition-colors resize-none ${
+                    focusedField === "message" ? "border-[#1a4d2e] ring-4 ring-[#1a4d2e]/10" : "border-[#e5e5e5] focus:border-[#1a4d2e] focus:ring-4 focus:ring-[#1a4d2e]/10"
+                  }`}
                   placeholder="How can we help you?"
+                  aria-required="true"
                 />
               </div>
 
@@ -178,7 +211,7 @@ export default function ContactClientPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
@@ -187,7 +220,7 @@ export default function ContactClientPage() {
                 ) : (
                   <>
                     Send Message
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                   </>
@@ -198,13 +231,13 @@ export default function ContactClientPage() {
         </div>
 
         {/* Business hours */}
-        <div className="mt-10 rounded-3xl bg-white border border-[#e5e5e5] p-10 shadow-sm">
+        <section className="mt-10 rounded-3xl bg-white border border-[#e5e5e5] p-10 shadow-sm" aria-labelledby="hours-heading">
           <div className="mb-6">
             <p className="text-sm font-bold tracking-[0.15em] uppercase text-[#1a4d2e] mb-3">Availability</p>
-            <h2 className="text-2xl font-black text-[#0a0a0a] tracking-tight leading-tight">
+            <h2 id="hours-heading" className="text-2xl font-black text-[#0a0a0a] tracking-tight leading-tight">
               When to Reach Us
             </h2>
-            <div className="mt-4 h-1 w-12 bg-[#1a4d2e]" />
+            <div className="mt-4 h-1 w-12 bg-[#1a4d2e]" aria-hidden="true" />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center justify-between py-4 px-6 rounded-2xl bg-[#fafafa]">
@@ -219,7 +252,7 @@ export default function ContactClientPage() {
           <p className="mt-5 text-sm text-[#999] leading-relaxed">
             For urgent matters, please call our support line.
           </p>
-        </div>
+        </section>
       </main>
 
       {/* Footer */}
@@ -227,17 +260,17 @@ export default function ContactClientPage() {
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center" aria-hidden="true">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <span className="text-sm text-[#666]">2024 Route Commerce. All rights reserved.</span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-[#888]">
+            <nav className="flex items-center gap-6 text-sm text-[#888]" aria-label="Footer navigation">
               <Link href="/privacy-policy" className="hover:text-[#1a4d2e] transition-colors">Privacy</Link>
               <Link href="/terms-and-conditions" className="hover:text-[#1a4d2e] transition-colors">Terms</Link>
-            </div>
+            </nav>
           </div>
         </div>
       </footer>

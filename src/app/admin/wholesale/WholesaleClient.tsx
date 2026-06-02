@@ -95,8 +95,8 @@ export default function WholesaleClient({ brandId }: { brandId: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--admin-bg)] flex items-center justify-center">
-        <p className="text-[var(--admin-text-muted)]">Loading wholesale data...</p>
+      <div className="min-h-screen bg-[var(--admin-bg)]">
+        <WholesaleLoadingSkeleton />
       </div>
     );
   }
@@ -243,7 +243,15 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
       <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--admin-text-primary)] mb-4">Recent Orders</h2>
         {recentOrders.length === 0 ? (
-          <p className="text-sm text-[var(--admin-text-muted)] py-8 text-center">No wholesale orders yet.</p>
+          <div className="text-center py-12">
+            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+            </div>
+            <p className="text-base font-semibold text-slate-600 mb-1">No wholesale orders yet</p>
+            <p className="text-sm text-slate-400">Wholesale orders placed by your customers will appear here.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -702,7 +710,19 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
           </thead>
           <tbody className="divide-y divide-[var(--admin-border-light)]">
             {customers.length === 0 ? (
-              <tr><td colSpan={8} className="py-8 text-center text-[var(--admin-text-muted)]">No customers yet.</td></tr>
+              <tr>
+                <td colSpan={8} className="py-12 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-600 mb-1">No customers yet</p>
+                    <p className="text-xs text-slate-400">Wholesale customers will appear here once registered.</p>
+                  </div>
+                </td>
+              </tr>
             ) : customers.map(c => (
               <tr key={c.id} className="hover:bg-[var(--admin-bg-subtle)]">
                 <td className="px-5 py-3">
@@ -885,7 +905,7 @@ function CustomerPricingPanel({ customer, products, onClose, onMsg }: {
           {loading ? (
             <p className="text-[var(--admin-text-muted)] text-sm">Loading...</p>
           ) : products.length === 0 ? (
-            <p className="text-[var(--admin-text-muted)] text-sm">No products available.</p>
+            <p className="text-[var(--admin-text-muted)] text-sm">No products available. Add wholesale products to see them here.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -1218,7 +1238,19 @@ function ProductsTab({ products, brandId, onMsg, onRefresh }: {
           </thead>
           <tbody className="divide-y divide-[var(--admin-border-light)]">
             {products.length === 0 ? (
-              <tr><td colSpan={6} className="py-8 text-center text-[var(--admin-text-muted)]">No products yet.</td></tr>
+              <tr>
+                <td colSpan={6} className="py-12 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-600 mb-1">No wholesale products yet</p>
+                    <p className="text-xs text-slate-400">Add products to your wholesale catalog to get started.</p>
+                  </div>
+                </td>
+              </tr>
             ) : products.map(p => (
               <tr key={p.id} className="hover:bg-[var(--admin-bg-subtle)]">
                 <td className="px-5 py-3 font-medium text-[var(--admin-text-primary)]">{p.name}</td>
@@ -2280,6 +2312,54 @@ function AddRecipientForm({ onAdd }: { onAdd: (email: string, name: string) => v
 }
 
 // ── Shared Components ─────────────────────────────────────────────────────────
+
+// ── Loading Skeleton ──────────────────────────────────────────────────────────
+function WholesaleLoadingSkeleton() {
+  return (
+    <div className="space-y-6 px-6 py-6">
+      {/* Header skeleton */}
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-slate-200 animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-6 w-40 bg-slate-200 rounded animate-pulse" />
+          <div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+        </div>
+      </div>
+
+      {/* Tab bar skeleton */}
+      <div className="flex gap-2">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} className={`h-10 rounded-xl bg-slate-200 animate-pulse ${i === 1 ? "w-24" : "w-20"}`} />
+        ))}
+      </div>
+
+      {/* Stat cards skeleton */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-4 animate-pulse">
+            <div className="h-3 w-20 bg-slate-100 rounded mb-2" />
+            <div className="h-7 w-16 bg-slate-200 rounded" />
+          </div>
+        ))}
+      </div>
+
+      {/* Recent orders skeleton */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="h-5 w-28 bg-slate-200 rounded mb-4 animate-pulse" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0 animate-pulse">
+              <div className="h-4 w-20 bg-slate-100 rounded" />
+              <div className="h-4 w-32 bg-slate-100 rounded flex-1" />
+              <div className="h-4 w-24 bg-slate-100 rounded hidden md:block" />
+              <div className="h-5 w-12 bg-slate-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {

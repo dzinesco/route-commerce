@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { motion } from "framer-motion";
+
 export default function ErrorPage({
   error,
   reset,
@@ -8,20 +11,65 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   return (
-    <main className="min-h-screen bg-red-50 px-6 py-12">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-3xl font-bold text-red-900">Page Error</h1>
-        <p className="mt-4 text-red-700">{error.message}</p>
-        {error.digest && (
-          <p className="mt-2 text-sm text-red-500">Digest: {error.digest}</p>
-        )}
-        <button
-          onClick={reset}
-          className="mt-6 rounded-xl bg-red-600 px-4 py-2 text-white"
+    <main className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex items-center justify-center p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-lg w-full text-center relative"
+      >
+        {/* Decorative background */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/4" />
+        </div>
+
+        {/* Error icon */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          className="relative inline-flex h-24 w-24 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm mb-8"
         >
-          Try again
-        </button>
-      </div>
+          <svg className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        </motion.div>
+
+        {/* Error message */}
+        <h1 className="text-4xl font-black text-white mb-4">
+          Something went wrong
+        </h1>
+        <p className="text-blue-100 mb-8 leading-relaxed">
+          We encountered an unexpected error. Please try again or return to the homepage.
+        </p>
+
+        {/* Error details (development only) */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mb-8 rounded-2xl bg-white/10 border border-white/20 p-5 text-left backdrop-blur-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-200 mb-2">Error Details</p>
+            <p className="text-sm text-white/80 font-mono leading-relaxed break-all">
+              {error.message}
+            </p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="relative flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            onClick={reset}
+            className="rounded-2xl bg-white text-blue-700 hover:bg-blue-50 px-8 py-4 text-sm font-bold transition-all hover:shadow-xl hover:-translate-y-0.5 active:scale-95 shadow-lg"
+          >
+            Try Again
+          </button>
+          <Link
+            href="/indian-river-direct"
+            className="rounded-2xl bg-blue-700/50 backdrop-blur-sm border border-white/30 text-white hover:bg-blue-600/80 px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5 active:scale-95"
+          >
+            Back to Homepage
+          </Link>
+        </div>
+      </motion.div>
     </main>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { markPickupComplete } from "@/actions/pickup";
 import { formatDate } from "@/lib/format-date";
 import AdminBadge from "./design-system/AdminBadge";
-import { AdminButton, AdminSearchInput, AdminFilterTabs } from "./design-system";
+import { AdminButton, AdminSearchInput, AdminFilterTabs, AdminIconButton, useToast } from "./design-system";
+import { Skeleton } from "./design-system";
 
 type OrderItem = {
   id: string;
@@ -104,6 +105,12 @@ const Icons = {
       <line x1="12" y1="22" x2="12" y2="12"/>
     </svg>
   ),
+  selectAll: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <polyline points="9 11 12 14 22 4"/>
+    </svg>
+  ),
 };
 
 export default function AdminOrdersPanel({
@@ -111,6 +118,7 @@ export default function AdminOrdersPanel({
   initialStops,
   brandId,
 }: AdminOrdersPanelProps) {
+  const { success: showSuccess, error: showError } = useToast();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [stops] = useState<Stop[]>(initialStops);
   const [search, setSearch] = useState("");
@@ -119,8 +127,17 @@ export default function AdminOrdersPanel({
   const [showStopDropdown, setShowStopDropdown] = useState(false);
   const [pickingUp, setPickingUp] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [pickupToast, setPickupToast] = useState<string | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkMarkingUp, setBulkMarkingUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const PAGE_SIZE = 20;
+
+  // Simulate loading when orders change
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [page, activeTab, search, selectedStops.length]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
@@ -142,6 +159,27 @@ export default function AdminOrdersPanel({
   const pendingCount = orders.filter((o) => !o.pickup_complete).length;
   const pickedUpCount = orders.filter((o) => o.pickup_complete).length;
 
+  // Bulk selection
+  const toggleSelectAll = useCallback(() => {
+    if (selectedOrders.size === paginatedOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(paginatedOrders.map(o => o.id)));
+    }
+  }, [selectedOrders.size, paginatedOrders]);
+
+  const toggleOrderSelection = useCallback((orderId: string) => {
+    setSelectedOrders(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  }, []);
+
   function toggleStop(stopId: string) {
     setSelectedStops((prev) =>
       prev.includes(stopId) ? prev.filter((id) => id !== stopId) : [...prev, stopId]
@@ -158,8 +196,7 @@ export default function AdminOrdersPanel({
     setPickingUp(orderId);
     const result = await markPickupComplete(orderId, brandId);
     if (result.success) {
-      setPickupToast(orderId);
-      setTimeout(() => setPickupToast(null), 3000);
+      showSuccess("Pickup confirmed", `${result.pickup_completed_at ? 'Order marked as picked up' : 'Success'}`);
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId
@@ -167,8 +204,43 @@ export default function AdminOrdersPanel({
             : o
         )
       );
+    } else {
+      showError("Failed to mark pickup", result.error ?? "Please try again");
     }
     setPickingUp(null);
+  }
+
+  async function handleBulkMarkPickup() {
+    if (selectedOrders.size === 0) return;
+    
+    setBulkMarkingUp(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const orderId of selectedOrders) {
+      const result = await markPickupComplete(orderId, brandId);
+      if (result.success) {
+        successCount++;
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? { ...o, pickup_complete: true, pickup_completed_at: result.pickup_completed_at, pickup_completed_by: result.pickup_completed_by }
+              : o
+          )
+        );
+      } else {
+        failCount++;
+      }
+    }
+    
+    setBulkMarkingUp(false);
+    setSelectedOrders(new Set());
+    
+    if (failCount === 0) {
+      showSuccess(`${successCount} order${successCount !== 1 ? 's' : ''} marked as picked up`);
+    } else {
+      showError("Some orders failed", `${successCount} succeeded, ${failCount} failed`);
+    }
   }
 
   return (
@@ -195,15 +267,15 @@ export default function AdminOrdersPanel({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Total</p>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--admin-text-primary)] mt-1">{orders.length}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--admin-text-primary)] mt-1">{isLoading ? <Skeleton variant="text" className="w-16 h-8" /> : orders.length}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Pending</p>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-amber-600 mt-1">{isLoading ? <Skeleton variant="text" className="w-12 h-8" /> : pendingCount}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Picked Up</p>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--admin-accent)] mt-1">{pickedUpCount}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--admin-accent)] mt-1">{isLoading ? <Skeleton variant="text" className="w-12 h-8" /> : pickedUpCount}</p>
         </div>
       </div>
 
@@ -296,8 +368,47 @@ export default function AdminOrdersPanel({
         </div>
       )}
 
+      {/* Bulk actions bar */}
+      {selectedOrders.size > 0 && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-[var(--admin-accent)] bg-[var(--admin-accent-light)] px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-[var(--admin-accent-text)]">
+              {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => setSelectedOrders(new Set())}
+              className="text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"
+            >
+              Clear
+            </button>
+          </div>
+          <AdminButton
+            variant="primary"
+            size="sm"
+            onClick={handleBulkMarkPickup}
+            isLoading={bulkMarkingUp}
+            icon={Icons.check("h-4 w-4")}
+          >
+            Mark All as Picked Up
+          </AdminButton>
+        </div>
+      )}
+
       {/* Orders Table */}
-      {paginatedOrders.length === 0 ? (
+      {isLoading ? (
+        <div className="rounded-xl border border-[var(--admin-border)] bg-white p-6">
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton variant="rect" className="h-5 w-5 rounded" />
+                <Skeleton variant="text" className="flex-1" />
+                <Skeleton variant="text" className="w-24" />
+                <Skeleton variant="text" className="w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : paginatedOrders.length === 0 ? (
         <div className="text-center py-12 rounded-xl border border-[var(--admin-border)] bg-white">
           <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-stone-100 mb-4">
             {Icons.package("h-8 w-8 text-stone-400")}
@@ -310,6 +421,14 @@ export default function AdminOrdersPanel({
           <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-stone-50">
               <tr className="border-b border-[var(--admin-border)]">
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.size === paginatedOrders.length && paginatedOrders.length > 0}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-stone-300 text-[var(--admin-accent)] focus:ring-[var(--admin-accent)] cursor-pointer"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-semibold text-[var(--admin-text-muted)] text-xs">Order</th>
                 <th className="text-left px-4 py-3 font-semibold text-[var(--admin-text-muted)] text-xs">Customer</th>
                 <th className="text-left px-4 py-3 font-semibold text-[var(--admin-text-muted)] text-xs hidden md:table-cell">Stop</th>
@@ -322,6 +441,14 @@ export default function AdminOrdersPanel({
             <tbody className="divide-y divide-[var(--admin-border)]">
               {paginatedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-stone-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrders.has(order.id)}
+                      onChange={() => toggleOrderSelection(order.id)}
+                      className="h-4 w-4 rounded border-stone-300 text-[var(--admin-accent)] focus:ring-[var(--admin-accent)] cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/orders/${order.id}`} className="font-mono text-xs text-[var(--admin-accent)] hover:text-[var(--admin-accent-hover)]">
                       {shortId(order.id)}
@@ -357,6 +484,17 @@ export default function AdminOrdersPanel({
                       {order.payment_processor === "square" && (
                         <AdminBadge variant="info">Square</AdminBadge>
                       )}
+                      {!order.pickup_complete && (
+                        <AdminButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkPickup(order.id)}
+                          disabled={pickingUp === order.id}
+                          isLoading={pickingUp === order.id}
+                        >
+                          {pickingUp === order.id ? "..." : "Pick Up"}
+                        </AdminButton>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -373,33 +511,27 @@ export default function AdminOrdersPanel({
             Showing {(page * PAGE_SIZE) + 1} to {Math.min((page + 1) * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}
           </p>
           <div className="flex items-center gap-2">
-            <button
+            <AdminIconButton
+              variant="secondary"
+              size="sm"
+              label="Previous page"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--admin-border)] text-stone-500 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="!rounded-lg"
             >
               {Icons.chevronLeft("h-4 w-4")}
-            </button>
+            </AdminIconButton>
             <span className="px-3 text-sm font-medium text-stone-700">{page + 1} / {totalPages}</span>
-            <button
+            <AdminIconButton
+              variant="secondary"
+              size="sm"
+              label="Next page"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--admin-border)] text-stone-500 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="!rounded-lg"
             >
               {Icons.chevronRight("h-4 w-4")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Toast */}
-      {pickupToast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-[var(--admin-accent)] bg-[var(--admin-accent-light)] px-5 py-3 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--admin-accent)]">
-              {Icons.check("h-4 w-4 text-white")}
-            </div>
-            <span className="font-medium text-[var(--admin-accent-text)]">Pickup confirmed!</span>
+            </AdminIconButton>
           </div>
         </div>
       )}

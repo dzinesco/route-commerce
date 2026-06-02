@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getCommunicationTemplates, getTemplateById } from "@/actions/communications/templates";
@@ -5,11 +6,16 @@ import { getCommunicationCampaigns } from "@/actions/communications/campaigns";
 import { getHarvestReachSegments } from "@/actions/harvest-reach/segments";
 import CommunicationsPage from "@/components/admin/CommunicationsPage";
 
-export default async function TemplateEditPage({
-  params,
-}: {
+export const metadata: Metadata = {
+  title: "Edit Template - Harvest Reach",
+  description: "Edit an email template for your marketing campaigns.",
+};
+
+interface PageProps {
   params: Promise<{ id: string }>;
-}) {
+}
+
+export default async function TemplateEditPage({ params }: PageProps) {
   const adminUser = await getAdminUser();
   if (!adminUser || !adminUser.can_manage_messages) {
     redirect("/admin/pickup");

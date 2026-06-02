@@ -19,6 +19,8 @@ import {
   type TimeTrackingSettings,
   type NotificationLogEntry,
 } from "@/actions/time-tracking";
+import { AdminToggle } from "./design-system/AdminToggle";
+import { AdminInput, AdminTextInput, AdminSelect, AdminButton } from "./design-system";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -363,25 +365,25 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
               <div className="bg-stone-50 border border-stone-200 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-stone-800 mb-4">Alert Settings</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[var(--admin-border)]">
                     <div>
-                      <p className="text-sm text-stone-700 font-medium">Daily overtime alerts</p>
-                      <p className="text-xs text-stone-500">Notify when worker hits daily limit</p>
+                      <p className="text-sm text-[var(--admin-text-primary)] font-medium">Daily overtime alerts</p>
+                      <p className="text-xs text-[var(--admin-text-muted)]">Notify when worker hits daily limit</p>
                     </div>
-                    <button onClick={() => setEnableDailyAlerts(!enableDailyAlerts)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enableDailyAlerts ? "bg-emerald-600" : "bg-stone-300"}`}>
-                      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${enableDailyAlerts ? "translate-x-4" : "translate-x-1"}`} />
-                    </button>
+                    <AdminToggle
+                      checked={enableDailyAlerts}
+                      onChange={setEnableDailyAlerts}
+                    />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[var(--admin-border)]">
                     <div>
-                      <p className="text-sm text-stone-700 font-medium">Weekly overtime alerts</p>
-                      <p className="text-xs text-stone-500">Notify when worker hits weekly limit</p>
+                      <p className="text-sm text-[var(--admin-text-primary)] font-medium">Weekly overtime alerts</p>
+                      <p className="text-xs text-[var(--admin-text-muted)]">Notify when worker hits weekly limit</p>
                     </div>
-                    <button onClick={() => setEnableWeeklyAlerts(!enableWeeklyAlerts)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enableWeeklyAlerts ? "bg-emerald-600" : "bg-stone-300"}`}>
-                      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${enableWeeklyAlerts ? "translate-x-4" : "translate-x-1"}`} />
-                    </button>
+                    <AdminToggle
+                      checked={enableWeeklyAlerts}
+                      onChange={setEnableWeeklyAlerts}
+                    />
                   </div>
                 </div>
               </div>
@@ -440,15 +442,43 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
               </div>
 
               {settingsError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl py-3 px-4 text-red-700 text-sm">{settingsError}</div>
+                <div className="rounded-xl border border-[var(--admin-danger)]/30 bg-[var(--admin-danger)]/10 px-4 py-3 text-sm text-[var(--admin-danger)] flex items-center gap-3">
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  {settingsError}
+                </div>
               )}
               {settingsSaved && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-3 px-4 text-emerald-700 text-sm">Settings saved.</div>
+                <div className="rounded-xl border border-[var(--admin-success)]/30 bg-[var(--admin-success)]/10 px-4 py-3 text-sm text-[var(--admin-success)] flex items-center gap-3">
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Settings saved successfully!
+                </div>
               )}
-              <button onClick={handleSaveNotifications} disabled={settingsSaving}
-                className="px-6 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 font-semibold text-sm text-white transition-all">
-                {settingsSaving ? "Saving..." : "Save Settings"}
-              </button>
+              <div className="flex items-center gap-3">
+                <AdminButton
+                  variant="primary"
+                  size="md"
+                  onClick={handleSaveNotifications}
+                  disabled={settingsSaving}
+                >
+                  {settingsSaving ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      Saving...
+                    </span>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                      Save Settings
+                    </>
+                  )}
+                </AdminButton>
+              </div>
             </div>
           </Accordion>
         </>

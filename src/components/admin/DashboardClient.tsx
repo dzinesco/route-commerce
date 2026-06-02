@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import UpgradePlanModal from "@/components/admin/UpgradePlanModal";
 import { PageHeader, AdminButton, AdminFilterTabs, AdminBadge } from "@/components/admin/design-system";
@@ -179,6 +179,39 @@ type Props = {
   limits: { max_users: number; max_stops_monthly: number; max_products: number };
 };
 
+// Stats data type
+interface StatsData {
+  todayOrders: number;
+  todayRevenue: number;
+  pendingStops: number;
+  activeProducts: number;
+  weeklyOrders: number[];
+  recentOrders: Array<{
+    id: string;
+    customer_name: string;
+    total: number;
+    status: string;
+    created_at: string;
+  }>;
+}
+
+// Simulated stats for demo
+const getStatsData = async (brandId: string | null): Promise<StatsData> => {
+  // In production, fetch from API
+  return {
+    todayOrders: 12,
+    todayRevenue: 847.50,
+    pendingStops: 3,
+    activeProducts: 45,
+    weeklyOrders: [8, 15, 12, 22, 18, 25, 12],
+    recentOrders: [
+      { id: "ord-001", customer_name: "Fresh Market Co", total: 125.00, status: "pending", created_at: "2h ago" },
+      { id: "ord-002", customer_name: "Green Valley Grocery", total: 89.50, status: "processing", created_at: "4h ago" },
+      { id: "ord-003", customer_name: "Farm Fresh Direct", total: 234.00, status: "shipped", created_at: "6h ago" },
+    ],
+  };
+};
+
 export default function DashboardClient({
   brandId,
   brandName,
@@ -190,6 +223,23 @@ export default function DashboardClient({
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("operations");
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      setIsLoadingStats(true);
+      try {
+        const data = await getStatsData(brandId);
+        setStats(data);
+      } catch (err) {
+        console.error("Failed to load stats:", err);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+    loadStats();
+  }, [brandId]);
 
   const usagePct = {
     users: limits.max_users > 0 ? (usage.users / limits.max_users) * 100 : 0,
@@ -199,8 +249,34 @@ export default function DashboardClient({
 
   const tabSections = sections.filter((s) => s.group === activeTab);
 
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
+  // Get status badge color
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, { bg: string; text: string }> = {
+      pending: { bg: "var(--admin-warning-light)", text: "var(--admin-warning)" },
+      processing: { bg: "var(--admin-accent-light)", text: "var(--admin-accent-text)" },
+      shipped: { bg: "#dbeafe", text: "#1e40af" },
+    };
+    return styles[status] || { bg: "var(--admin-bg)", text: "var(--admin-text-secondary)" };
+  };
+
+  // Quick action buttons
+  const quickActions = [
+    { label: "New Order", href: "/admin/orders?new=true", icon: "plus" },
+    { label: "Add Stop", href: "/admin/stops/new", icon: "map" },
+    { label: "Add Product", href: "/admin/products/new", icon: "package" },
+    { label: "Send Blast", href: "/admin/communications/compose", icon: "mail" },
+  ];
+
   return (
-    <div className="min-h-screen bg-[var(--admin-bg)]">
+    <div className="min-h-screen" style={{ backgroundColor: "var(--admin-bg)" }}>
       {/* Page Header */}
       <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
         <PageHeader
@@ -216,7 +292,7 @@ export default function DashboardClient({
           subtitle={`${brandName} Control Center`}
           actions={
             <div className="flex items-center gap-4">
-              <a href="/admin/settings/billing" className="text-sm font-medium text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] transition-colors">
+              <a href="/admin/settings/billing" className="text-sm font-medium hover:underline" style={{ color: "var(--admin-text-muted)" }}>
                 Billing →
               </a>
               {planTier === "starter" && brandId && (
@@ -234,10 +310,254 @@ export default function DashboardClient({
       </div>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 -mt-4">
-        {/* Usage stats - compact bar */}
-        <div className="rounded-xl border border-[var(--admin-border)] bg-white p-4 mb-4">
-          <div className="flex items-center gap-4 mb-3">
+      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 -mt-4 space-y-6">
+        {/* Stats Cards Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Today's Orders */}
+          <div 
+            className="rounded-xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5"
+            style={{ 
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-border)"
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <div 
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ backgroundColor: "var(--admin-accent-light)" }}
+              >
+                <svg className="w-6 h-6" style={{ color: "var(--admin-accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM12.94 18.55l.276-.276a.75.75 0 011.06 0l.27.27a.75.75 0 010 1.06l-.27.27a.75.75 0 01-1.06 0l-.276-.276a.75.75 0 010-1.06z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--admin-text-muted)" }}>
+                  Today&apos;s Orders
+                </p>
+                <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--admin-text-primary)" }}>
+                  {isLoadingStats ? "—" : stats?.todayOrders ?? 0}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Today's Revenue */}
+          <div 
+            className="rounded-xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5"
+            style={{ 
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-border)"
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50">
+                <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--admin-text-muted)" }}>
+                  Today&apos;s Revenue
+                </p>
+                <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--admin-text-primary)" }}>
+                  {isLoadingStats ? "—" : formatCurrency(stats?.todayRevenue ?? 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Stops */}
+          <div 
+            className="rounded-xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5"
+            style={{ 
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-border)"
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--admin-text-muted)" }}>
+                  Pending Stops
+                </p>
+                <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--admin-text-primary)" }}>
+                  {isLoadingStats ? "—" : stats?.pendingStops ?? 0}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Products */}
+          <div 
+            className="rounded-xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5"
+            style={{ 
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-border)"
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50">
+                <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--admin-text-muted)" }}>
+                  Active Products
+                </p>
+                <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--admin-text-primary)" }}>
+                  {isLoadingStats ? "—" : stats?.activeProducts ?? 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions + Recent Orders Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Quick Actions */}
+          <div 
+            className="rounded-xl border p-5"
+            style={{ 
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-border)"
+            }}
+          >
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text-primary)" }}>
+              Quick Actions
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="flex items-center gap-2 p-3 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                  style={{ 
+                    borderColor: "var(--admin-border-light)",
+                    backgroundColor: "var(--admin-bg-subtle)"
+                  }}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: "var(--admin-accent-light)" }}>
+                    {action.icon === "plus" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                    )}
+                    {action.icon === "map" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                      </svg>
+                    )}
+                    {action.icon === "package" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                      </svg>
+                    )}
+                    {action.icon === "mail" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-3-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-sm font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                    {action.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Orders */}
+          <div 
+            className="lg:col-span-2 rounded-xl border overflow-hidden"
+            style={{ 
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-border)"
+            }}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--admin-border-light)" }}>
+              <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text-primary)" }}>
+                Recent Orders
+              </h3>
+              <Link 
+                href="/admin/orders" 
+                className="text-xs font-medium hover:underline"
+                style={{ color: "var(--admin-accent)" }}
+              >
+                View all →
+              </Link>
+            </div>
+            <div className="divide-y" style={{ borderColor: "var(--admin-border-light)" }}>
+              {stats?.recentOrders && stats.recentOrders.length > 0 ? (
+                stats.recentOrders.map((order) => {
+                  const badge = getStatusBadge(order.status);
+                  return (
+                    <div key={order.id} className="flex items-center justify-between px-5 py-4 hover:bg-stone-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: "var(--admin-bg)" }}>
+                          <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM12.94 18.55l.276-.276a.75.75 0 011.06 0l.27.27a.75.75 0 010 1.06l-.27.27a.75.75 0 01-1.06 0l-.276-.276a.75.75 0 010-1.06z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>
+                            {order.customer_name}
+                          </p>
+                          <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                            {order.created_at}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-semibold" style={{ color: "var(--admin-text-primary)" }}>
+                          {formatCurrency(order.total)}
+                        </span>
+                        <span 
+                          className="px-2.5 py-1 rounded-full text-xs font-medium capitalize"
+                          style={{ backgroundColor: badge.bg, color: badge.text }}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-5 py-12 text-center">
+                  <svg className="w-12 h-12 mx-auto mb-3" style={{ color: "var(--admin-text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  <p className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
+                    No recent orders
+                  </p>
+                  <Link 
+                    href="/admin/orders/new" 
+                    className="inline-block mt-3 text-xs font-medium hover:underline"
+                    style={{ color: "var(--admin-accent)" }}
+                  >
+                    Create your first order →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Usage stats bar */}
+        <div 
+          className="rounded-xl border p-5"
+          style={{ 
+            backgroundColor: "var(--admin-card-bg)",
+            borderColor: "var(--admin-border)"
+          }}
+        >
+          <div className="flex items-center gap-4 mb-4">
             <AdminBadge variant={
               planTier === "enterprise" ? "warning" :
               planTier === "farm" ? "success" :
@@ -245,33 +565,59 @@ export default function DashboardClient({
             }>
               {planTier.charAt(0).toUpperCase() + planTier.slice(1)} Plan
             </AdminBadge>
-            <span className="text-xs text-stone-500">{brandId ? "Tuxedo Corn" : "All Brands"}</span>
+            <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+              {brandId ? brandName : "All Brands"}
+            </span>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
             {[
-              { label: "Users", value: `${usage.users}/${limits.max_users}`, pct: usagePct.users },
-              { label: "Stops", value: `${usage.stops_this_month}/${limits.max_stops_monthly}`, pct: usagePct.stops },
-              { label: "Products", value: `${usage.products}/${limits.max_products}`, pct: usagePct.products },
+              { label: "Users", value: `${usage.users}/${limits.max_users}`, pct: usagePct.users, icon: "users" },
+              { label: "Stops", value: `${usage.stops_this_month}/${limits.max_stops_monthly}`, pct: usagePct.stops, icon: "map" },
+              { label: "Products", value: `${usage.products}/${limits.max_products}`, pct: usagePct.products, icon: "package" },
             ].map(({ label, value, pct }) => (
               <div key={label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium text-stone-600">{label}</span>
-                  <span className="text-xs font-semibold text-stone-900">{value}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {label === "Users" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                    )}
+                    {label === "Stops" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                      </svg>
+                    )}
+                    {label === "Products" && (
+                      <svg className="w-4 h-4" style={{ color: "var(--admin-text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                      </svg>
+                    )}
+                    <span className="text-sm font-medium" style={{ color: "var(--admin-text-secondary)" }}>{label}</span>
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: "var(--admin-text-primary)" }}>{value}</span>
                 </div>
-                <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--admin-bg)" }}>
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      pct > 90 ? "bg-red-500" : pct > 75 ? "bg-amber-500" : "bg-[var(--admin-accent)]"
-                    }`}
-                    style={{ width: `${Math.min(pct, 100)}%` }}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{ 
+                      width: `${Math.min(pct, 100)}%`,
+                      backgroundColor: pct > 90 ? "var(--admin-danger)" : pct > 75 ? "#f59e0b" : "var(--admin-accent)"
+                    }}
                   />
                 </div>
+                {pct > 85 && (
+                  <p className="text-xs mt-1.5" style={{ color: "var(--admin-danger)" }}>
+                    Near limit - consider upgrading
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Tab navigation using AdminFilterTabs */}
+        {/* Tab navigation */}
         <AdminFilterTabs
           activeTab={activeTab}
           onTabChange={(value) => setActiveTab(value as Tab)}
@@ -282,11 +628,10 @@ export default function DashboardClient({
           }))}
           size="md"
           showCounts={false}
-          className="mb-4"
         />
 
         {/* Section Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {tabSections.map((section) => {
             if (section.title === "Water Log" && !isWaterLogVisible) return null;
             if (section.title === "Route Trace" && !enabledAddons["route_trace"]) return null;
@@ -300,25 +645,49 @@ export default function DashboardClient({
                 key={section.title}
                 href={section.href}
                 className={[
-                  "group relative flex flex-col rounded-2xl border bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
+                  "group relative flex flex-col rounded-xl border p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
                   isAddon && !isEnabled
                     ? "border-stone-200 shadow-sm opacity-75 hover:opacity-100"
                     : isProminent
                     ? "border-[var(--admin-accent)]/20 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
                     : "border-stone-200 shadow-sm",
                 ].join(" ")}
+                style={{ backgroundColor: "var(--admin-card-bg)" }}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${
                     isAddon && !isEnabled
                       ? "bg-stone-100 text-stone-400"
                       : isProminent
                       ? "bg-emerald-50 text-emerald-600"
                       : "bg-stone-100 text-stone-600"
                   }`}>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
+                    {section.title === "Orders" && (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM12.94 18.55l.276-.276a.75.75 0 011.06 0l.27.27a.75.75 0 010 1.06l-.27.27a.75.75 0 01-1.06 0l-.276-.276a.75.75 0 010-1.06z" />
+                      </svg>
+                    )}
+                    {section.title === "Products" && (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                      </svg>
+                    )}
+                    {section.title === "Tours & Stops" && (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                      </svg>
+                    )}
+                    {section.title === "Driver Pickup" && (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                      </svg>
+                    )}
+                    {!["Orders", "Products", "Tours & Stops", "Driver Pickup"].includes(section.title) && (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    )}
                   </div>
                   {isAddon && !isEnabled && (
                     <AdminBadge variant="warning">
@@ -337,7 +706,7 @@ export default function DashboardClient({
                   )}
                 </div>
 
-                <h3 className="text-sm font-semibold leading-tight text-stone-950">
+                <h3 className="text-sm font-semibold leading-tight" style={{ color: "var(--admin-text-primary)" }}>
                   {section.title}
                 </h3>
 
@@ -348,8 +717,18 @@ export default function DashboardClient({
                 </p>
 
                 {isAddon && !isEnabled && section.upgradeText && (
-                  <p className="mt-3 text-xs text-amber-700 font-medium">{section.upgradeText}</p>
+                  <p className="mt-3 text-xs font-medium" style={{ color: "var(--admin-warning)" }}>
+                    {section.upgradeText}
+                  </p>
                 )}
+                
+                {/* Arrow indicator */}
+                <div className="mt-4 flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--admin-accent)" }}>
+                  Open section
+                  <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                </div>
               </Link>
             );
           })}

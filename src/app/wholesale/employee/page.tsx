@@ -134,27 +134,23 @@ export default function EmployeePortalPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <p className="text-slate-500">Loading pickup queue...</p>
-      </div>
-    );
+    return <EmployeePortalSkeleton />;
   }
 
   return (
     <div className="min-h-screen bg-slate-100">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="mx-auto max-w-5xl flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Pickup Portal</h1>
-            <p className="mt-0.5 text-sm text-slate-500">{brandName}</p>
+      <div className="bg-white border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto max-w-5xl flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">Pickup Portal</h1>
+            <p className="mt-0.5 text-xs sm:text-sm text-slate-500 truncate">{brandName}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-500">{employeeName}</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs sm:text-sm text-slate-500 hidden sm:inline">{employeeName}</span>
             <button
               onClick={handleSignOut}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-h-[40px]"
             >
               Sign Out
             </button>
@@ -163,9 +159,9 @@ export default function EmployeePortalPage() {
       </div>
 
       {/* Queue tabs */}
-      <div className="bg-white border-b border-slate-200 px-6">
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
         <div className="mx-auto max-w-5xl">
-          <nav className="flex gap-1 -mb-px">
+          <nav className="flex gap-1 -mb-px overflow-x-auto">
             {(["past_due", "today", "upcoming"] as Queue[]).map((tab) => {
               const data = tabData[tab];
               const isActive = activeTab === tab;
@@ -206,13 +202,16 @@ export default function EmployeePortalPage() {
         )}
 
         {currentTab.orders.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-200">
-            <p className="text-slate-400 text-sm">
-              {activeTab === "past_due" ? "No past due orders." :
-               activeTab === "today" ? "No pickups scheduled for today." :
-               "No upcoming pickups."}
-            </p>
-          </div>
+          <EmptyQueueState
+            label={currentTab.label === "Past Due" ? "No past due orders" :
+                   currentTab.label === "Today" ? "No pickups scheduled today" :
+                   "No upcoming pickups"}
+            description={currentTab.label === "Past Due" ?
+              "All orders are on schedule. Great work!" :
+              currentTab.label === "Today" ?
+              "There are no wholesale orders scheduled for pickup today." :
+              "You have no upcoming pickups scheduled."}
+          />
         ) : (
           <div className="space-y-3">
             {currentTab.orders.map((order) => (
@@ -299,6 +298,64 @@ export default function EmployeePortalPage() {
   );
 }
 
+// ── Loading Skeleton ──────────────────────────────────────────────────────────
+function EmployeePortalSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <div className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="mx-auto max-w-5xl flex items-center justify-between">
+          <div className="space-y-2 animate-pulse">
+            <div className="h-7 w-40 bg-slate-200 rounded" />
+            <div className="h-4 w-32 bg-slate-100 rounded" />
+          </div>
+          <div className="h-10 w-24 bg-slate-200 rounded-xl" />
+        </div>
+      </div>
+      <div className="bg-white border-b border-slate-200 px-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="flex gap-1 -mb-px py-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-9 w-20 bg-slate-200 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mx-auto max-w-5xl px-6 py-6 space-y-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 animate-pulse">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2 flex-1">
+                <div className="h-5 w-40 bg-slate-200 rounded" />
+                <div className="h-4 w-56 bg-slate-100 rounded" />
+                <div className="h-3 w-32 bg-slate-100 rounded" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-9 w-16 bg-slate-200 rounded-xl" />
+                <div className="h-9 w-16 bg-slate-200 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Empty State ──────────────────────────────────────────────────────────────
+function EmptyQueueState({ label, description }: { label: string; description: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-200">
+      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+      </div>
+      <p className="text-lg font-semibold text-slate-700 mb-2">{label}</p>
+      <p className="text-sm text-slate-500 max-w-xs mx-auto">{description}</p>
+    </div>
+  );
+}
+
 // ── Order Card ────────────────────────────────────────────────────────────────
 
 function OrderCard({
@@ -325,23 +382,23 @@ function OrderCard({
   const hasPhone = Boolean(order.customer_phone);
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
+    <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden hover:ring-slate-300 transition-shadow">
       {/* Card header */}
-      <div className="px-5 py-4 flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
+      <div className="px-4 py-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex-1 min-w-0 w-full">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-slate-900">{order.company_name}</span>
+            <span className="font-semibold text-slate-900 text-sm sm:text-base">{order.company_name}</span>
             <StatusBadge status={order.status} />
             <span className={`text-xs font-medium ${order.payment_status === "paid" ? "text-green-600" : "text-orange-600"}`}>
               {order.payment_status === "paid" ? "Paid" : `$${Number(order.balance_due).toFixed(2)} due`}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {order.contact_name ?? ""} ·{" "}
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            {order.contact_name ?? ""}
             {hasPhone ? (
-              <a href={`tel:${order.customer_phone}`} className="hover:underline">{order.customer_phone}</a>
+              <> · <a href={`tel:${order.customer_phone}`} className="hover:underline">{order.customer_phone}</a></>
             ) : (
-              <a href={`mailto:${order.customer_email}`} className="hover:underline">{order.customer_email}</a>
+              <> · <a href={`mailto:${order.customer_email}`} className="hover:underline">{order.customer_email}</a></>
             )}
           </p>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -350,7 +407,7 @@ function OrderCard({
         </div>
 
         {/* Inline action buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
           {order.fulfillment_status !== "fulfilled" && (
             <button
               onClick={() => !fulfilling && onFulfill(order.id)}
@@ -418,7 +475,7 @@ function OrderCard({
 
       {/* Line items summary */}
       {order.items && order.items.length > 0 && (
-        <div className="px-5 pb-4">
+        <div className="px-4 pb-4 sm:px-5 sm:pb-4">
           <div className="rounded-xl bg-slate-50 border border-slate-100 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-500">
@@ -431,9 +488,9 @@ function OrderCard({
               <tbody className="divide-y divide-slate-100">
                 {order.items.map((item, i) => (
                   <tr key={i}>
-                    <td className="px-4 py-2 text-slate-700">{item.product_name}</td>
-                    <td className="px-4 py-2 text-right text-slate-600">{item.quantity}</td>
-                    <td className="px-4 py-2 text-right font-medium text-slate-900">${Number(item.line_total).toFixed(2)}</td>
+                    <td className="px-4 py-2 text-slate-700 text-xs">{item.product_name}</td>
+                    <td className="px-4 py-2 text-right text-slate-600 text-xs">{item.quantity}</td>
+                    <td className="px-4 py-2 text-right font-medium text-slate-900 text-xs">${Number(item.line_total).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>

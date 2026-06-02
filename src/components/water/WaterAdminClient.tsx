@@ -123,6 +123,61 @@ const LABELS = {
   },
 };
 
+function SummarySkeleton() {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white p-4 animate-pulse">
+      <div className="flex items-center justify-between mb-3">
+        <div className="h-5 w-32 bg-stone-200 rounded" />
+        <div className="h-4 w-16 bg-stone-100 rounded" />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="space-y-1">
+            <div className="h-3 w-20 bg-stone-100 rounded" />
+            <div className="h-6 w-16 bg-stone-200 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TableSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white overflow-hidden animate-pulse">
+      <div className="h-12 bg-stone-50 border-b border-stone-100" />
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-stone-50 last:border-0">
+          <div className="h-4 w-32 bg-stone-100 rounded" />
+          <div className="h-4 w-20 bg-stone-100 rounded" />
+          <div className="h-4 w-16 bg-stone-100 rounded ml-auto" />
+          <div className="h-4 w-12 bg-stone-100 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CardsSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white p-4 animate-pulse">
+      <div className="flex items-center justify-between mb-3">
+        <div className="h-4 w-24 bg-stone-200 rounded" />
+        <div className="h-8 w-8 bg-stone-100 rounded-lg" />
+      </div>
+      <div className="flex gap-2 overflow-hidden">
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="rounded-lg border border-stone-100 p-3 w-36 shrink-0">
+            <div className="h-4 w-20 bg-stone-100 rounded mb-2" />
+            <div className="h-6 w-16 bg-stone-100 rounded mb-1" />
+            <div className="h-3 w-12 bg-stone-100 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
@@ -247,6 +302,9 @@ export default function WaterAdminClient() {
 
   const t = LABELS[lang];
 
+  // Initial loading state
+  const [initialLoading, setInitialLoading] = useState(true);
+
   useEffect(() => {
     const savedLang = document.cookie.match(/wl_lang=(en|es)/)?.[1] as "en" | "es" | undefined;
     if (savedLang) setLang(savedLang);
@@ -266,6 +324,7 @@ export default function WaterAdminClient() {
     setHeadgates(headgatesData);
     setAlertLog(alertsData as AlertLogEntry[]);
     setLoading(false);
+    setInitialLoading(false);
   };
 
   const loadDisplaySummary = useCallback(async () => {
@@ -373,8 +432,10 @@ export default function WaterAdminClient() {
               {t.refreshIn}: {refreshCountdown}s
             </span>
           </div>
-          {displayLoading ? (
-            <div className="rounded-xl bg-white p-4 text-sm text-stone-400">Loading...</div>
+          {initialLoading ? (
+            <CardsSkeleton count={3} />
+          ) : displayLoading ? (
+            <CardsSkeleton count={3} />
           ) : displaySummary ? (
             <div className="space-y-3">
               <div>
@@ -471,8 +532,8 @@ export default function WaterAdminClient() {
 
           {showHeadgates && (
             <div className="space-y-1">
-              {loading ? (
-                <p className="text-sm text-stone-400 py-2">Loading...</p>
+              {initialLoading ? (
+                <TableSkeleton rows={3} />
               ) : headgates.length === 0 ? (
                 <p className="text-sm text-stone-400 py-2">{t.noHeadgates}</p>
               ) : (
@@ -571,8 +632,8 @@ export default function WaterAdminClient() {
 
           {showUsers && (
             <div className="space-y-1">
-              {loading ? (
-                <p className="text-sm text-stone-400 py-2">Loading...</p>
+              {initialLoading ? (
+                <TableSkeleton rows={3} />
               ) : users.length === 0 ? (
                 <p className="text-sm text-stone-400 py-2">No users</p>
               ) : (
@@ -666,8 +727,16 @@ export default function WaterAdminClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {loading ? (
-                      <tr><td colSpan={5} className="py-4 text-center text-stone-400">Loading...</td></tr>
+                    {initialLoading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <tr key={i}>
+                          <td className="py-3"><div className="h-3 w-20 bg-stone-100 rounded animate-pulse" /></td>
+                          <td className="py-3"><div className="h-3 w-16 bg-stone-100 rounded animate-pulse hidden sm:table-cell" /></td>
+                          <td className="py-3"><div className="h-3 w-14 bg-stone-100 rounded animate-pulse" /></td>
+                          <td className="py-3"><div className="h-3 w-10 bg-stone-100 rounded animate-pulse ml-auto" /></td>
+                          <td className="py-3"><div className="h-5 w-8 bg-stone-100 rounded animate-pulse ml-auto" /></td>
+                        </tr>
+                      ))
                     ) : filteredEntries.length === 0 ? (
                       <tr><td colSpan={5} className="py-4 text-center text-stone-400">{allEntries.length === 0 ? t.noEntries : "No matches"}</td></tr>
                     ) : (

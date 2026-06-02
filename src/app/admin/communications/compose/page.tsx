@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getCommunicationCampaigns } from "@/actions/communications/campaigns";
 import { getCommunicationTemplates } from "@/actions/communications/templates";
 import { getHarvestReachSegments } from "@/actions/harvest-reach/segments";
 import CommunicationsPage from "@/components/admin/CommunicationsPage";
+
+export const metadata: Metadata = {
+  title: "Compose Campaign - Harvest Reach",
+  description: "Create and send email campaigns to your customers.",
+};
 
 export default async function ComposePage() {
   const adminUser = await getAdminUser();

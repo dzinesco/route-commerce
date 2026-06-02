@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getCommunicationCampaigns } from "@/actions/communications/campaigns";
@@ -5,6 +6,11 @@ import { getCommunicationTemplates } from "@/actions/communications/templates";
 import { getHarvestReachSegments } from "@/actions/harvest-reach/segments";
 import { getCampaignAnalytics } from "@/actions/harvest-reach/campaigns";
 import CommunicationsPage from "@/components/admin/CommunicationsPage";
+
+export const metadata: Metadata = {
+  title: "Harvest Reach - Communications Hub",
+  description: "Manage email campaigns, templates, contacts, and marketing automation for your brand.",
+};
 
 export default async function CommunicationsRootPage() {
   const adminUser = await getAdminUser();

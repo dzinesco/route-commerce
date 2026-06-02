@@ -8,7 +8,7 @@ import { updateProduct } from "@/actions/products/update-product";
 import { deleteProduct } from "@/actions/products";
 import { uploadProductImage } from "@/actions/products/upload-image";
 import GlassModal from "@/components/admin/GlassModal";
-import { PageHeader, AdminButton, AdminIconButton, AdminSearchInput, AdminFilterTabs, AdminViewModeTabs } from "@/components/admin/design-system";
+import { PageHeader, AdminButton, AdminIconButton, AdminSearchInput, AdminFilterTabs, AdminViewModeTabs, useToast, Skeleton } from "@/components/admin/design-system";
 
 type Product = {
   id: string;
@@ -76,6 +76,7 @@ const PackageIconHeader = () => (
 
 export default function ProductsClient({ products, brandId }: { products: Product[]; brandId?: string }) {
   const router = useRouter();
+  const { success: showSuccess, error: showError } = useToast();
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -95,6 +96,7 @@ export default function ProductsClient({ products, brandId }: { products: Produc
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Image upload states
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -225,11 +227,20 @@ export default function ProductsClient({ products, brandId }: { products: Produc
     e.preventDefault();
     setError(null);
     setSaving(true);
+    setIsLoading(true);
 
     const price = parseFloat(formData.price);
     if (isNaN(price) || price < 0) {
       setError("Please enter a valid price");
       setSaving(false);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      setError("Product name is required");
+      setSaving(false);
+      setIsLoading(false);
       return;
     }
 
@@ -237,6 +248,7 @@ export default function ProductsClient({ products, brandId }: { products: Produc
       if (!brandId) {
         setError("Brand ID is required");
         setSaving(false);
+        setIsLoading(false);
         return;
       }
 
@@ -267,15 +279,21 @@ export default function ProductsClient({ products, brandId }: { products: Produc
 
       if (!result.success) {
         setError(result.error ?? "Failed to save product");
+        showError("Failed to save product", result.error ?? "Please try again");
         setSaving(false);
+        setIsLoading(false);
         return;
       }
 
+      showSuccess(editingProduct ? "Product updated" : "Product created", `${formData.name} has been saved`);
       closeModal();
+      setIsLoading(false);
       startTransition(() => router.refresh());
     } catch {
       setError("Network error. Please try again.");
+      showError("Network error", "Please check your connection and try again");
       setSaving(false);
+      setIsLoading(false);
     }
   };
 
@@ -285,7 +303,10 @@ export default function ProductsClient({ products, brandId }: { products: Produc
     setDeletingId(null);
     if (result.success) {
       setDeleteConfirm(null);
+      showSuccess("Product deleted", "The product has been removed");
       startTransition(() => router.refresh());
+    } else {
+      showError("Failed to delete product", result.error ?? "Please try again");
     }
   };
 
@@ -317,15 +338,15 @@ export default function ProductsClient({ products, brandId }: { products: Produc
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Total</p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-text-primary)] mt-1">{products.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-text-primary)] mt-1">{isLoading ? <Skeleton variant="text" className="w-12 h-6" /> : products.length}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Active</p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-accent)] mt-1">{activeCount}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-accent)] mt-1">{isLoading ? <Skeleton variant="text" className="w-10 h-6" /> : activeCount}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Inactive</p>
-          <p className="text-xl sm:text-2xl font-bold text-stone-400 mt-1">{inactiveCount}</p>
+          <p className="text-xl sm:text-2xl font-bold text-stone-400 mt-1">{isLoading ? <Skeleton variant="text" className="w-8 h-6" /> : inactiveCount}</p>
         </div>
       </div>
 
@@ -387,19 +408,28 @@ export default function ProductsClient({ products, brandId }: { products: Produc
         >
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 flex items-start gap-3">
+                <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">Name</label>
+              <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                Name <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Product name"
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] transition-colors ${
+                  error && !formData.name.trim()
+                    ? "border-red-400 bg-red-50"
+                    : "border-[var(--admin-border)] bg-white focus:border-[var(--admin-accent)]"
+                }`}
                 required
               />
             </div>
@@ -417,7 +447,9 @@ export default function ProductsClient({ products, brandId }: { products: Produc
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1.5">Price</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                  Price <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
                   <input
@@ -427,7 +459,11 @@ export default function ProductsClient({ products, brandId }: { products: Produc
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-[var(--admin-border)] bg-white pl-8 pr-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
+                    className={`w-full rounded-xl border pl-8 pr-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 ${
+                      error && (!formData.price || parseFloat(formData.price) < 0)
+                        ? "border-red-400 bg-red-50"
+                        : "border-[var(--admin-border)] bg-white focus:border-[var(--admin-accent)]"
+                    }`}
                     required
                   />
                 </div>
