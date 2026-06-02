@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -15,25 +15,10 @@ function LoginForm() {
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const { clientX, clientY } = e;
-      const innerWidth = window.innerWidth;
-      const innerHeight = window.innerHeight;
-      const x = (clientX / innerWidth - 0.5) * 2;
-      const y = (clientY / innerHeight - 0.5) * 2;
-      setMousePos({ x: clientX, y: clientY });
-      setTilt({ x: y * 8, y: -x * 8 });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    setMounted(true);
   }, []);
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
@@ -81,273 +66,276 @@ function LoginForm() {
   }, [forgotEmail]);
 
   return (
-    <main ref={containerRef} className="min-h-screen flex items-center justify-center px-6 py-12 relative overflow-hidden" role="main">
-      {/* Animated gradient mesh background */}
-      <div 
-        className="fixed inset-0 transition-transform duration-1000 ease-out"
-        style={{
-          background: `
-            radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(250, 204, 21, 0.12) 0%, transparent 50%),
-            radial-gradient(circle at 40% 40%, rgba(22, 163, 74, 0.08) 0%, transparent 40%),
-            linear-gradient(135deg, #fafaf9 0%, #f5f5f4 50%, #fefce8 100%)
-          `,
-          transform: `perspective(1000px) rotateX(${tilt.x * 0.1}deg) rotateY(${tilt.y * 0.1}deg)`
-        }}
-        aria-hidden="true"
-      />
-      
-      {/* Floating orbs with parallax */}
-      <div 
-        className="fixed w-96 h-96 rounded-full transition-transform duration-500 ease-out pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(34, 197, 94, 0.2) 0%, transparent 70%)',
-          top: `${10 + tilt.y * 0.5}%`,
-          left: `${10 + tilt.x * 0.3}%`,
-          transform: `translate(${mousePos.x * 0.02}px, ${mousePos.y * 0.02}px) scale(1.2)`,
-          filter: 'blur(60px)'
-        }}
-        aria-hidden="true"
-      />
-      <div 
-        className="fixed w-[500px] h-[500px] rounded-full transition-transform duration-700 ease-out pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(250, 204, 21, 0.15) 0%, transparent 70%)',
-          bottom: `${5 - tilt.y * 0.3}%`,
-          right: `${5 - tilt.x * 0.2}%`,
-          transform: `translate(${-mousePos.x * 0.03}px, ${-mousePos.y * 0.03}px)`,
-          filter: 'blur(80px)'
-        }}
-        aria-hidden="true"
-      />
-      <div 
-        className="fixed w-64 h-64 rounded-full transition-transform duration-500 ease-out pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(22, 163, 74, 0.1) 0%, transparent 70%)',
-          top: '50%',
-          left: '50%',
-          transform: `translate(${mousePos.x * 0.015}px, ${mousePos.y * 0.015}px)`,
-          filter: 'blur(50px)'
-        }}
-        aria-hidden="true"
-      />
+    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5" }}>
+      {/* Google Fonts */}
+      <style jsx global>{`
+        @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+      `}</style>
 
-      {/* 3D Card Container */}
-      <div 
-        className="w-full max-w-sm relative z-10"
-        style={{
-          transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-          transition: 'transform 0.1s ease-out'
-        }}
-      >
-        {/* Glow effect behind card */}
-        <div 
-          className="absolute -inset-4 rounded-[2rem] opacity-50 pointer-events-none"
-          style={{
-            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(250, 204, 21, 0.2), rgba(34, 197, 94, 0.3))',
-            filter: 'blur(30px)',
-            transform: 'translateZ(-50px)'
-          }}
-          aria-hidden="true"
-        />
-        
-        {/* Main card with glassmorphism */}
-        <div className="relative bg-white/70 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-white/50 overflow-hidden">
-          {/* Top gradient border */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-amber-400" aria-hidden="true" />
-          
-          <div className="p-8">
-            {/* Logo */}
-            <div className="text-center mb-10">
-              <div 
-                className="inline-flex h-20 w-20 items-center justify-center rounded-3xl mb-6"
-                style={{
-                  background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
-                  boxShadow: '0 20px 40px rgba(34, 197, 94, 0.3), 0 8px 16px rgba(34, 197, 94, 0.2), inset 0 -2px 8px rgba(0,0,0,0.1)',
-                  transform: `translateZ(20px) rotate(${tilt.y * 0.3}deg)`,
-                  transition: 'transform 0.3s ease-out'
-                }}
-                aria-hidden="true"
-              >
-                <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                </svg>
-              </div>
-              <h1 className="text-3xl font-bold text-stone-900 tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                Welcome back
-              </h1>
-              <p className="mt-2 text-stone-500">Sign in to continue</p>
+      {/* Organic background elements */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-20" style={{ background: "radial-gradient(circle at 30% 30%, #c97a3e20 0%, transparent 70%)", filter: "blur(40px)" }} />
+        <div className="absolute -bottom-48 -left-48 w-[600px] h-[600px] rounded-full opacity-15" style={{ background: "radial-gradient(circle at 70% 70%, #6b8f7130 0%, transparent 70%)", filter: "blur(60px)" }} />
+        <div className="absolute top-1/3 left-1/4 w-72 h-72 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #1a4d2e15 0%, transparent 70%)", filter: "blur(30px)" }} />
+      </div>
+
+      {/* Header */}
+      <header className="w-full py-6 px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group" style={{ textDecoration: "none" }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ backgroundColor: "#1a4d2e" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
+            <span className="text-xl font-semibold tracking-tight" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: "#1a1a1a" }}>
+              Route Commerce
+            </span>
+          </Link>
+          <Link href="/" className="text-sm font-medium transition-opacity hover:opacity-60" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}>
+            Back to home
+          </Link>
+        </div>
+      </header>
 
-            <form onSubmit={handleSubmit} className="space-y-5" aria-label="Sign in form">
-              {globalError && (
-                <div 
-                  role="alert" 
-                  className="rounded-2xl bg-red-50/80 backdrop-blur-sm p-4 text-sm text-red-600 border border-red-100 shadow-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {globalError}
+      {/* Login Card */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
+        <div className={`w-full max-w-sm transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+          {/* Card */}
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl ring-1 ring-black/5 overflow-hidden">
+            {/* Subtle top accent */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#6b8f71]/30 to-transparent" />
+
+            <div className="p-8 sm:p-10">
+              {/* Logo & Title */}
+              <div className="text-center mb-8">
+                <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-5" style={{ background: "linear-gradient(135deg, #1a4d2e 0%, #2d6a45 100%)", boxShadow: "0 12px 32px rgba(26, 77, 46, 0.25)" }}>
+                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                </div>
+                <h1 className="text-3xl font-semibold text-stone-900" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: "-0.02em" }}>
+                  Welcome back
+                </h1>
+                <p className="mt-2 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
+                  Sign in to your account
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5" aria-label="Sign in form">
+                {globalError && (
+                  <div role="alert" className="rounded-2xl bg-red-50/80 p-4 text-sm text-red-600 border border-red-100/50">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {globalError}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-stone-700" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="username"
+                    disabled={loading}
+                    className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                    placeholder="you@company.com"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-stone-700" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Password</label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      disabled={loading}
+                      className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 pr-12 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
+                      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                      placeholder="••••••••"
+                      aria-required="true"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-stone-700">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setFocusedField("email")}
-                  onBlur={() => setFocusedField(null)}
-                  required
-                  autoComplete="username"
+                <button
+                  type="submit"
                   disabled={loading}
-                  className={`w-full rounded-xl border px-4 py-4 text-stone-900 shadow-sm outline-none transition-all disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400 ${
-                    focusedField === "email" 
-                      ? "border-emerald-400 ring-4 ring-emerald-500/10" 
-                      : "border-stone-200/80 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
-                  }`}
-                  placeholder="you@company.com"
-                  aria-required="true"
-                />
-              </div>
+                  className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Signing in...
+                    </>
+                  ) : "Sign in"}
+                </button>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-stone-700">Password</label>
-                <div className="relative">
+                {!forgotPassword && !forgotSent && (
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(true); setGlobalError(null); }}
+                    className="w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </form>
+
+              {/* Password Reset Form */}
+              {forgotPassword && !forgotSent && (
+                <form onSubmit={handleForgotPassword} className="mt-6 space-y-4 border-t border-stone-200/50 pt-6" aria-label="Password reset form">
+                  <p className="text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b6b6b" }}>Enter your email and we&apos;ll send you a reset link.</p>
+                  {forgotError && (
+                    <div role="alert" className="rounded-xl bg-red-50/80 p-3 text-sm text-red-600 border border-red-100">
+                      {forgotError}
+                    </div>
+                  )}
                   <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField("password")}
-                    onBlur={() => setFocusedField(null)}
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
                     required
-                    autoComplete="current-password"
-                    disabled={loading}
-                    className={`w-full rounded-xl border px-4 py-4 pr-12 text-stone-900 shadow-sm outline-none transition-all disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400 ${
-                      focusedField === "password" 
-                        ? "border-emerald-400 ring-4 ring-emerald-500/10" 
-                        : "border-stone-200/80 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
-                    }`}
-                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-stone-200/80 bg-white/90 px-4 py-3.5 text-stone-900 outline-none focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 placeholder:text-stone-400 transition-all"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                    placeholder="you@company.com"
                     aria-required="true"
                   />
                   <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
                   >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
+                    {forgotLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(false); setForgotEmail(""); setForgotError(null); }}
+                    className="w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
+                  >
+                    ← Back to sign in
+                  </button>
+                </form>
+              )}
+
+              {/* Reset Email Sent */}
+              {forgotSent && (
+                <div className="mt-6 border-t border-stone-200/50 pt-6" role="status" aria-live="polite">
+                  <div className="rounded-xl p-4 text-sm border" style={{ backgroundColor: "#f0fdf4", color: "#166534", borderColor: "#bbf7d0" }}>
+                    <strong>Check your inbox.</strong> If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(false); setForgotSent(false); setForgotEmail(""); }}
+                    className="mt-4 w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
+                  >
+                    ← Back to sign in
                   </button>
                 </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 bg-size-200 px-6 py-4 text-base font-semibold text-white hover:shadow-xl hover:shadow-emerald-500/30 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                style={{ backgroundPosition: '0% 50%' }}
-              >
-                {loading ? (
-                  <>
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Signing in...
-                  </>
-                ) : "Sign in"}
-              </button>
-
-              {!forgotPassword && !forgotSent && (
-                <button
-                  type="button"
-                  onClick={() => { setForgotPassword(true); setGlobalError(null); }}
-                  className="w-full text-center text-sm text-stone-500 hover:text-stone-700 transition-colors"
-                >
-                  Forgot password?
-                </button>
               )}
-            </form>
+            </div>
 
-            {forgotPassword && !forgotSent && (
-              <form onSubmit={handleForgotPassword} className="mt-6 space-y-4 border-t border-stone-200/50 pt-6" aria-label="Password reset form">
-                <p className="text-sm text-stone-600">Enter your email and we&apos;ll send you a reset link.</p>
-                {forgotError && (
-                  <div role="alert" className="rounded-xl bg-red-50/80 p-3 text-sm text-red-600 border border-red-100">
-                    {forgotError}
+            {/* Security Trust Badges */}
+            <div className="border-t border-stone-100/50 px-8 py-5" style={{ backgroundColor: "rgba(250, 248, 245, 0.5)" }}>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-center gap-4 text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#9a9590" }}>
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-[#6b8f71]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span>256-bit SSL</span>
                   </div>
-                )}
-                <input
-                  type="email"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-stone-200/80 bg-white/90 px-4 py-4 text-stone-900 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 placeholder:text-stone-400 transition-all"
-                  placeholder="you@company.com"
-                  aria-required="true"
-                />
-                <button
-                  type="submit"
-                  disabled={forgotLoading}
-                  className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 text-sm font-semibold text-white hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                >
-                  {forgotLoading ? "Sending..." : "Send Reset Link"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setForgotPassword(false); setForgotEmail(""); setForgotError(null); }}
-                  className="w-full text-center text-sm text-stone-500 hover:text-stone-700 transition-colors"
-                >
-                  ← Back to sign in
-                </button>
-              </form>
-            )}
-
-            {forgotSent && (
-              <div className="mt-6 border-t border-stone-200/50 pt-6" role="status" aria-live="polite">
-                <div className="rounded-xl bg-emerald-50/80 p-4 text-sm text-emerald-700 border border-emerald-100 shadow-sm">
-                  <strong>Check your inbox.</strong> If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
+                  <span className="text-stone-300">•</span>
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-[#6b8f71]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span>SOC 2</span>
+                  </div>
+                  <span className="text-stone-300">•</span>
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#6b8f71"/>
+                    </svg>
+                    <span>Powered by Supabase</span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { setForgotPassword(false); setForgotSent(false); setForgotEmail(""); }}
-                  className="mt-4 w-full text-center text-sm text-stone-500 hover:text-stone-700 transition-colors"
-                >
-                  ← Back to sign in
-                </button>
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* Back link */}
+          <div className="text-center mt-6">
+            <Link href="/brands" className="text-sm transition-opacity hover:opacity-60 inline-flex items-center gap-1" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              View Farms
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Back link */}
-      <Link 
-        href="/brands" 
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-sm text-stone-500 hover:text-stone-700 transition-colors z-10 flex items-center gap-1"
-        aria-label="View farms and brands"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        View Farms
-      </Link>
+      {/* Footer */}
+      <footer className="py-6 px-6 border-t border-stone-200/30 relative z-10">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1a4d2e" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span className="text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#b5b0a8" }}>
+              © 2025 Route Commerce
+            </span>
+          </div>
+          <nav className="flex items-center gap-6">
+            <Link href="/privacy-policy" className="text-xs font-medium uppercase tracking-wider transition-colors hover:text-[#1a4d2e]" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71", letterSpacing: "0.08em" }}>
+              Privacy
+            </Link>
+            <Link href="/terms-and-conditions" className="text-xs font-medium uppercase tracking-wider transition-colors hover:text-[#1a4d2e]" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71", letterSpacing: "0.08em" }}>
+              Terms
+            </Link>
+          </nav>
+        </div>
+      </footer>
     </main>
   );
 }
@@ -355,32 +343,103 @@ function LoginForm() {
 // Demo mode wrapper
 function DemoMode() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-gradient-to-br from-emerald-50 to-amber-50">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-stone-900 mb-4">Demo Mode</h1>
-        <p className="text-stone-600 mb-8">Select a role to explore the platform</p>
-        <div className="flex flex-col gap-4">
-          <button 
-            onClick={() => { document.cookie = "dev_session=platform_admin; path=/; max-age=86400"; window.location.replace("/admin"); }} 
-            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl font-semibold hover:from-emerald-500 hover:to-emerald-400 transition-all shadow-lg"
-          >
-            Platform Admin
-          </button>
-          <button 
-            onClick={() => { document.cookie = "dev_session=brand_admin; path=/; max-age=86400"; window.location.replace("/admin"); }} 
-            className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-400 text-white rounded-xl font-semibold hover:from-amber-400 hover:to-amber-300 transition-all shadow-lg"
-          >
-            Brand Admin
-          </button>
-          <button 
-            onClick={() => { document.cookie = "dev_session=store_employee; path=/; max-age=86400"; window.location.replace("/admin"); }} 
-            className="px-8 py-4 bg-gradient-to-r from-stone-600 to-stone-500 text-white rounded-xl font-semibold hover:from-stone-500 hover:to-stone-400 transition-all shadow-lg"
-          >
-            Store Employee
-          </button>
+    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5" }}>
+      {/* Organic background elements */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-20" style={{ background: "radial-gradient(circle at 30% 30%, #c97a3e20 0%, transparent 70%)", filter: "blur(40px)" }} />
+        <div className="absolute -bottom-48 -left-48 w-[600px] h-[600px] rounded-full opacity-15" style={{ background: "radial-gradient(circle at 70% 70%, #6b8f7130 0%, transparent 70%)", filter: "blur(60px)" }} />
+      </div>
+
+      {/* Header */}
+      <header className="w-full py-6 px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group" style={{ textDecoration: "none" }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ backgroundColor: "#1a4d2e" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span className="text-xl font-semibold tracking-tight" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: "#1a1a1a" }}>
+              Route Commerce
+            </span>
+          </Link>
+          <Link href="/" className="text-sm font-medium transition-opacity hover:opacity-60" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}>
+            Back to home
+          </Link>
+        </div>
+      </header>
+
+      {/* Demo Card */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
+        <div className="w-full max-w-sm">
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl ring-1 ring-black/5 overflow-hidden p-10">
+            <div className="text-center mb-8">
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-5" style={{ background: "linear-gradient(135deg, #1a4d2e 0%, #2d6a45 100%)", boxShadow: "0 12px 32px rgba(26, 77, 46, 0.25)" }}>
+                <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-semibold text-stone-900" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: "-0.02em" }}>
+                Demo Mode
+              </h1>
+              <p className="mt-2 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
+                Select a role to explore the platform
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => { document.cookie = "dev_session=platform_admin; path=/; max-age=86400"; window.location.replace("/admin"); }}
+                className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
+              >
+                Platform Admin
+              </button>
+              <button
+                onClick={() => { document.cookie = "dev_session=brand_admin; path=/; max-age=86400"; window.location.replace("/admin"); }}
+                className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#c97a3e" }}
+              >
+                Brand Admin
+              </button>
+              <button
+                onClick={() => { document.cookie = "dev_session=store_employee; path=/; max-age=86400"; window.location.replace("/admin"); }}
+                className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#6b8f71" }}
+              >
+                Store Employee
+              </button>
+            </div>
+          </div>
+
+          {/* Back link */}
+          <div className="text-center mt-6">
+            <Link href="/brands" className="text-sm transition-opacity hover:opacity-60 inline-flex items-center gap-1" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              View Farms
+            </Link>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Footer */}
+      <footer className="py-6 px-6 border-t border-stone-200/30 relative z-10">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1a4d2e" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span className="text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#b5b0a8" }}>
+              © 2025 Route Commerce
+            </span>
+          </div>
+        </div>
+      </footer>
+    </main>
   );
 }
 
