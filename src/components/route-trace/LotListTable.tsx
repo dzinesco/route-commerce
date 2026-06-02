@@ -89,9 +89,11 @@ function getAgeStatus(harvestDate: string): { label: string; className: string; 
 export default function LotListTable({
   initialLots,
   brandId,
+  onCreateNew,
 }: {
   initialLots: HaulingLot[];
   brandId: string;
+  onCreateNew?: () => void;
 }) {
   const [filter, setFilter] = useState("");
   const [query, setQuery] = useState("");
@@ -180,13 +182,13 @@ export default function LotListTable({
                 <p className="text-sm text-stone-500">{filtered.length} lot{filtered.length !== 1 ? "s" : ""}</p>
               </div>
             </div>
-            <Link
-              href="/admin/route-trace/lots/new"
+            <button
+              onClick={onCreateNew}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
             >
               {Icons.plus("h-4 w-4")}
               <span>New Lot</span>
-            </Link>
+            </button>
           </div>
         </div>
         <div className="p-6 space-y-4">

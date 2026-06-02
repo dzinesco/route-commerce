@@ -5,6 +5,7 @@ import Link from "next/link";
 import RouteTraceDashboard from "./RouteTraceDashboard";
 import AdminLookupPage from "./AdminLookupPage";
 import LotListTable from "./LotListTable";
+import LotCreateModal from "./LotCreateModal";
 import RouteTraceSettings from "./RouteTraceSettings";
 import {
   RouteTraceStats,
@@ -94,9 +95,17 @@ export default function RouteTracePage({
   lots,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--admin-bg)]">
+      {/* Modal */}
+      <LotCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        brandId={brandId}
+      />
+
       {/* Tab navigation */}
       <div className="px-4 sm:px-6 md:px-8 pt-4 sm:pt-6">
         <nav className="grid grid-cols-4 gap-1 p-1.5 rounded-xl bg-white border border-stone-200">
@@ -140,9 +149,11 @@ export default function RouteTracePage({
 
         {activeTab === "lots" && (
           <div>
-            <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
-              <LotListTable initialLots={lots} brandId={brandId} />
-            </div>
+            <LotListTable 
+              initialLots={lots} 
+              brandId={brandId} 
+              onCreateNew={() => setShowCreateModal(true)}
+            />
           </div>
         )}
 
