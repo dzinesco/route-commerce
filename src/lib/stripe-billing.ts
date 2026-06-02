@@ -2,11 +2,10 @@
 // Supports plans, add-ons, upgrades, cancellations, and customer portal
 
 import Stripe from "stripe";
-import { v4 as uuidv4 } from "uuid";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
+  apiVersion: "2026-05-27.dahlia",
 });
 
 // Plan tier configurations
@@ -363,7 +362,8 @@ export async function getInvoice(invoiceId: string) {
 }
 
 export async function getUpcomingInvoice(customerId: string) {
-  return await stripe.invoices.retrieveUpcoming({
+  // Use Stripe's upcoming invoice preview endpoint
+  return await stripe.invoices.createPreview({
     customer: customerId,
   });
 }
@@ -460,25 +460,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscription.id,
       subscription.status,
       subscription.metadata.plan_tier,
-      subscription.current_period_end
+      (subscription as unknown as { current_period_end: number | null }).current_period_end
     );
   }
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  const { brand_id, plan_tier } = subscription.metadata;
+  const { brand_id, plan_tier } = subscription.metadata as { brand_id?: string; plan_tier?: string };
   
   await updateBrandSubscription(
     brand_id,
     subscription.id,
     subscription.status,
     plan_tier,
-    subscription.current_period_end
+    (subscription as unknown as { current_period_end: number | null }).current_period_end
   );
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const { brand_id, plan_tier, addon_key } = subscription.metadata;
+  const { brand_id, plan_tier, addon_key } = subscription.metadata as { brand_id?: string; plan_tier?: string; addon_key?: string };
   
   if (addon_key) {
     // Add-on subscription
@@ -494,20 +494,20 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       subscription.id,
       subscription.status,
       plan_tier,
-      subscription.current_period_end
+      (subscription as unknown as { current_period_end: number | null }).current_period_end
     );
   }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const { brand_id, plan_tier } = subscription.metadata;
+  const { brand_id } = subscription.metadata as { brand_id?: string };
   
   // Downgrade to free tier or cancel
   await updateBrandSubscription(
     brand_id,
     null,
     "cancelled",
-    null,
+    undefined,
     null
   );
 }
@@ -633,25 +633,34 @@ export async function createUsageRecord(options: {
   timestamp?: number;
   idempotencyKey?: string;
 }) {
-  return await stripe.subscriptionItems.createUsageRecord(
-    options.subscriptionItemId,
+  // Use the metering endpoint for usage-based billing
+  return await fetch(
+    `https://api.stripe.com/v1/billing/meter_events`,
     {
-      quantity: options.quantity,
-      timestamp: options.timestamp,
-    },
-    {
-      idempotencyKey: options.idempotencyKey || uuidv4(),
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        event_name: "usage",
+        payload: JSON.stringify({
+          subscription_item_id: options.subscriptionItemId,
+          quantity: options.quantity.toString(),
+          timestamp: (options.timestamp || Math.floor(Date.now() / 1000)).toString(),
+        }),
+      }),
     }
   );
 }
 
-export async function getUsageSummary(subscriptionItemId: string, period: { start: number; end: number }) {
-  return await stripe.usageRecordSummaries.list(
-    subscriptionItemId,
-    {
-      limit: 12,
-    }
+export async function getUsageSummary(subscriptionItemId: string) {
+  // List subscription items with usage summaries
+  const subscription = await stripe.subscriptions.retrieve(
+    subscriptionItemId.split("_")[0]
   );
+  const item = subscription.items.data.find(i => i.id === subscriptionItemId);
+  return item || null;
 }
 
 // ============================================
