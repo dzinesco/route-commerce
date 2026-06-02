@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import ThemeToggle from "@/components/shared/ThemeToggle";
 
 const BRAND_NAMES: Record<string, string> = {
   tuxedo: "Tuxedo Corn",
@@ -98,9 +97,6 @@ export default function SiteHeader() {
               Admin
             </Link>
           )}
-
-          {/* Theme Toggle */}
-          <ThemeToggle />
         </nav>
       </div>
     </header>

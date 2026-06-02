@@ -66,10 +66,11 @@ function LoginForm() {
   }, [forgotEmail]);
 
   return (
-    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5" }}>
+    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5", height: "100vh" }}>
       {/* Google Fonts */}
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+        html, body { overflow: hidden; }
       `}</style>
 
       {/* Organic background elements */}
@@ -343,7 +344,7 @@ function LoginForm() {
 // Demo mode wrapper
 function DemoMode() {
   return (
-    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5" }}>
+    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5", height: "100vh" }}>
       {/* Organic background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-20" style={{ background: "radial-gradient(circle at 30% 30%, #c97a3e20 0%, transparent 70%)", filter: "blur(40px)" }} />

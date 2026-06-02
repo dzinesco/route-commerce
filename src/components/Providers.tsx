@@ -13,6 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isBrandRoute = pathname?.startsWith("/tuxedo") || pathname?.startsWith("/indian-river-direct");
   const isLandingPage = pathname === "/" || pathname === "/brands";
+  const isAuthPage = pathname === "/login" || pathname === "/admin/login";
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -22,9 +23,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
       <CartProvider>
-        {!isBrandRoute && !isLandingPage && <SiteHeader />}
+        {!isBrandRoute && !isLandingPage && !isAuthPage && <SiteHeader />}
         {mounted ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
-        {!isBrandRoute && !isLandingPage && <SiteFooter />}
+        {!isBrandRoute && !isLandingPage && !isAuthPage && <SiteFooter />}
         <CartToast />
         <CartRestoredToast />
       </CartProvider>
