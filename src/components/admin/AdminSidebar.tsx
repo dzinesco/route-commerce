@@ -21,21 +21,6 @@ const TOP_LINKS = [
   { href: "/admin/advanced", label: "Advanced", icon: "advanced" },
 ];
 
-type SettingsItem = {
-  href: string;
-  label: string;
-  description: string;
-};
-
-const SETTINGS_SUB_LINKS: SettingsItem[] = [
-  { href: "/admin/settings", label: "General", description: "Brand name, logo, timezone" },
-  { href: "/admin/settings/apps", label: "Add-ons", description: "Enable and manage feature add-ons" },
-  { href: "/admin/settings/billing", label: "Billing & Plans", description: "Subscription, invoices, usage" },
-  { href: "/admin/settings/payments", label: "Payments", description: "Stripe, Square, payment methods" },
-  { href: "/admin/communications/abandoned-carts", label: "Abandoned Cart Recovery", description: "3-email recovery sequence" },
-  { href: "/admin/communications/welcome-sequence", label: "Welcome Sequence", description: "4-email onboarding for new subscribers" },
-];
-
 function GridIcon({ className }: { className?: string }) {
   return (
     <svg className={className ?? "w-4 h-4"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -145,7 +130,6 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const roleLabel = userRole === "platform_admin" ? "Platform Admin"
     : userRole === "brand_admin" ? "Brand Admin"
@@ -154,22 +138,8 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
-    if (href === "/admin/settings") return pathname === "/admin/settings" || pathname.startsWith("/admin/settings");
     return pathname.startsWith(href);
   };
-
-  // Check if we're on a settings-related page
-  const isSettingsPage = pathname.startsWith("/admin/settings") ||
-    pathname.startsWith("/admin/users") ||
-    pathname.startsWith("/admin/communications/abandoned-carts") ||
-    pathname.startsWith("/admin/communications/welcome-sequence");
-
-  // Auto-expand settings menu when navigating to a settings page
-  useEffect(() => {
-    if (isSettingsPage) {
-      setSettingsOpen(true);
-    }
-  }, [isSettingsPage]);
 
   async function handleLogout() {
     document.cookie = "dev_session=;path=/;max-age=0";
@@ -234,66 +204,9 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-1">
+        <nav className="flex-1 overflow-hidden px-3 py-5">
           {TOP_LINKS.map((item) => {
             const active = isActive(item.href);
-
-            // Settings link with expandable sub-menu
-            if (item.href === "/admin/settings") {
-              return (
-                <div key={item.href}>
-                  <button
-                    onClick={() => setSettingsOpen(!settingsOpen)}
-                    className={[
-                      "w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border-l-2",
-                      isSettingsPage
-                        ? "border-l-2"
-                        : "border-l-2 border-transparent",
-                    ].join(" ")}
-                    style={isSettingsPage ? {
-                      backgroundColor: "rgba(202, 117, 67, 0.15)",
-                      color: "#dea889",
-                      borderColor: "var(--admin-accent)"
-                    } : {
-                      color: "var(--admin-sidebar-text)",
-                      borderColor: "transparent"
-                    }}
-                  >
-                    <span className="flex-shrink-0 transition-colors" style={{
-                      color: isSettingsPage ? "var(--admin-accent)" : "rgba(208, 203, 180, 0.6)"
-                    }}>
-                      <SettingsCogIcon open={settingsOpen} />
-                    </span>
-                    Settings
-                    <ChevronIcon open={settingsOpen} />
-                  </button>
-
-                  {/* Settings sub-links */}
-                  {settingsOpen && (
-                    <div className="ml-6 mt-1 space-y-0.5 border-l border-[var(--admin-sidebar-bg)] pl-3">
-                      {SETTINGS_SUB_LINKS.map((subItem) => {
-                        const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
-                        return (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            onClick={() => setMobileOpen(false)}
-                            className={[
-                              "block px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200",
-                              subActive
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "text-[var(--admin-sidebar-text)] hover:bg-white/5 opacity-70 hover:opacity-100",
-                            ].join(" ")}
-                          >
-                            {subItem.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
 
             return (
               <Link
@@ -301,7 +214,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className={[
-                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-1",
                   active
                     ? "border-l-2"
                     : "border-l-2 border-transparent hover:border-l-2",
