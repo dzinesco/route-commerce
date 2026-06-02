@@ -11,8 +11,7 @@
     "migrate": "node supabase/push-migrations.js",
     "migrate:one": "node supabase/push-migrations.js",
     "type-check": "npx tsc --noEmit",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "postinstall": "next-env file generation"
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
