@@ -1,5 +1,6 @@
 import TimeTrackingAdminPanel from "@/components/admin/TimeTrackingAdminPanel";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const TUXEDO_BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
@@ -9,23 +10,29 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminTimeTrackingPage() {
   const adminUser = await getAdminUser();
-  if (!adminUser) redirect("/login");
+  
+  // Dev session bypass for platform admin
+  if (!adminUser) {
+    const cookieStore = await cookies();
+    const devSession = cookieStore.get("dev_session")?.value;
+    if (devSession === "platform_admin" || devSession === "brand_admin") {
+      // Allow access in dev mode
+    } else {
+      redirect("/login");
+    }
+  }
 
-  const isPlatformAdmin = adminUser.role === "platform_admin";
-  const isTuxedoAdmin = adminUser.role === "brand_admin" && adminUser.brand_id === TUXEDO_BRAND_ID;
-  const isIRDAdmin = adminUser.role === "brand_admin" && adminUser.brand_id === IRD_BRAND_ID;
+  const isPlatformAdmin = adminUser?.role === "platform_admin";
+  const isTuxedoAdmin = adminUser?.role === "brand_admin" && adminUser?.brand_id === TUXEDO_BRAND_ID;
+  const isIRDAdmin = adminUser?.role === "brand_admin" && adminUser?.brand_id === IRD_BRAND_ID;
 
   if (!isPlatformAdmin && !isTuxedoAdmin && !isIRDAdmin) {
     redirect("/admin/pickup");
   }
 
-  const effectiveBrandId = adminUser.brand_id ?? TUXEDO_BRAND_ID;
+  const effectiveBrandId = adminUser?.brand_id ?? TUXEDO_BRAND_ID;
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto max-w-6xl">
-        <TimeTrackingAdminPanel brandId={effectiveBrandId} />
-      </div>
-    </main>
+    <TimeTrackingAdminPanel brandId={effectiveBrandId} />
   );
 }

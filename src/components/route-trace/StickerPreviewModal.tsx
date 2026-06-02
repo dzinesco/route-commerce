@@ -3,6 +3,31 @@
 import { useState, useEffect } from "react";
 import { LotDetail } from "@/actions/route-trace/lots";
 
+// One-color outline icons
+const Icons = {
+  printer: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+      <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/>
+      <rect x="6" y="14" width="12" height="8" rx="1"/>
+    </svg>
+  ),
+  leaf: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+    </svg>
+  ),
+  warehouse: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/>
+      <path d="M6 18h12"/>
+      <path d="M6 14h12"/>
+      <rect x="6" y="10" width="12" height="4" rx="1"/>
+    </svg>
+  ),
+};
+
 type StickerType = "field" | "shed";
 type StickerSize = "4x2" | "4x3";
 
@@ -62,7 +87,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
           <div>
-            <h3 className="text-base font-semibold text-stone-900">🖨 Print Sticker</h3>
+            <h3 className="text-base font-semibold text-stone-900 flex items-center gap-2">{Icons.printer("h-5 w-5")} Print Sticker</h3>
             <p className="text-xs text-stone-400 mt-0.5">{lot.lot_number} · {lot.crop_type}</p>
           </div>
           <button onClick={onClose} className="text-stone-400 hover:text-stone-600 text-xl leading-none">✕</button>
@@ -75,7 +100,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
               <p className="mb-2 text-xs font-semibold text-stone-500 uppercase tracking-wider">Sticker Type</p>
               <div className="space-y-1.5">
                 {(["field", "shed"] as StickerType[]).map((t) => {
-                  const label = t === "field" ? "🌱 Field" : "🏭 Shed";
+                  const label = t === "field" ? "Field" : "Shed";
                   const desc = t === "field" ? "After harvest" : "At shed arrival";
                   return (
                     <button
@@ -266,7 +291,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
             disabled={loading}
             className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
           >
-            {loading ? "Generating PDF..." : `🖨 Print ${copies === 1 ? "" : `${copies}× `}${stickerType === "field" ? "Field" : "Shed"} Sticker${copies > 1 ? "s" : ""}`}
+            {loading ? "Generating PDF..." : <><span className="inline-flex items-center gap-1.5">{Icons.printer("h-4 w-4")} Print {copies === 1 ? "" : `${copies}× `}{stickerType === "field" ? "Field" : "Shed"} Sticker{copies > 1 ? "s" : ""}</span></>}
           </button>
         </div>
       </div>

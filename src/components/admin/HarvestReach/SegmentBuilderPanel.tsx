@@ -8,6 +8,15 @@ import {
   type SegmentFilterParams,
 } from "@/actions/harvest-reach/segments";
 
+// Icon components
+const Icons = {
+  x: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+  ),
+};
+
 type Props = {
   brandId: string;
   rules: SegmentRuleV2;
@@ -63,28 +72,28 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
   }
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5 flex flex-col gap-5">
+    <div className="rounded-xl border border-[var(--admin-border)] bg-white p-4 sm:p-5 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-800">Filter Rules</h3>
+        <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Filter Rules</h3>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-500">Match</span>
-          <div className="flex rounded-lg border border-zinc-800 bg-slate-50 p-0.5">
+          <span className="text-xs text-[var(--admin-text-muted)]">Match</span>
+          <div className="flex rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-0.5">
             {(["AND", "OR"] as const).map((c) => (
               <button
                 key={c}
                 onClick={() => setCombinator(c)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                   rules.combinator === c
-                    ? "bg-stone-900 text-white"
-                    : "text-zinc-400 hover:bg-zinc-900"
+                    ? "bg-emerald-600 text-white"
+                    : "text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)]"
                 }`}
               >
                 {c}
               </button>
             ))}
           </div>
-          <span className="text-xs text-zinc-500">of the following</span>
+          <span className="text-xs text-[var(--admin-text-muted)]">of the following</span>
         </div>
       </div>
 
@@ -92,7 +101,7 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
       <div className="flex flex-col gap-3">
         {rules.filters.length === 0 && (
           <div className="py-8 text-center">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-[var(--admin-text-muted)]">
               No filters yet. Add a filter below to start building your segment.
             </p>
           </div>
@@ -114,7 +123,7 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
           <button
             key={ft.value}
             onClick={() => addFilter(ft.value)}
-            className="px-3 py-1.5 text-xs font-medium rounded-full border border-zinc-600 text-zinc-400 hover:bg-zinc-800 hover:border-slate-400 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-full border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors"
           >
             + {ft.label}
           </button>
@@ -122,11 +131,11 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
       </div>
 
       {/* Save button */}
-      <div className="pt-1 border-t border-slate-100">
+      <div className="pt-1 border-t border-[var(--admin-border)]">
         <button
           onClick={onSave}
           disabled={rules.filters.length === 0}
-          className="w-full py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {hasActiveSegment ? "Update Segment" : "Save Segment"}
         </button>
@@ -171,14 +180,14 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 p-4 flex flex-col gap-3">
+    <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <select
           value={filter.type}
           onChange={(e) =>
             onChange({ type: e.target.value as SegmentFilterType, params: emptyFilter(e.target.value as SegmentFilterType).params })
           }
-          className="text-sm font-medium border border-zinc-800 rounded-lg px-2.5 py-1.5 bg-zinc-900 outline-none focus:border-slate-900"
+          className="text-sm font-medium border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 bg-white text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         >
           {FILTER_TYPES.map((ft) => (
             <option key={ft.value} value={ft.value}>{ft.label}</option>
@@ -186,12 +195,10 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
         </select>
         <button
           onClick={onRemove}
-          className="text-slate-400 hover:text-red-500 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--admin-text-muted)] hover:text-red-500 transition-colors"
           aria-label="Remove filter"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          {Icons.x("w-4 h-4")}
         </button>
       </div>
 
@@ -203,7 +210,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
               value={filter.params.stop_id ?? ""}
               onChange={(e) => onChange({ params: { ...filter.params, stop_id: e.target.value } })}
               onMouseEnter={() => loadStops(filter.type === "stop")}
-              className="border border-zinc-800 rounded-lg px-3 py-2 text-sm bg-zinc-900 w-full outline-none focus:border-slate-900"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white w-full outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               <option value="">Select {filter.type === "stop" ? "past" : "upcoming"} stop…</option>
               {stops.map((s) => (
@@ -215,13 +222,13 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 type="date"
                 value={filter.params.date_from ?? ""}
                 onChange={(e) => onChange({ params: { ...filter.params, date_from: e.target.value } })}
-                className="border border-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-900"
+                className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
               <input
                 type="date"
                 value={filter.params.date_to ?? ""}
                 onChange={(e) => onChange({ params: { ...filter.params, date_to: e.target.value } })}
-                className="border border-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-900"
+                className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
           </>
@@ -237,7 +244,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 if (e.target.value) loadProducts();
               }}
               onMouseEnter={loadProducts}
-              className="border border-zinc-800 rounded-lg px-3 py-2 text-sm bg-zinc-900 w-full outline-none focus:border-slate-900"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white w-full outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               <option value="">Select a product…</option>
               {products.map((p) => (
@@ -245,16 +252,16 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
               ))}
             </select>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-zinc-500">In the last</label>
+              <label className="text-xs text-[var(--admin-text-muted)]">In the last</label>
               <input
                 type="number"
                 min={1}
                 max={365}
                 value={filter.params.days_back ?? 90}
                 onChange={(e) => onChange({ params: { ...filter.params, days_back: parseInt(e.target.value) } })}
-                className="border border-zinc-800 rounded-lg px-2.5 py-1.5 text-sm w-20 outline-none focus:border-slate-900"
+                className="border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 text-sm w-20 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
-              <span className="text-xs text-zinc-500">days</span>
+              <span className="text-xs text-[var(--admin-text-muted)]">days</span>
             </div>
           </>
         )}
@@ -274,14 +281,14 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                   },
                 })
               }
-              className="border border-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-900"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
             <input
               type="text"
               placeholder="City (optional)"
               value={filter.params.city ?? ""}
               onChange={(e) => onChange({ params: { ...filter.params, city: e.target.value } })}
-              className="border border-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-900"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
           </>
         )}
@@ -294,23 +301,23 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
               onChange={(e) =>
                 onChange({ params: { ...filter.params, order_history: e.target.value as "all" | "first_order" | "repeat" } })
               }
-              className="border border-zinc-800 rounded-lg px-3 py-2 text-sm bg-zinc-900 outline-none focus:border-slate-900"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             >
               {ORDER_HISTORY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-zinc-500">In the last</label>
+              <label className="text-xs text-[var(--admin-text-muted)]">In the last</label>
               <input
                 type="number"
                 min={1}
                 max={365}
                 value={filter.params.days_back ?? 90}
                 onChange={(e) => onChange({ params: { ...filter.params, days_back: parseInt(e.target.value) } })}
-                className="border border-zinc-800 rounded-lg px-2.5 py-1.5 text-sm w-20 outline-none focus:border-slate-900"
+                className="border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 text-sm w-20 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
-              <span className="text-xs text-zinc-500">days</span>
+              <span className="text-xs text-[var(--admin-text-muted)]">days</span>
             </div>
           </div>
         )}
@@ -329,13 +336,13 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 },
               })
             }
-            className="border border-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-900"
+            className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
         )}
 
         {/* All customers */}
         {filter.type === "all_customers" && (
-          <p className="text-xs text-slate-400">Matches all customers in your brand.</p>
+          <p className="text-xs text-[var(--admin-text-muted)]">Matches all customers in your brand.</p>
         )}
       </div>
     </div>

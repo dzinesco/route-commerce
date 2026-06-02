@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { markPickupComplete } from "@/actions/pickup";
 
@@ -56,7 +56,6 @@ function formatPickupTime(iso: string | null) {
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffMin < 1440) return `${Math.floor(diffMin / 60)}h ago`;
 
-  // Same year — show mon/day
   if (d.getFullYear() === now.getFullYear()) {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
@@ -83,17 +82,13 @@ export default function DriverPickupPanel({
   const [showPickedUp, setShowPickedUp] = useState(true);
   const [pickupToast, setPickupToast] = useState<string | null>(null);
 
-  const activeStopFilter = stopFilter;
-
   const filteredPending = pendingOrders.filter((o) => {
     const matchesSearch =
       !search ||
       o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       (o.customer_phone ?? "").includes(search) ||
       o.id.includes(search.toUpperCase().slice(0, 8));
-
-    const matchesStop = !activeStopFilter || o.stop_id === activeStopFilter;
-
+    const matchesStop = !stopFilter || o.stop_id === stopFilter;
     return matchesSearch && matchesStop;
   });
 
@@ -103,9 +98,7 @@ export default function DriverPickupPanel({
       o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       (o.customer_phone ?? "").includes(search) ||
       o.id.includes(search.toUpperCase().slice(0, 8));
-
-    const matchesStop = !activeStopFilter || o.stop_id === activeStopFilter;
-
+    const matchesStop = !stopFilter || o.stop_id === stopFilter;
     return matchesSearch && matchesStop;
   });
 
@@ -139,60 +132,71 @@ export default function DriverPickupPanel({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <div className="bg-slate-900 px-4 py-5">
-        <div className="mx-auto max-w-6xl">
+      <header className="border-b border-stone-200 bg-white">
+        <div className="mx-auto max-w-5xl px-6 py-5">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">Driver Pickup</h1>
-              <p className="mt-1 text-sm text-slate-400">
+              <h1 className="text-2xl font-semibold text-stone-950 tracking-tight">Driver Pickup</h1>
+              <p className="mt-1 text-sm text-stone-500">
                 {filteredPending.length} pending
                 {hasAnyPickedUp && ` · ${pickedUpOrders.length} picked up`}
               </p>
             </div>
             <Link
               href="/admin/orders"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600"
+              className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
             >
               All Orders
             </Link>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-4 space-y-4">
-        {/* Stop Filter */}
-        <select
-          value={stopFilter}
-          onChange={(e) => setStopFilter(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-4 text-base font-medium outline-none focus:border-slate-900"
-        >
-          <option value="">All Stops</option>
-          {stops.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.city}, {s.state} · {s.date}
-            </option>
-          ))}
-        </select>
-
-        {/* Search */}
-        <input
-          type="search"
-          placeholder="Search name, phone, or order #..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-4 text-base outline-none focus:border-slate-900"
-        />
+      <main className="mx-auto max-w-5xl px-6 py-6 space-y-5">
+        {/* Filters */}
+        <div className="flex gap-3">
+          <select
+            value={stopFilter}
+            onChange={(e) => setStopFilter(e.target.value)}
+            className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="">All Stops</option>
+            {stops.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.city}, {s.state} · {s.date}
+              </option>
+            ))}
+          </select>
+          <div className="relative flex-1">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Search name, phone, or order #..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-white pl-11 pr-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+        </div>
 
         {/* Pending Orders */}
-        <div className="space-y-3">
-          {filteredPending.length === 0 ? (
-            <div className="rounded-xl bg-zinc-900 py-12 text-center text-slate-400">
-              No pending orders
+        {filteredPending.length === 0 ? (
+          <div className="rounded-2xl bg-white border border-stone-200 py-16 text-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-stone-100 flex items-center justify-center">
+              <svg className="h-6 w-6 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
             </div>
-          ) : (
-            filteredPending.map((order) => (
+            <p className="text-lg font-medium text-stone-600">No pending orders</p>
+            <p className="mt-1 text-sm text-stone-400">Orders awaiting pickup will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredPending.map((order) => (
               <OrderCard
                 key={order.id}
                 order={order}
@@ -201,45 +205,45 @@ export default function DriverPickupPanel({
                 pickingUp={pickingUp}
                 shortId={shortId(order.id)}
               />
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Picked Up Toggle */}
         {hasAnyPickedUp && (
           <button
             onClick={() => setShowPickedUp((v) => !v)}
-            className="w-full rounded-xl border border-green-200 bg-green-900/30 px-4 py-3 text-sm font-medium text-green-400 hover:bg-green-900/40"
+            className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
           >
-            {showPickedUp ? "▲ Hide" : "▼"} {pickedUpOrders.length} picked up
+            {showPickedUp ? "▼ Hide" : "▶ Show"} {pickedUpOrders.length} picked up
           </button>
         )}
 
-        {showPickedUp && (
+        {showPickedUp && filteredPickedUp.length > 0 && (
           <div className="space-y-3">
-            {filteredPickedUp.length === 0 && activeStopFilter ? (
-              <div className="rounded-xl border border-green-200 bg-green-900/30 py-6 text-center text-sm text-green-600">
-                No picked-up orders for this stop. {pickedUpOrders.length} picked up at other stops.
-              </div>
-            ) : (
-              filteredPickedUp.map((order) => (
-                <PickedUpCard
-                  key={order.id}
-                  order={order}
-                  shortId={shortId(order.id)}
-                />
-              ))
-            )}
+            {filteredPickedUp.map((order) => (
+              <PickedUpCard
+                key={order.id}
+                order={order}
+                shortId={shortId(order.id)}
+              />
+            ))}
           </div>
         )}
 
-        {/* Success toast */}
+        {showPickedUp && filteredPickedUp.length === 0 && stopFilter && (
+          <div className="rounded-xl border border-stone-200 bg-stone-50 py-6 text-center text-sm text-stone-500">
+            No picked-up orders for this stop
+          </div>
+        )}
+
+        {/* Toast */}
         {pickupToast && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-bottom-2">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200/50">
             ✓ Order picked up
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
@@ -260,104 +264,113 @@ function OrderCard({ order, canManagePickup, onMarkPickup, pickingUp, shortId }:
   const pickupTotal = pickupItems.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
 
   return (
-    <div className="rounded-2xl bg-zinc-900 p-5 shadow-black/20 ring-1 ring-zinc-700">
-      {/* Top row: name + order # */}
+    <div className="rounded-2xl bg-white border border-stone-200 p-6 shadow-sm">
+      {/* Header row */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xl font-bold text-zinc-100">{order.customer_name}</p>
+          <p className="text-lg font-semibold text-stone-950">{order.customer_name}</p>
           {order.customer_phone && (
-            <p className="mt-1 text-base text-zinc-400">{order.customer_phone}</p>
+            <p className="mt-0.5 text-sm text-stone-500">{order.customer_phone}</p>
           )}
-          <p className="mt-1 font-mono text-xs text-slate-400 uppercase">{shortId}</p>
+          <p className="mt-1 font-mono text-xs text-stone-400 uppercase">{shortId}</p>
         </div>
-        <div className="text-right shrink-0 flex flex-col items-end gap-1">
-          <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-bold text-yellow-800">
+        <div className="flex flex-col items-end gap-2">
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
             Pending
           </span>
           {isMixed && (
-            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
-              Mixed order
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
+              Mixed
             </span>
           )}
         </div>
       </div>
 
-      {/* Products list — pickup items only */}
+      {/* Items */}
       {pickupItems.length > 0 && (
-        <div className="mt-4 rounded-lg bg-slate-50 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Pickup items ({pickupItems.reduce((s, i) => s + i.quantity, 0)} total)
-          </p>
-          <ul className="space-y-1">
+        <div className="mt-5 rounded-xl bg-stone-50 border border-stone-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Pickup Items
+            </span>
+            <span className="text-xs text-stone-400">
+              {pickupItems.reduce((s, i) => s + i.quantity, 0)} total
+            </span>
+          </div>
+          <ul className="space-y-2">
             {pickupItems.map((item) => (
               <li key={item.id} className="flex items-center justify-between text-sm">
-                <span className="text-zinc-300">
+                <span className="text-stone-700">
                   {item.quantity > 1 && (
-                    <span className="font-semibold text-zinc-100">{item.quantity}× </span>
+                    <span className="font-semibold text-stone-900">{item.quantity}× </span>
                   )}
                   {item.products?.name ?? "Unknown Product"}
                 </span>
-                <span className="text-zinc-500">
+                <span className="text-stone-500 font-medium">
                   ${(Number(item.price) * item.quantity).toFixed(2)}
                 </span>
               </li>
             ))}
           </ul>
-          <div className="mt-2 border-t border-zinc-800 pt-2 flex justify-between">
-            <span className="text-sm font-medium text-zinc-400">Pickup subtotal</span>
-            <span className="text-sm font-bold text-zinc-100">${pickupTotal.toFixed(2)}</span>
+          <div className="mt-3 border-t border-stone-200 pt-3 flex justify-between">
+            <span className="text-sm font-medium text-stone-600">Subtotal</span>
+            <span className="text-sm font-bold text-stone-900">${pickupTotal.toFixed(2)}</span>
           </div>
         </div>
       )}
 
-      {/* Shipping items note */}
+      {/* Shipping warning */}
       {isMixed && (
-        <div className="mt-3 rounded-lg bg-purple-50 border border-purple-100 px-3 py-2 text-sm text-purple-700">
-          ⚠ {shippingItems.length} shipping item{shippingItems.length > 1 ? "s" : ""} — will also be marked picked up
+        <div className="mt-4 rounded-lg bg-violet-50 border border-violet-100 px-4 py-3 text-sm text-violet-700">
+          {shippingItems.length} shipping item{shippingItems.length > 1 ? "s" : ""} will also be marked picked up
         </div>
       )}
 
-      {/* Middle: stop + items count */}
-      <div className="mt-4 flex items-center justify-between">
+      {/* Footer */}
+      <div className="mt-5 flex items-center justify-between">
         <div>
           {order.stops ? (
-            <p className="font-medium text-zinc-300">
-              {order.stops.city}, {order.stops.state}
-            </p>
+            <>
+              <p className="font-medium text-stone-700">{order.stops.city}, {order.stops.state}</p>
+              <p className="text-sm text-stone-400">
+                {pickupItems.length} pickup {pickupItems.length === 1 ? "item" : "items"}
+              </p>
+            </>
           ) : (
-            <p className="text-slate-400">No stop</p>
+            <p className="text-stone-400">No stop assigned</p>
           )}
-          <p className="text-sm text-slate-400">
-            {pickupItems.length} pickup {pickupItems.length === 1 ? "item" : "items"}
-            {isMixed && ` · ${shippingItems.length} shipping`}
-          </p>
         </div>
-        <p className="text-3xl font-bold text-zinc-100">
-          ${pickupTotal.toFixed(2)}
-        </p>
+        <p className="text-2xl font-bold text-stone-950">${pickupTotal.toFixed(2)}</p>
       </div>
 
-      {/* Pickup Button */}
+      {/* Actions */}
       {canManagePickup ? (
-        <div className="mt-4 flex gap-2">
-          <a
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Link
             href={`/admin/orders/${order.id}`}
-            className="flex-1 rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-4 text-center text-base font-semibold text-zinc-300 active:bg-slate-50"
-            style={{ minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "center" }}
+            className="flex items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
           >
             View Details
-          </a>
+          </Link>
           <button
             onClick={() => onMarkPickup(order.id)}
             disabled={pickingUp === order.id}
-            className="flex-1 rounded-xl bg-green-600 px-4 py-5 text-xl font-bold text-white active:bg-green-700 disabled:opacity-50"
-            style={{ minHeight: "56px" }}
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
-            {pickingUp === order.id ? "..." : "✓ Pick Up"}
+            {pickingUp === order.id ? (
+              "..."
+            ) : (
+              <>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Pick Up
+              </>
+            )}
           </button>
         </div>
       ) : (
-        <div className="mt-4 rounded-xl bg-zinc-950 px-4 py-3 text-center text-sm text-zinc-500">
+        <div className="mt-5 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-center text-sm text-stone-400">
           No pickup permission
         </div>
       )}
@@ -377,40 +390,38 @@ function PickedUpCard({ order, shortId }: PickedUpCardProps) {
   const isMixed = allItems.some((i) => i.fulfillment === "shipping");
 
   return (
-    <div className="rounded-xl border border-green-200 bg-green-900/30 p-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-bold text-green-900">{order.customer_name}</p>
+          <p className="font-semibold text-stone-900">{order.customer_name}</p>
           {order.customer_phone && (
-            <p className="text-sm text-green-400">{order.customer_phone}</p>
+            <p className="mt-0.5 text-sm text-stone-500">{order.customer_phone}</p>
           )}
-          <p className="mt-1 text-xs text-green-600">
+          <p className="mt-1 text-xs text-stone-400">
             {shortId} · {order.stops?.city}, {order.stops?.state}
           </p>
           {pickupItems.length > 0 && (
-            <ul className="mt-2 space-y-0.5">
+            <ul className="mt-3 space-y-1">
               {pickupItems.map((item) => (
-                <li key={item.id} className="text-xs text-green-400">
+                <li key={item.id} className="text-sm text-stone-600">
                   {item.quantity > 1 && <span className="font-semibold">{item.quantity}× </span>}
                   {item.products?.name ?? "Unknown"}
-                  <span className="ml-1 text-green-500">${(Number(item.price) * item.quantity).toFixed(2)}</span>
+                  <span className="ml-2 text-stone-400">${(Number(item.price) * item.quantity).toFixed(2)}</span>
                 </li>
               ))}
             </ul>
           )}
-          <p className="mt-2 text-xs font-semibold text-green-400">
-            {pickupItems.reduce((s, i) => s + i.quantity, 0)} pickup items · ${pickupTotal.toFixed(2)}
-            {isMixed && <span className="text-purple-600 ml-1">· mixed</span>}
+          <p className="mt-2 text-xs text-stone-500">
+            {pickupItems.reduce((s, i) => s + i.quantity, 0)} items · ${pickupTotal.toFixed(2)}
+            {isMixed && <span className="ml-2 text-violet-600">· mixed</span>}
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <span className="rounded-full bg-green-200 px-3 py-1 text-xs font-bold text-green-800">
+        <div className="flex flex-col items-end gap-2">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
             Picked Up
           </span>
           {order.pickup_completed_at && (
-            <p className="mt-1 text-xs text-green-600">
-              {formatPickupTime(order.pickup_completed_at)}
-            </p>
+            <p className="text-xs text-stone-400">{formatPickupTime(order.pickup_completed_at)}</p>
           )}
         </div>
       </div>

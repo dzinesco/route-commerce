@@ -2,7 +2,213 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getBrandSettings } from "@/actions/brand-settings";
+import { AdminCard } from "@/components/admin/design-system";
+import { setAIProviderSettings } from "@/actions/integrations/ai-providers";
+
+// ── Header Icon Component ─────────────────────────────────────────────────────
+
+function AIHeaderIcon() {
+  return (
+    <div 
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+      style={{
+        background: 'linear-gradient(135deg, rgba(202, 117, 67, 0.15) 0%, rgba(202, 117, 67, 0.08) 100%)',
+        border: '1px solid rgba(202, 117, 67, 0.2)',
+      }}
+    >
+      <svg className="h-6 w-6" style={{ color: '#8c4c27' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+      </svg>
+    </div>
+  );
+}
+
+// ── Tool Card Component ───────────────────────────────────────────────────────
+
+type ToolCardProps = {
+  tool: AITool;
+  isConnected: boolean;
+  onOpen: (tool: AITool) => void;
+};
+
+function ToolCard({ tool, isConnected, onOpen }: ToolCardProps) {
+  const isReady = tool.status === "available" && isConnected;
+  
+  return (
+    <AdminCard className="p-5">
+      <div className="flex items-start gap-4">
+        <span className="text-2xl">{tool.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <h3 className="text-base font-semibold" style={{ color: 'var(--admin-text-primary)' }}>{tool.title}</h3>
+            {tool.badge && (
+              <span 
+                className="text-xs font-medium rounded-full px-2.5 py-0.5"
+                style={{ 
+                  background: 'rgba(202, 117, 67, 0.1)', 
+                  color: '#8c4c27',
+                  border: '1px solid rgba(202, 117, 67, 0.2)',
+                }}
+              >
+                {tool.badge}
+              </span>
+            )}
+            {tool.status === "available" && (
+              <span 
+                className="text-xs font-medium rounded-full px-2.5 py-0.5"
+                style={{ 
+                  background: isConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 0, 0, 0.04)', 
+                  color: isConnected ? '#047857' : 'rgba(0, 0, 0, 0.4)',
+                  border: isConnected ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(0, 0, 0, 0.06)',
+                }}
+              >
+                {isConnected ? "Ready" : "Disabled"}
+              </span>
+            )}
+            {tool.status === "experimental" && (
+              <span 
+                className="text-xs font-medium rounded-full px-2.5 py-0.5"
+                style={{ 
+                  background: 'rgba(171, 162, 120, 0.15)', 
+                  color: '#92781e',
+                  border: '1px solid rgba(171, 162, 120, 0.2)',
+                }}
+              >
+                Experimental
+              </span>
+            )}
+            {tool.status === "coming_soon" && (
+              <span 
+                className="text-xs font-medium rounded-full px-2.5 py-0.5"
+                style={{ 
+                  background: 'rgba(0, 0, 0, 0.04)', 
+                  color: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                }}
+              >
+                Coming Soon
+              </span>
+            )}
+          </div>
+          <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>{tool.module}</span>
+          <p className="mt-2 text-sm" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.5 }}>{tool.description}</p>
+        </div>
+      </div>
+      <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--admin-border-light)' }}>
+        {tool.status === "available" && (
+          <button
+            onClick={() => isConnected && onOpen(tool)}
+            disabled={!isConnected}
+            className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-all"
+            style={{
+              background: isConnected 
+                ? 'linear-gradient(135deg, #ca7543 0%, #d4865a 100%)' 
+                : 'rgba(0, 0, 0, 0.04)',
+              color: isConnected ? 'white' : 'rgba(0, 0, 0, 0.4)',
+              boxShadow: isConnected ? '0 2px 8px rgba(202, 117, 67, 0.25)' : 'none',
+            }}
+            title={!isConnected ? "Add your OpenAI API key in Settings to enable" : "Open tool"}
+          >
+            Open Tool
+          </button>
+        )}
+        {tool.status === "coming_soon" && (
+          <button disabled className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold cursor-not-allowed"
+            style={{ 
+              background: 'rgba(0, 0, 0, 0.04)', 
+              color: 'rgba(0, 0, 0, 0.4)',
+            }}>
+            Coming Soon
+          </button>
+        )}
+        {tool.status === "experimental" && (
+          <button disabled className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold cursor-not-allowed"
+            style={{ 
+              background: 'rgba(171, 162, 120, 0.15)', 
+              color: '#92781e',
+            }}>
+            Request Access
+          </button>
+        )}
+      </div>
+    </AdminCard>
+  );
+}
+
+// ── Connection Status Banner ───────────────────────────────────────────────────
+
+function ConnectionStatusBanner({ isConnected, availableCount, onConfigure }: { 
+  isConnected: boolean; 
+  availableCount: number;
+  onConfigure: () => void;
+}) {
+  if (isConnected) {
+    return (
+      <AdminCard className="p-5 mb-6" style={{ 
+        background: 'rgba(16, 185, 129, 0.08)',
+        border: '1px solid rgba(16, 185, 129, 0.2)',
+      }}>
+        <div className="flex items-center gap-4">
+          <div 
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            style={{ background: 'rgba(16, 185, 129, 0.15)' }}
+          >
+            <svg className="h-5 w-5" style={{ color: '#047857' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold" style={{ color: '#047857' }}>AI Connected</p>
+            <p className="text-sm" style={{ color: '#059669' }}>{availableCount} tool{availableCount !== 1 ? "s" : ""} ready to use</p>
+          </div>
+          <span 
+            className="text-xs font-medium rounded-full px-3 py-1"
+            style={{ 
+              background: 'rgba(16, 185, 129, 0.15)', 
+              color: '#047857',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+            }}
+          >
+            Active
+          </span>
+        </div>
+      </AdminCard>
+    );
+  }
+
+  return (
+    <AdminCard className="p-5 mb-6" style={{ 
+      background: 'rgba(171, 162, 120, 0.08)',
+      border: '1px solid rgba(171, 162, 120, 0.2)',
+    }}>
+      <div className="flex items-center gap-4">
+        <div 
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          style={{ background: 'rgba(171, 162, 120, 0.15)' }}
+        >
+          <svg className="h-5 w-5" style={{ color: '#92781e' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold" style={{ color: '#92781e' }}>AI Not Configured</p>
+          <p className="text-sm" style={{ color: '#a6953f' }}>Add your API key to enable AI tools.</p>
+        </div>
+        <button
+          onClick={onConfigure}
+          className="rounded-xl px-4 py-2 text-sm font-bold transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #ca7543 0%, #d4865a 100%)',
+            color: 'white',
+            boxShadow: '0 2px 8px rgba(202, 117, 67, 0.25)',
+          }}
+        >
+          Add API Key
+        </button>
+      </div>
+    </AdminCard>
+  );
+}
 
 type ToolStatus = "available" | "coming_soon" | "experimental";
 
@@ -84,10 +290,195 @@ const AI_TOOLS: AITool[] = [
   },
 ];
 
+type Provider = "openai" | "anthropic" | "google" | "xai" | "custom";
+
 type Props = {
   isConnected: boolean;
   brandId: string;
   brandName: string;
+  provider?: Provider;
+  model?: string;
+  customEndpoint?: string;
+};
+
+// ── Provider Selector ─────────────────────────────────────────────────────────
+
+type ProviderOption = {
+  id: Provider;
+  name: string;
+  icon: string;
+  description: string;
+};
+
+const PROVIDERS: ProviderOption[] = [
+  { id: "openai", name: "OpenAI", icon: "💩", description: "GPT-4, GPT-4o, o1" },
+  { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3.5 Sonnet, Opus" },
+  { id: "google", name: "Google", icon: "🔴", description: "Gemini 2.0 Flash, Pro" },
+  { id: "xai", name: "xAI", icon: "⚡", description: "Grok-2, Grok-1.5" },
+  { id: "custom", name: "Custom", icon: "🔧", description: "Bring your own endpoint" },
+];
+
+// ── Model Input ───────────────────────────────────────────────────────────────
+
+function ModelInput({ 
+  currentModel, 
+  brandId,
+  onChange 
+}: { 
+  currentModel: string;
+  brandId: string;
+  onChange: (model: string) => void;
+}) {
+  const [customModel, setCustomModel] = useState(currentModel);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!customModel.trim()) return;
+    setSaving(true);
+    setError(null);
+    
+    const result = await setAIProviderSettings(brandId, { model: customModel.trim() });
+    if (result.success) {
+      onChange(customModel.trim());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      setError(result.error ?? "Failed to save");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <AdminCard className="p-5 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">🤖</span>
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--admin-text-primary)' }}>
+          Model
+        </h2>
+      </div>
+      <div className="flex gap-3">
+        <input
+          type="text"
+          value={customModel}
+          onChange={(e) => setCustomModel(e.target.value)}
+          placeholder="e.g., gpt-4o, claude-3-5-sonnet-20241002"
+          className="flex-1 px-4 py-2.5 rounded-xl text-sm"
+          style={{
+            border: '1px solid var(--admin-border)',
+            backgroundColor: 'var(--admin-card-bg)',
+            color: 'var(--admin-text-primary)',
+          }}
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving || !customModel.trim()}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #ca7543 0%, #d4865a 100%)',
+            boxShadow: '0 2px 8px rgba(202, 117, 67, 0.25)',
+            opacity: (saving || !customModel.trim()) ? 0.5 : 1,
+            cursor: (saving || !customModel.trim()) ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {saving ? "..." : saved ? "✓" : "Save"}
+        </button>
+      </div>
+      <p className="text-xs mt-2" style={{ color: 'var(--admin-danger)' }}>
+        ⚠️ Model ID must be exact — check the provider&apos;s documentation for the correct identifier.
+      </p>
+      {error && <p className="text-xs mt-2" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
+    </AdminCard>
+  );
+}
+
+// ── Provider Selector Component ─────────────────────────────────────────────
+
+function ProviderSelector({ 
+  currentProvider, 
+  currentModel, 
+  brandId,
+  onSelect 
+}: { 
+  currentProvider: Provider;
+  currentModel: string;
+  brandId: string;
+  onSelect: (provider: Provider) => void;
+}) {
+  const handleSelect = async (provider: Provider) => {
+    onSelect(provider);
+    await setAIProviderSettings(brandId, { provider });
+  };
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">💩</span>
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--admin-text-primary)' }}>
+          AI Provider
+        </h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {PROVIDERS.map((provider) => (
+          <button
+            key={provider.id}
+            onClick={() => handleSelect(provider.id)}
+            className="p-4 rounded-xl text-center transition-all"
+            style={{
+              background: currentProvider === provider.id 
+                ? 'rgba(202, 117, 67, 0.1)' 
+                : 'rgba(0, 0, 0, 0.02)',
+              border: currentProvider === provider.id 
+                ? '2px solid var(--admin-accent)' 
+                : '1px solid var(--admin-border)',
+            }}
+          >
+            <span className="text-3xl block mb-2">{provider.icon}</span>
+            <span className="text-sm font-semibold block" style={{ color: 'var(--admin-text-primary)' }}>
+              {provider.name}
+            </span>
+            <span className="text-xs block mt-1" style={{ color: 'var(--admin-text-muted)' }}>
+              {provider.description}
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="text-xs mt-3" style={{ color: 'var(--admin-text-muted)' }}>
+        Current model: <span className="font-medium" style={{ color: 'var(--admin-text-secondary)' }}>{currentModel}</span>
+      </p>
+    </div>
+  );
+}
+
+// ── Form Input Styles (Shared) ────────────────────────────────────────────────
+
+const inputBaseClass = "w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-colors";
+const inputStyle = {
+  border: '1px solid var(--admin-border)',
+  backgroundColor: 'var(--admin-card-bg)',
+  color: 'var(--admin-text-primary)',
+};
+const inputFocusStyle = {
+  borderColor: 'var(--admin-accent)',
+  boxShadow: '0 0 0 3px rgba(202, 117, 67, 0.1)',
+};
+
+const textareaStyle = { ...inputStyle };
+const textareaFocusStyle = { ...inputFocusStyle };
+
+const btnPrimaryClass = "rounded-xl px-5 py-2.5 text-sm font-bold text-white transition-all";
+const btnPrimaryStyle = {
+  background: 'linear-gradient(135deg, #ca7543 0%, #d4865a 100%)',
+  boxShadow: '0 2px 8px rgba(202, 117, 67, 0.25)',
+};
+
+const labelStyle = {
+  display: 'block',
+  fontSize: '0.875rem',
+  fontWeight: 500,
+  marginBottom: '0.25rem',
+  color: 'var(--admin-text-primary)',
 };
 
 // ── Campaign Writer Tool ──────────────────────────────────────────────────────
@@ -123,31 +514,37 @@ function CampaignWriterTool({ brandId, brandName }: { brandId: string; brandName
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1">What do you want to communicate?</label>
+        <label className="block text-sm font-medium mb-1" style={labelStyle}>What do you want to communicate?</label>
         <textarea
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           rows={3}
           placeholder="e.g., 'Remind customers about the new sweet corn season starting next week, emphasize freshness and local delivery'"
-          className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+          className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+          style={textareaStyle}
         />
       </div>
       <button
         onClick={handleGenerate}
         disabled={loading || !topic.trim()}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || !topic.trim()) ? 0.5 : 1,
+          cursor: (loading || !topic.trim()) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Generating..." : "Generate Campaign Ideas"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {results.length > 0 && (
         <div className="space-y-3">
           {results.map((idea, i) => (
-            <div key={i} className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Idea {i + 1}</p>
-              <p className="text-sm font-medium text-stone-950 mb-1"><span className="text-stone-400">Subject:</span> {idea.subject}</p>
-              <p className="text-sm text-stone-500 mt-2 whitespace-pre-line">{idea.body}</p>
-            </div>
+            <AdminCard key={i} className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-accent)' }}>Idea {i + 1}</p>
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--admin-text-primary)' }}><span style={{ color: 'var(--admin-text-muted)' }}>Subject:</span> {idea.subject}</p>
+              <p className="text-sm mt-2 whitespace-pre-line" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.6 }}>{idea.body}</p>
+            </AdminCard>
           ))}
         </div>
       )}
@@ -192,51 +589,56 @@ function ProductWriterTool({ brandId }: { brandId: string }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Product Name *</label>
-          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Product Name *</label>
+          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetables" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Category</label>
+          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetables" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Price</label>
-          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$4.50" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Price</label>
+          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$4.50" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Unit</label>
-          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="per dozen" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Unit</label>
+          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="per dozen" className={inputBaseClass} style={inputStyle} />
         </div>
       </div>
       <button
         onClick={handleGenerate}
         disabled={loading || !productName.trim()}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || !productName.trim()) ? 0.5 : 1,
+          cursor: (loading || !productName.trim()) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Generating..." : "Write Description"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
-        <div className="rounded-xl border border-stone-300 p-5 bg-white space-y-4">
+        <AdminCard className="p-5 space-y-4">
           <div>
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Product Name</p>
-            <p className="text-base font-semibold text-stone-950">{result.name}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Product Name</p>
+            <p className="text-base font-semibold" style={{ color: 'var(--admin-text-primary)' }}>{result.name}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Description</p>
-            <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-line">{result.description}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Description</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.6 }}>{result.description}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Image Alt Text</p>
-            <p className="text-sm text-stone-500">{result.altText}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Image Alt Text</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)' }}>{result.altText}</p>
           </div>
           {result.priceNote && (
             <div>
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Pricing Note</p>
-              <p className="text-sm text-stone-500">{result.priceNote}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Pricing Note</p>
+              <p className="text-sm" style={{ color: 'var(--admin-text-secondary)' }}>{result.priceNote}</p>
             </div>
           )}
-        </div>
+        </AdminCard>
       )}
     </div>
   );
@@ -287,16 +689,17 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
+      <p className="text-sm rounded-lg p-3" style={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', color: 'var(--admin-text-muted)' }}>
         The Report Explainer analyzes any report tab from the Reports dashboard. Switch to a report tab, copy the data, and paste it here for an AI-generated breakdown.
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Report Type</label>
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Report Type</label>
           <select
             value={reportType}
             onChange={(e) => setReportType(e.target.value)}
-            className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+            className={inputBaseClass}
+            style={inputStyle}
           >
             {reportTypes.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
@@ -304,60 +707,63 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Date Range</label>
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Date Range</label>
           <input
             type="text"
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
             placeholder="e.g., Last 7 days, March 2026"
-            className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+            className={inputBaseClass}
+            style={inputStyle}
           />
         </div>
       </div>
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
-        ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
+      <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'rgba(171, 162, 120, 0.1)', border: '1px solid rgba(171, 162, 120, 0.2)', color: '#92781e' }}>
+        AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={handleExplain}
         disabled={loading}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{ ...btnPrimaryStyle, opacity: loading ? 0.5 : 1 }}
       >
         {loading ? "Analyzing..." : "Explain Report"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Summary</p>
-            <p className="text-sm text-stone-700 leading-relaxed">{result.summary}</p>
-          </div>
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Key Insights</p>
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Summary</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.6 }}>{result.summary}</p>
+          </AdminCard>
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Key Insights</p>
             <ul className="space-y-2">
               {result.keyInsights.map((insight, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-stone-700">
-                  <span className="text-emerald-600 mt-0.5">→</span>
+                <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--admin-text-secondary)' }}>
+                  <span style={{ color: 'var(--admin-accent)' }}>→</span>
                   <span>{insight}</span>
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Suggested Actions</p>
+          </AdminCard>
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Suggested Actions</p>
             <ul className="space-y-2">
               {result.suggestedActions.map((action, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-stone-700">
-                  <span className="text-green-500 mt-0.5">✓</span>
+                <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--admin-text-secondary)' }}>
+                  <span style={{ color: 'var(--admin-success)' }}>✓</span>
                   <span>{action}</span>
                 </li>
               ))}
             </ul>
-          </div>
+          </AdminCard>
           <button
             onClick={() => copyToClipboard(JSON.stringify(result, null, 2))}
-            className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1"
+            className="text-xs flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--admin-text-muted)' }}
           >
-            📋 Copy to clipboard
+            Copy to clipboard
           </button>
         </div>
       )}
@@ -432,14 +838,12 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
     navigator.clipboard.writeText(text);
   }
 
-  // Price tier helpers
   function addTier() { setPriceTiers([...priceTiers, { tier: "", price: "" }]); }
   function removeTier(i: number) { setPriceTiers(priceTiers.filter((_, idx) => idx !== i)); }
   function updateTier(i: number, field: keyof PriceTier, val: string) {
     const updated = [...priceTiers]; updated[i] = { ...updated[i], [field]: val }; setPriceTiers(updated);
   }
 
-  // Sales entry helpers
   function addSale() { setHistoricalSales([...historicalSales, { date: "", units_sold: "", revenue: "" }]); }
   function removeSale(i: number) { setHistoricalSales(historicalSales.filter((_, idx) => idx !== i)); }
   function updateSale(i: number, field: keyof SalesEntry, val: string) {
@@ -448,25 +852,26 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
+      <p className="text-sm rounded-lg p-3" style={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', color: 'var(--admin-text-muted)' }}>
         Enter a product name and optional price tiers or historical sales data for AI-powered pricing recommendations.
       </p>
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1">Product Name *</label>
+        <label className="block text-sm font-medium mb-1" style={labelStyle}>Product Name *</label>
         <input
           type="text"
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
           placeholder="Sweet Corn"
-          className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+          className={inputBaseClass}
+          style={inputStyle}
         />
       </div>
 
       {/* Price Tiers */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-stone-700">Price Tiers</label>
-          <button onClick={addTier} className="text-xs text-emerald-700 hover:text-emerald-600">+ Add Tier</button>
+          <label className="block text-sm font-medium" style={labelStyle}>Price Tiers</label>
+          <button onClick={addTier} className="text-xs transition-colors" style={{ color: 'var(--admin-accent)' }}>+ Add Tier</button>
         </div>
         {priceTiers.map((tier, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -475,20 +880,22 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
               value={tier.tier}
               onChange={(e) => updateTier(i, "tier", e.target.value)}
               placeholder="e.g., Wholesale"
-              className="flex-1 rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+              className="flex-1 rounded-lg px-3 py-2 text-sm"
+              style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
             />
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--admin-text-muted)' }}>$</span>
               <input
                 type="text"
                 value={tier.price}
                 onChange={(e) => updateTier(i, "price", e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-lg border border-stone-200 pl-7 pr-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+                className="w-full rounded-lg pl-7 pr-3 py-2 text-sm"
+                style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
             </div>
             {priceTiers.length > 1 && (
-              <button onClick={() => removeTier(i)} className="text-red-700 hover:text-red-600 text-xs px-2">✕</button>
+              <button onClick={() => removeTier(i)} className="text-xs px-2 transition-colors" style={{ color: 'var(--admin-danger)' }}>✕</button>
             )}
           </div>
         ))}
@@ -497,14 +904,14 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
       {/* Historical Sales */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-stone-700">Historical Sales</label>
-          <button onClick={addSale} className="text-xs text-emerald-700 hover:text-emerald-600">+ Add Row</button>
+          <label className="block text-sm font-medium" style={labelStyle}>Historical Sales</label>
+          <button onClick={addSale} className="text-xs transition-colors" style={{ color: 'var(--admin-accent)' }}>+ Add Row</button>
         </div>
-        <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-200">
+        <AdminCard className="divide-y" style={{ border: '1px solid var(--admin-border)' }}>
           <div className="grid grid-cols-4 gap-2 px-3 py-2">
-            <span className="text-xs text-stone-400 font-medium">Date</span>
-            <span className="text-xs text-stone-400 font-medium">Units Sold</span>
-            <span className="text-xs text-stone-400 font-medium">Revenue</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>Date</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>Units Sold</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>Revenue</span>
             <span />
           </div>
           {historicalSales.map((sale, i) => (
@@ -514,97 +921,108 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
                 value={sale.date}
                 onChange={(e) => updateSale(i, "date", e.target.value)}
                 placeholder="2026-04-01"
-                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
+                className="rounded-lg border px-2 py-1.5 text-xs"
+                style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
               <input
                 type="text"
                 value={sale.units_sold}
                 onChange={(e) => updateSale(i, "units_sold", e.target.value)}
                 placeholder="120"
-                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
+                className="rounded-lg border px-2 py-1.5 text-xs"
+                style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
               <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-stone-400 text-xs">$</span>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--admin-text-muted)' }}>$</span>
                 <input
                   type="text"
                   value={sale.revenue}
                   onChange={(e) => updateSale(i, "revenue", e.target.value)}
                   placeholder="540"
-                  className="w-full rounded-lg border border-stone-200 pl-5 pr-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
+                  className="w-full rounded-lg border pl-5 pr-2 py-1.5 text-xs"
+                  style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
                 />
               </div>
               {historicalSales.length > 1 && (
-                <button onClick={() => removeSale(i)} className="text-red-700 hover:text-red-600 text-xs justify-self-end">✕</button>
+                <button onClick={() => removeSale(i)} className="text-xs justify-self-end transition-colors" style={{ color: 'var(--admin-danger)' }}>✕</button>
               )}
             </div>
           ))}
-        </div>
+        </AdminCard>
       </div>
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
-        ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
+      <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'rgba(171, 162, 120, 0.1)', border: '1px solid rgba(171, 162, 120, 0.2)', color: '#92781e' }}>
+        AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={handleAnalyze}
         disabled={loading || !productName.trim()}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || !productName.trim()) ? 0.5 : 1,
+          cursor: (loading || !productName.trim()) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Analyzing..." : "Analyze Pricing"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Current State</p>
-            <p className="text-sm text-stone-700 leading-relaxed">{result.currentState}</p>
-          </div>
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Current State</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.6 }}>{result.currentState}</p>
+          </AdminCard>
           {result.recommendations.map((rec, i) => (
-            <div key={i} className="rounded-xl border border-stone-300 p-5 bg-white">
+            <AdminCard key={i} className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-stone-950">{rec.productName}</p>
-                <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${
-                  rec.direction === "increase" ? "bg-green-50 text-green-700" :
-                  rec.direction === "decrease" ? "bg-red-50 text-red-700" :
-                  "bg-stone-50 text-stone-500"
-                }`}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--admin-text-primary)' }}>{rec.productName}</p>
+                <span 
+                  className="text-xs font-bold rounded-full px-2 py-0.5"
+                  style={{
+                    background: rec.direction === "increase" ? 'rgba(16, 185, 129, 0.1)' : rec.direction === "decrease" ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+                    color: rec.direction === "increase" ? '#047857' : rec.direction === "decrease" ? '#dc2626' : 'var(--admin-text-muted)',
+                  }}
+                >
                   {rec.direction}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm mb-2">
-                <span className="text-stone-500">${rec.currentPrice}</span>
-                <span className="text-stone-500">→</span>
-                <span className="font-bold text-emerald-700">${rec.suggestedPrice}</span>
-                <span className={`text-xs ml-auto ${rec.estimatedRevenueImpact.startsWith("+") ? "text-green-700" : "text-stone-400"}`}>
+                <span style={{ color: 'var(--admin-text-muted)' }}>${rec.currentPrice}</span>
+                <span style={{ color: 'var(--admin-text-muted)' }}>→</span>
+                <span className="font-bold" style={{ color: 'var(--admin-accent)' }}>${rec.suggestedPrice}</span>
+                <span className={`text-xs ml-auto ${rec.estimatedRevenueImpact.startsWith("+") ? 'text-green-600' : ''}`} style={{ color: rec.estimatedRevenueImpact.startsWith("+") ? '#059669' : 'var(--admin-text-muted)' }}>
                   {rec.estimatedRevenueImpact}
                 </span>
               </div>
-              <p className="text-sm text-stone-500">{rec.reasoning}</p>
-            </div>
+              <p className="text-sm" style={{ color: 'var(--admin-text-secondary)' }}>{rec.reasoning}</p>
+            </AdminCard>
           ))}
           {result.opportunities.length > 0 && (
-            <div className="rounded-xl border border-green-200 p-5 bg-green-50">
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">Opportunities</p>
+            <AdminCard className="p-5" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#047857' }}>Opportunities</p>
               <ul className="space-y-1">
                 {result.opportunities.map((opp, i) => (
-                  <li key={i} className="text-sm text-green-600">• {opp}</li>
+                  <li key={i} className="text-sm" style={{ color: '#059669' }}>• {opp}</li>
                 ))}
               </ul>
-            </div>
+            </AdminCard>
           )}
           {result.warnings.length > 0 && (
-            <div className="rounded-xl border border-amber-200 p-5 bg-amber-50">
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Warnings</p>
+            <AdminCard className="p-5" style={{ backgroundColor: 'rgba(171, 162, 120, 0.08)', border: '1px solid rgba(171, 162, 120, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#92781e' }}>Warnings</p>
               <ul className="space-y-1">
                 {result.warnings.map((warn, i) => (
-                  <li key={i} className="text-sm text-amber-600">• {warn}</li>
+                  <li key={i} className="text-sm" style={{ color: '#a6953f' }}>• {warn}</li>
                 ))}
               </ul>
-            </div>
+            </AdminCard>
           )}
           <button
             onClick={() => copyToClipboard(JSON.stringify(result, null, 2))}
-            className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1"
+            className="text-xs flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--admin-text-muted)' }}
           >
-            📋 Copy to clipboard
+            Copy to clipboard
           </button>
         </div>
       )}
@@ -666,73 +1084,83 @@ function StopBlastAdvisorTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
+      <p className="text-sm rounded-lg p-3" style={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', color: 'var(--admin-text-muted)' }}>
         Enter details about the stop you want to send a blast for. The AI will suggest optimal timing, subject lines, content angles, and audience targeting.
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Stop Name *</label>
-          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Stop Name *</label>
+          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Stop Date</label>
-          <input type="text" value={stopDate} onChange={(e) => setStopDate(e.target.value)} placeholder="2026-06-15" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Stop Date</label>
+          <input type="text" value={stopDate} onChange={(e) => setStopDate(e.target.value)} placeholder="2026-06-15" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">City</label>
-          <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Greeley" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>City</label>
+          <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Greeley" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Customer Count</label>
-          <input type="text" value={customerCount} onChange={(e) => setCustomerCount(e.target.value)} placeholder="42" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Customer Count</label>
+          <input type="text" value={customerCount} onChange={(e) => setCustomerCount(e.target.value)} placeholder="42" className={inputBaseClass} style={inputStyle} />
         </div>
       </div>
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
-        ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
+      <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'rgba(171, 162, 120, 0.1)', border: '1px solid rgba(171, 162, 120, 0.2)', color: '#92781e' }}>
+        AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={handleAnalyze}
         disabled={loading || !stopName.trim()}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || !stopName.trim()) ? 0.5 : 1,
+          cursor: (loading || !stopName.trim()) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Analyzing..." : "Get Recommendations"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Timing</p>
-            <p className="text-sm text-stone-700">{result.timingRecommendation}</p>
-          </div>
-          <div className="rounded-xl border border-emerald-200 p-5 bg-emerald-50">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">Recommended Subject Line</p>
-            <p className="text-base font-semibold text-stone-950">{result.subjectLine}</p>
-            <button onClick={() => copyToClipboard(result.subjectLine)} className="mt-2 text-xs text-emerald-700 hover:text-emerald-600 flex items-center gap-1">
-              📋 Copy
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Timing</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)' }}>{result.timingRecommendation}</p>
+          </AdminCard>
+          <AdminCard className="p-5" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#047857' }}>Recommended Subject Line</p>
+            <p className="text-base font-semibold" style={{ color: 'var(--admin-text-primary)' }}>{result.subjectLine}</p>
+            <button onClick={() => copyToClipboard(result.subjectLine)} className="mt-2 text-xs flex items-center gap-1 transition-colors" style={{ color: 'var(--admin-accent)' }}>
+              Copy
             </button>
-          </div>
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Body Preview</p>
-            <p className="text-sm text-stone-700 leading-relaxed">{result.bodyPreview}</p>
-          </div>
-          <div className="rounded-xl border border-stone-300 p-5 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Audience</p>
-            <p className="text-sm text-stone-700">{result.audienceRecommendation}</p>
-            <span className="inline-block mt-1 text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{result.audienceSize} recipients</span>
-          </div>
+          </AdminCard>
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Body Preview</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.6 }}>{result.bodyPreview}</p>
+          </AdminCard>
+          <AdminCard className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Audience</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)' }}>{result.audienceRecommendation}</p>
+            <span 
+              className="inline-block mt-1 text-xs rounded-full px-2 py-0.5"
+              style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#2563eb' }}
+            >
+              {result.audienceSize} recipients
+            </span>
+          </AdminCard>
           {result.contentAngles.map((a, i) => (
-            <div key={i} className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-sm font-semibold text-stone-950 mb-1">📣 {a.angle}</p>
-              <p className="text-xs text-stone-400">{a.reasoning}</p>
-            </div>
+            <AdminCard key={i} className="p-4">
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--admin-text-primary)' }}>{a.angle}</p>
+              <p className="text-xs" style={{ color: 'var(--admin-text-muted)' }}>{a.reasoning}</p>
+            </AdminCard>
           ))}
           {result.warnings.length > 0 && (
-            <div className="rounded-xl border border-amber-200 p-4 bg-amber-50">
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Warnings</p>
+            <AdminCard className="p-4" style={{ backgroundColor: 'rgba(171, 162, 120, 0.08)', border: '1px solid rgba(171, 162, 120, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#92781e' }}>Warnings</p>
               {result.warnings.map((w, i) => (
-                <p key={i} className="text-xs text-amber-600">• {w}</p>
+                <p key={i} className="text-xs" style={{ color: '#a6953f' }}>• {w}</p>
               ))}
-            </div>
+            </AdminCard>
           )}
         </div>
       )}
@@ -787,17 +1215,18 @@ function CustomerInsightsTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
+      <p className="text-sm rounded-lg p-3" style={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', color: 'var(--admin-text-muted)' }}>
         Ask questions about your customers and orders in plain English. The AI will analyze and return actionable insights.
       </p>
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1">Ask about your customers</label>
+        <label className="block text-sm font-medium mb-1" style={labelStyle}>Ask about your customers</label>
         <textarea
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           rows={2}
           placeholder="e.g., 'Which customers haven't ordered in 45 days?'"
-          className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+          className={inputBaseClass}
+          style={textareaStyle}
         />
       </div>
       <div className="flex flex-wrap gap-2">
@@ -805,51 +1234,66 @@ function CustomerInsightsTool({ brandId }: { brandId: string }) {
           <button
             key={q}
             onClick={() => { setQuery(q); handleAnalyze(q); }}
-            className="rounded-full bg-stone-50 px-3 py-1 text-xs text-stone-500 hover:bg-emerald-100 hover:text-emerald-600 transition-colors"
+            className="rounded-full px-3 py-1 text-xs transition-all"
+            style={{ 
+              backgroundColor: 'var(--admin-bg)', 
+              border: '1px solid var(--admin-border)',
+              color: 'var(--admin-text-secondary)',
+            }}
           >
             {q}
           </button>
         ))}
       </div>
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
-        ⚠️ AI-generated suggestions — review before use. Not a substitute for business judgment.
+      <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'rgba(171, 162, 120, 0.1)', border: '1px solid rgba(171, 162, 120, 0.2)', color: '#92781e' }}>
+        AI-generated suggestions — review before use. Not a substitute for business judgment.
       </div>
       <button
         onClick={() => handleAnalyze()}
         disabled={loading || !query.trim()}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || !query.trim()) ? 0.5 : 1,
+          cursor: (loading || !query.trim()) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Analyzing..." : "Analyze"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-stone-300 p-4 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Query Type</p>
-            <span className="rounded-full bg-emerald-50 text-emerald-600 px-2 py-0.5 text-xs font-medium">{result.queryType?.replace("_", " ")}</span>
-            <p className="text-sm text-stone-500 mt-2">{result.explanation}</p>
-          </div>
-          <div className="rounded-xl border border-stone-300 p-4 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">
-              Results <span className="text-emerald-700">({result.count} found)</span>
+          <AdminCard className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Query Type</p>
+            <span 
+              className="rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#047857' }}
+            >
+              {result.queryType?.replace("_", " ")}
+            </span>
+            <p className="text-sm mt-2" style={{ color: 'var(--admin-text-muted)' }}>{result.explanation}</p>
+          </AdminCard>
+          <AdminCard className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>
+              Results <span style={{ color: 'var(--admin-accent)' }}>({result.count} found)</span>
             </p>
             {result.results.length === 0 ? (
-              <p className="text-sm text-stone-400">No results found.</p>
+              <p className="text-sm" style={{ color: 'var(--admin-text-muted)' }}>No results found.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ color: 'var(--admin-text-secondary)' }}>
                   <thead>
-                    <tr className="border-b border-stone-300">
+                    <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
                       {Object.keys(result.results[0] ?? {}).map((k) => (
-                        <th key={k} className="text-left px-2 py-1.5 font-medium text-stone-400 uppercase">{k}</th>
+                        <th key={k} className="text-left px-2 py-1.5 font-medium uppercase" style={{ color: 'var(--admin-text-muted)' }}>{k}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {result.results.map((row, i) => (
-                      <tr key={i} className="border-b border-stone-300">
+                      <tr key={i} style={{ borderBottom: '1px solid var(--admin-border-light)' }}>
                         {Object.values(row).map((v, j) => (
-                          <td key={j} className="px-2 py-1.5 text-stone-700">{String(v ?? "—")}</td>
+                          <td key={j} className="px-2 py-1.5" style={{ color: 'var(--admin-text-secondary)' }}>{String(v ?? "—")}</td>
                         ))}
                       </tr>
                     ))}
@@ -857,7 +1301,7 @@ function CustomerInsightsTool({ brandId }: { brandId: string }) {
                 </table>
               </div>
             )}
-          </div>
+          </AdminCard>
         </div>
       )}
     </div>
@@ -929,145 +1373,166 @@ function RouteOptimizerTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
+      <p className="text-sm rounded-lg p-3" style={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', color: 'var(--admin-text-muted)' }}>
         Add your stops below. You need at least 2 stops to optimize a route.
       </p>
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1">Start Location</label>
+        <label className="block text-sm font-medium mb-1" style={labelStyle}>Start Location</label>
         <input
           type="text"
           value={startLocation}
           onChange={(e) => setStartLocation(e.target.value)}
           placeholder="Warehouse, Greeley CO"
-          className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+          className={inputBaseClass}
+          style={inputStyle}
         />
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-stone-700">Stops</label>
+          <label className="block text-sm font-medium" style={labelStyle}>Stops</label>
           <button
             onClick={addStop}
-            className="text-xs text-emerald-700 hover:text-emerald-600 flex items-center gap-1"
+            className="text-xs flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--admin-accent)' }}
           >
             + Add Stop
           </button>
         </div>
         {stops.map((stop, i) => (
-          <div key={i} className="rounded-xl border border-stone-200 bg-white p-4 space-y-3">
+          <AdminCard key={i} className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Stop {i + 1}</span>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--admin-text-muted)' }}>Stop {i + 1}</span>
               {stops.length > 2 && (
-                <button onClick={() => removeStop(i)} className="text-xs text-red-700 hover:text-red-600">
+                <button onClick={() => removeStop(i)} className="text-xs transition-colors" style={{ color: 'var(--admin-danger)' }}>
                   Remove
                 </button>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-stone-400 mb-1">Name *</label>
+                <label className="block text-xs mb-1" style={{ color: 'var(--admin-text-muted)' }}>Name *</label>
                 <input
                   type="text"
                   value={stop.name}
                   onChange={(e) => updateStop(i, "name", e.target.value)}
                   placeholder="Farmers Market"
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-400 mb-1">City *</label>
+                <label className="block text-xs mb-1" style={{ color: 'var(--admin-text-muted)' }}>City *</label>
                 <input
                   type="text"
                   value={stop.city}
                   onChange={(e) => updateStop(i, "city", e.target.value)}
                   placeholder="Greeley"
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-400 mb-1">State *</label>
+                <label className="block text-xs mb-1" style={{ color: 'var(--admin-text-muted)' }}>State *</label>
                 <input
                   type="text"
                   value={stop.state}
                   onChange={(e) => updateStop(i, "state", e.target.value)}
                   placeholder="CO"
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-400 mb-1">Address</label>
+                <label className="block text-xs mb-1" style={{ color: 'var(--admin-text-muted)' }}>Address</label>
                 <input
                   type="text"
                   value={stop.address}
                   onChange={(e) => updateStop(i, "address", e.target.value)}
                   placeholder="123 Main St"
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-stone-400 mb-1">Time Window</label>
+              <label className="block text-xs mb-1" style={{ color: 'var(--admin-text-muted)' }}>Time Window</label>
               <input
                 type="text"
                 value={stop.time_window}
                 onChange={(e) => updateStop(i, "time_window", e.target.value)}
                 placeholder="8am–12pm"
-                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 bg-stone-50"
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{ border: '1px solid var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
             </div>
-          </div>
+          </AdminCard>
         ))}
       </div>
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
-        ⚠️ AI-generated suggestions — review before use. Not a substitute for professional routing software.
+      <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'rgba(171, 162, 120, 0.1)', border: '1px solid rgba(171, 162, 120, 0.2)', color: '#92781e' }}>
+        AI-generated suggestions — review before use. Not a substitute for professional routing software.
       </div>
       <button
         onClick={handleOptimize}
         disabled={loading || validStops.length < 2}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || validStops.length < 2) ? 0.5 : 1,
+          cursor: (loading || validStops.length < 2) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Optimizing..." : "Optimize Route"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Est. Distance</p>
-              <p className="text-base font-bold text-stone-950">{result.totalEstimatedDistance}</p>
-            </div>
-            <div className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Drive Time</p>
-              <p className="text-base font-bold text-stone-950">{result.totalEstimatedDriveTime}</p>
-            </div>
+            <AdminCard className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Est. Distance</p>
+              <p className="text-base font-bold" style={{ color: 'var(--admin-text-primary)' }}>{result.totalEstimatedDistance}</p>
+            </AdminCard>
+            <AdminCard className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Drive Time</p>
+              <p className="text-base font-bold" style={{ color: 'var(--admin-text-primary)' }}>{result.totalEstimatedDriveTime}</p>
+            </AdminCard>
           </div>
-          <div className="rounded-xl border border-emerald-200 p-4 bg-emerald-50">
-            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Optimized Sequence</p>
+          <AdminCard className="p-4" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#047857' }}>Optimized Sequence</p>
             {result.optimizedSequence.map((s, i) => (
-              <div key={i} className="flex items-start gap-3 py-2 border-b border-stone-300 last:border-0">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex-shrink-0">{s.position}</span>
+              <div key={i} className="flex items-start gap-3 py-2" style={{ borderBottom: i < result.optimizedSequence.length - 1 ? '1px solid var(--admin-border-light)' : 'none' }}>
+                <span 
+                  className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white flex-shrink-0"
+                  style={{ backgroundColor: 'var(--admin-accent)' }}
+                >
+                  {s.position}
+                </span>
                 <div>
-                  <p className="text-sm font-semibold text-stone-950">{s.stopName}</p>
-                  <p className="text-xs text-stone-400">{s.city}, {s.state}</p>
-                  <p className="text-xs text-emerald-700 mt-0.5">{s.reason}</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--admin-text-primary)' }}>{s.stopName}</p>
+                  <p className="text-xs" style={{ color: 'var(--admin-text-muted)' }}>{s.city}, {s.state}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#047857' }}>{s.reason}</p>
                 </div>
               </div>
             ))}
-          </div>
+          </AdminCard>
           {result.suggestions.length > 0 && (
-            <div className="rounded-xl border border-green-200 p-4 bg-green-50">
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">Suggestions</p>
-              {result.suggestions.map((s, i) => <p key={i} className="text-sm text-green-600">✓ {s}</p>)}
-            </div>
+            <AdminCard className="p-4" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#047857' }}>Suggestions</p>
+              {result.suggestions.map((s, i) => <p key={i} className="text-sm" style={{ color: '#059669' }}>✓ {s}</p>)}
+            </AdminCard>
           )}
           {result.warnings.length > 0 && (
-            <div className="rounded-xl border border-amber-200 p-4 bg-amber-50">
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Warnings</p>
-              {result.warnings.map((w, i) => <p key={i} className="text-sm text-amber-600">⚠ {w}</p>)}
-            </div>
+            <AdminCard className="p-4" style={{ backgroundColor: 'rgba(171, 162, 120, 0.08)', border: '1px solid rgba(171, 162, 120, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#92781e' }}>Warnings</p>
+              {result.warnings.map((w, i) => <p key={i} className="text-sm" style={{ color: '#a6953f' }}>⚠ {w}</p>)}
+            </AdminCard>
           )}
-          <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1">
-            📋 Copy to clipboard
+          <button 
+            onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} 
+            className="text-xs flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--admin-text-muted)' }}
+          >
+            Copy to clipboard
           </button>
         </div>
       )}
@@ -1142,31 +1607,31 @@ function DemandForecastTool({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-stone-500 bg-white rounded-lg p-3">
+      <p className="text-sm rounded-lg p-3" style={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', color: 'var(--admin-text-muted)' }}>
         Enter a product name for demand forecasting. Add historical sales rows to improve accuracy.
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Product Name *</label>
-          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Product Name *</label>
+          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Stop Name</label>
-          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <label className="block text-sm font-medium mb-1" style={labelStyle}>Stop Name</label>
+          <input type="text" value={stopName} onChange={(e) => setStopName(e.target.value)} placeholder="Downtown Farmers Market" className={inputBaseClass} style={inputStyle} />
         </div>
       </div>
 
       {/* Historical Data */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-stone-700">Historical Sales</label>
-          <button onClick={addRow} className="text-xs text-emerald-700 hover:text-emerald-600">+ Add Row</button>
+          <label className="block text-sm font-medium" style={labelStyle}>Historical Sales</label>
+          <button onClick={addRow} className="text-xs transition-colors" style={{ color: 'var(--admin-accent)' }}>+ Add Row</button>
         </div>
-        <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-200">
+        <AdminCard className="divide-y" style={{ border: '1px solid var(--admin-border)' }}>
           <div className="grid grid-cols-4 gap-2 px-3 py-2">
-            <span className="text-xs text-stone-400 font-medium">Date</span>
-            <span className="text-xs text-stone-400 font-medium">Units Sold</span>
-            <span className="text-xs text-stone-400 font-medium">Stop</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>Date</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>Units Sold</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--admin-text-muted)' }}>Stop</span>
             <span />
           </div>
           {historicalData.map((row, i) => (
@@ -1176,84 +1641,100 @@ function DemandForecastTool({ brandId }: { brandId: string }) {
                 value={row.date}
                 onChange={(e) => updateRow(i, "date", e.target.value)}
                 placeholder="2026-04-01"
-                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
+                className="rounded-lg border px-2 py-1.5 text-xs"
+                style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
               <input
                 type="text"
                 value={row.quantity_sold}
                 onChange={(e) => updateRow(i, "quantity_sold", e.target.value)}
                 placeholder="120"
-                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
+                className="rounded-lg border px-2 py-1.5 text-xs"
+                style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
               <input
                 type="text"
                 value={row.stop}
                 onChange={(e) => updateRow(i, "stop", e.target.value)}
                 placeholder="Farmers Market"
-                className="rounded-lg border border-stone-200 px-2 py-1.5 text-xs outline-none focus:border-emerald-500 bg-stone-50"
+                className="rounded-lg border px-2 py-1.5 text-xs"
+                style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-bg)', color: 'var(--admin-text-primary)' }}
               />
               {historicalData.length > 1 && (
-                <button onClick={() => removeRow(i)} className="text-red-700 hover:text-red-600 text-xs justify-self-end">✕</button>
+                <button onClick={() => removeRow(i)} className="text-xs justify-self-end transition-colors" style={{ color: 'var(--admin-danger)' }}>✕</button>
               )}
             </div>
           ))}
-        </div>
+        </AdminCard>
       </div>
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
-        ⚠️ AI-generated forecasts — review before use. Not a substitute for professional supply chain planning.
+      <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'rgba(171, 162, 120, 0.1)', border: '1px solid rgba(171, 162, 120, 0.2)', color: '#92781e' }}>
+        AI-generated forecasts — review before use. Not a substitute for professional supply chain planning.
       </div>
       <button
         onClick={handleAnalyze}
         disabled={loading || !productName.trim()}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={btnPrimaryClass}
+        style={{
+          ...btnPrimaryStyle,
+          opacity: (loading || !productName.trim()) ? 0.5 : 1,
+          cursor: (loading || !productName.trim()) ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? "Forecasting..." : "Generate Forecast"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--admin-danger)' }}>{error}</p>}
       {result && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-stone-300 p-4 bg-white">
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Current Trend</p>
-            <p className="text-sm text-stone-700 leading-relaxed">{result.currentTrend}</p>
-          </div>
+          <AdminCard className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--admin-text-muted)' }}>Current Trend</p>
+            <p className="text-sm" style={{ color: 'var(--admin-text-secondary)', lineHeight: 1.6 }}>{result.currentTrend}</p>
+          </AdminCard>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Next Stop</p>
-              <p className="text-xl font-bold text-emerald-700">{result.prediction.nextStopVolume}<span className="text-sm font-normal text-stone-400 ml-1">units</span></p>
-            </div>
-            <div className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Next Week</p>
-              <p className="text-xl font-bold text-emerald-700">{result.prediction.nextWeekVolume}<span className="text-sm font-normal text-stone-400 ml-1">units</span></p>
-            </div>
-            <div className="rounded-xl border border-stone-300 p-4 bg-white">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Confidence</p>
-              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
-                result.prediction.confidence === "high" ? "bg-green-50 text-green-700" :
-                result.prediction.confidence === "medium" ? "bg-amber-50 text-amber-600" :
-                "bg-red-50 text-red-700"
-              }`}>{result.prediction.confidence}</span>
-              <p className="text-xs text-stone-400 mt-1">{result.prediction.confidenceReason}</p>
-            </div>
+            <AdminCard className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Next Stop</p>
+              <p className="text-xl font-bold" style={{ color: 'var(--admin-accent)' }}>{result.prediction.nextStopVolume}<span className="text-sm font-normal ml-1" style={{ color: 'var(--admin-text-muted)' }}>units</span></p>
+            </AdminCard>
+            <AdminCard className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Next Week</p>
+              <p className="text-xl font-bold" style={{ color: 'var(--admin-accent)' }}>{result.prediction.nextWeekVolume}<span className="text-sm font-normal ml-1" style={{ color: 'var(--admin-text-muted)' }}>units</span></p>
+            </AdminCard>
+            <AdminCard className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--admin-text-muted)' }}>Confidence</p>
+              <span 
+                className="inline-block rounded-full px-2 py-0.5 text-xs font-bold"
+                style={{
+                  background: result.prediction.confidence === "high" ? 'rgba(16, 185, 129, 0.1)' : result.prediction.confidence === "medium" ? 'rgba(171, 162, 120, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+                  color: result.prediction.confidence === "high" ? '#047857' : result.prediction.confidence === "medium" ? '#92781e' : '#dc2626',
+                }}
+              >
+                {result.prediction.confidence}
+              </span>
+              <p className="text-xs mt-1" style={{ color: 'var(--admin-text-muted)' }}>{result.prediction.confidenceReason}</p>
+            </AdminCard>
           </div>
-          <div className="rounded-xl border border-emerald-200 p-4 bg-emerald-50">
-            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Recommended Stock</p>
-            <p className="text-2xl font-bold text-stone-950">{result.recommendedStock.units}<span className="text-sm font-normal text-stone-400 ml-1">units</span></p>
-            <p className="text-sm text-stone-500 mt-1">{result.recommendedStock.reasoning}</p>
-          </div>
+          <AdminCard className="p-4" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#047857' }}>Recommended Stock</p>
+            <p className="text-2xl font-bold" style={{ color: 'var(--admin-text-primary)' }}>{result.recommendedStock.units}<span className="text-sm font-normal ml-1" style={{ color: 'var(--admin-text-muted)' }}>units</span></p>
+            <p className="text-sm mt-1" style={{ color: 'var(--admin-text-secondary)' }}>{result.recommendedStock.reasoning}</p>
+          </AdminCard>
           {result.seasonalFactors.length > 0 && (
-            <div className="rounded-xl border border-blue-200 p-4 bg-blue-50">
-              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2">Seasonal Factors</p>
-              {result.seasonalFactors.map((f, i) => <p key={i} className="text-sm text-blue-600">☀ {f}</p>)}
-            </div>
+            <AdminCard className="p-4" style={{ backgroundColor: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#2563eb' }}>Seasonal Factors</p>
+              {result.seasonalFactors.map((f, i) => <p key={i} className="text-sm" style={{ color: '#3b82f6' }}>☀ {f}</p>)}
+            </AdminCard>
           )}
           {result.riskFlags.length > 0 && (
-            <div className="rounded-xl border border-amber-200 p-4 bg-amber-50">
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Risk Flags</p>
-              {result.riskFlags.map((r, i) => <p key={i} className="text-sm text-amber-600">⚠ {r}</p>)}
-            </div>
+            <AdminCard className="p-4" style={{ backgroundColor: 'rgba(171, 162, 120, 0.08)', border: '1px solid rgba(171, 162, 120, 0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#92781e' }}>Risk Flags</p>
+              {result.riskFlags.map((r, i) => <p key={i} className="text-sm" style={{ color: '#a6953f' }}>⚠ {r}</p>)}
+            </AdminCard>
           )}
-          <button onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1">
-            📋 Copy to clipboard
+          <button 
+            onClick={() => copyToClipboard(JSON.stringify(result, null, 2))} 
+            className="text-xs flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--admin-text-muted)' }}
+          >
+            Copy to clipboard
           </button>
         </div>
       )}
@@ -1272,14 +1753,14 @@ type ModalProps = {
 
 function ToolModal({ tool, brandId, brandName, onClose }: ModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(60, 56, 37, 0.4)', backdropFilter: 'blur(4px)' }}>
+      <AdminCard className="w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--admin-border)' }}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">{tool.icon}</span>
-            <h2 className="text-lg font-bold text-stone-950">{tool.title}</h2>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--admin-text-primary)' }}>{tool.title}</h2>
           </div>
-          <button onClick={onClose} className="text-stone-500 hover:text-stone-500 p-2">
+          <button onClick={onClose} className="p-2 transition-colors" style={{ color: 'var(--admin-text-muted)' }}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -1295,16 +1776,25 @@ function ToolModal({ tool, brandId, brandName, onClose }: ModalProps) {
           {tool.id === "route-suggester" && <RouteOptimizerTool brandId={brandId} />}
           {tool.id === "demand-forecast" && <DemandForecastTool brandId={brandId} />}
         </div>
-      </div>
+      </AdminCard>
     </div>
   );
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function AIsettingsClient({ isConnected, brandId, brandName }: Props) {
+export default function AIsettingsClient({ 
+  isConnected, 
+  brandId, 
+  brandName,
+  provider = "openai",
+  model = "gpt-4o-mini",
+  customEndpoint 
+}: Props) {
   const [activeTool, setActiveTool] = useState<AITool | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<Provider>(provider);
+  const [currentModel, setCurrentModel] = useState(model);
 
   const filteredTools = activeModule ? AI_TOOLS.filter((t) => t.module === activeModule) : AI_TOOLS;
   const modules = [...new Set(AI_TOOLS.map((t) => t.module))];
@@ -1312,63 +1802,55 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
   const availableCount = AI_TOOLS.filter((t) => t.status === "available").length;
 
   return (
-    <main className="min-h-screen bg-stone-50 px-6 py-12">
-      <div className="mx-auto max-w-4xl">
-
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <svg className="w-8 h-8 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
-            </svg>
-            <h1 className="text-3xl font-bold text-stone-950">AI Tools</h1>
+    <main className="admin-page">
+      <div className="admin-container">
+        {/* Header with icon */}
+        <div className="flex items-center gap-4 mb-6">
+          <AIHeaderIcon />
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--admin-text-primary)' }}>AI Tools</h1>
+            <p className="mt-1 text-sm" style={{ color: 'var(--admin-text-muted)' }}>
+              AI-assisted features across Harvest Reach, Products, Reports, and more.
+            </p>
           </div>
-          <p className="text-stone-500">
-            AI-assisted features across Harvest Reach, Products, Reports, and more.
-          </p>
         </div>
 
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-xs mb-6" style={{ color: 'var(--admin-text-muted)' }}>
+          <a href="/admin" style={{ color: 'var(--admin-text-secondary)' }}>Admin</a>
+          <span>/</span>
+          <a href="/admin/settings" style={{ color: 'var(--admin-text-secondary)' }}>Settings</a>
+          <span>/</span>
+          <span style={{ color: 'var(--admin-text-secondary)' }}>AI Tools</span>
+        </nav>
+
         {/* Connection Status Banner */}
-        {isConnected ? (
-          <div className="mb-6 rounded-2xl bg-green-50 border border-green-200 p-5 flex items-center gap-4">
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-50 flex-shrink-0">
-              <svg className="h-5 w-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-green-700">AI Connected</p>
-              <p className="text-sm text-green-500">{availableCount} tool{availableCount !== 1 ? "s" : ""} ready to use</p>
-            </div>
-            <span className="text-xs font-medium text-green-700 bg-green-50 rounded-full px-3 py-1">Active</span>
-          </div>
-        ) : (
-          <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-5 flex items-center gap-4">
-            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-amber-50 flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-amber-600">AI Not Configured</p>
-              <p className="text-sm text-amber-500">Add your API key to enable AI tools.</p>
-            </div>
-            <Link
-              href="/admin/settings"
-              className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700"
-            >
-              Add API Key
-            </Link>
-          </div>
-        )}
+        <ConnectionStatusBanner 
+          isConnected={isConnected} 
+          availableCount={availableCount}
+          onConfigure={() => window.location.href = '/admin/settings#integrations'}
+        />
+
+        {/* Provider Selector */}
+        <ProviderSelector
+          currentProvider={selectedProvider}
+          currentModel={currentModel}
+          brandId={brandId}
+          onSelect={setSelectedProvider}
+        />
+
+        {/* Model Input */}
+        <ModelInput
+          currentModel={currentModel}
+          brandId={brandId}
+          onChange={setCurrentModel}
+        />
 
         {/* Module filter */}
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="admin-filter-tabs mb-6">
           <button
             onClick={() => setActiveModule(null)}
-            className={`text-xs font-medium rounded-full px-3 py-1.5 transition-colors ${
-              activeModule === null ? "bg-emerald-600 text-white" : "bg-white text-stone-500 border border-stone-300 hover:border-emerald-300"
-            }`}
+            className={`admin-filter-tab ${activeModule === null ? 'admin-filter-tab--active' : ''}`}
           >
             All ({AI_TOOLS.length})
           </button>
@@ -1378,9 +1860,7 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
               <button
                 key={m}
                 onClick={() => setActiveModule(activeModule === m ? null : m)}
-                className={`text-xs font-medium rounded-full px-3 py-1.5 transition-colors ${
-                  activeModule === m ? "bg-emerald-600 text-white" : "bg-white text-stone-500 border border-stone-300 hover:border-emerald-300"
-                }`}
+                className={`admin-filter-tab ${activeModule === m ? 'admin-filter-tab--active' : ''}`}
               >
                 {m} ({count})
               </button>
@@ -1389,83 +1869,28 @@ export default function AIsettingsClient({ isConnected, brandId, brandName }: Pr
         </div>
 
         {/* Tool Cards */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredTools.map((tool) => {
-            const isReady = tool.status === "available" && isConnected;
-            return (
-              <div
-                key={tool.id}
-                className={`rounded-2xl bg-white p-5 shadow-black/20 ring-1 transition-all ${
-                  tool.status === "available"
-                    ? "ring-stone-200 hover:shadow-md"
-                    : tool.status === "experimental"
-                    ? "ring-amber-200 bg-amber-50"
-                    : "ring-stone-200 opacity-75"
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <span className="text-2xl mt-0.5">{tool.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="text-base font-semibold text-stone-950">{tool.title}</h3>
-                      {tool.badge && (
-                        <span className="text-xs font-medium bg-emerald-50 text-emerald-600 rounded-full px-2 py-0.5">
-                          {tool.badge}
-                        </span>
-                      )}
-                      {tool.status === "available" && (
-                        <span className="text-xs font-medium text-green-700 bg-green-50 rounded-full px-2 py-0.5">Ready</span>
-                      )}
-                      {tool.status === "experimental" && (
-                        <span className="text-xs font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">Experimental</span>
-                      )}
-                      {tool.status === "coming_soon" && (
-                        <span className="text-xs font-medium text-stone-400 bg-stone-50 rounded-full px-2 py-0.5">Coming Soon</span>
-                      )}
-                    </div>
-                    <span className="text-xs text-stone-500 font-medium">{tool.module}</span>
-                    <p className="mt-2 text-sm text-stone-500 leading-relaxed">{tool.description}</p>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-stone-300">
-                  {tool.status === "available" && (
-                    <button
-                      onClick={() => isConnected && setActiveTool(tool)}
-                      disabled={!isConnected}
-                      className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
-                        isConnected
-                          ? "bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
-                          : "bg-stone-50 text-stone-500 cursor-not-allowed"
-                      }`}
-                      title={!isConnected ? "Add your OpenAI API key in Settings to enable" : "Open tool"}
-                    >
-                      Open Tool
-                    </button>
-                  )}
-                  {tool.status === "coming_soon" && (
-                    <button disabled className="w-full rounded-xl bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-500 cursor-not-allowed">
-                      Coming Soon
-                    </button>
-                  )}
-                  {tool.status === "experimental" && (
-                    <button disabled className="w-full rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-600 cursor-not-allowed">
-                      Request Access
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid gap-5 md:grid-cols-2">
+          {filteredTools.map((tool) => (
+            <ToolCard
+              key={tool.id}
+              tool={tool}
+              isConnected={isConnected}
+              onOpen={setActiveTool}
+            />
+          ))}
         </div>
 
         {/* Info box */}
-        <div className="mt-8 rounded-xl bg-emerald-50 border border-emerald-200 p-5">
-          <h3 className="text-sm font-semibold text-emerald-600 mb-2">About AI in Route Commerce</h3>
-          <p className="text-sm text-emerald-700 leading-relaxed">
+        <AdminCard className="mt-8 p-5" style={{ 
+          background: 'rgba(202, 117, 67, 0.05)',
+          border: '1px solid rgba(202, 117, 67, 0.15)',
+        }}>
+          <h3 className="text-sm font-semibold mb-2" style={{ color: '#8c4c27' }}>About AI in Route Commerce</h3>
+          <p className="text-sm" style={{ color: '#a0694f', lineHeight: 1.6 }}>
             AI tools process your data locally — orders, products, stops, and contacts — and send requests to your configured AI provider.
             No data is stored or shared beyond the generation request. Experimental features may require additional setup.
           </p>
-        </div>
+        </AdminCard>
       </div>
 
       {/* Tool Modal */}

@@ -9,6 +9,7 @@ import {
   type ColumnMapping,
   type ImportField,
 } from "@/actions/communications/contacts";
+import { uploadContactsToBucket, processBucketImport, listImportHistory } from "@/actions/communications/import-contacts";
 
 type Step = "idle" | "preview" | "confirming" | "importing" | "result";
 
@@ -33,6 +34,57 @@ const FIELD_LABELS: Record<string, string> = {
   external_id: "External ID",
 };
 
+// Icon components
+const Icons = {
+  upload: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  ),
+  uploadCloud: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 16 12 12 8 16"/>
+      <line x1="12" y1="12" x2="12" y2="21"/>
+      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+      <polyline points="16 16 12 12 8 16"/>
+    </svg>
+  ),
+  file: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+  ),
+  check: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
+  spinner: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round">
+        <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+      </path>
+    </svg>
+  ),
+};
+
+// Helper for stat colors
+function getStatColor(highlight: boolean, warn: boolean) {
+  if (highlight) return "bg-emerald-50 border-emerald-200 text-emerald-700";
+  if (warn) return "bg-amber-50 border-amber-200 text-amber-700";
+  return "bg-[var(--admin-card)] border-[var(--admin-border)] text-[var(--admin-text-primary)]";
+}
+
+function getStatValueColor(highlight: boolean, warn: boolean) {
+  if (highlight) return "text-emerald-600";
+  if (warn) return "text-amber-600";
+  return "text-[var(--admin-text-muted)]";
+}
+
 export default function ContactImportForm({ brandId }: { brandId: string }) {
   const [step, setStep] = useState<Step>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -46,7 +98,13 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
   const [overridingMappings, setOverridingMappings] = useState<
     Record<string, ImportField>
   >({});
+  const [useBucket, setUseBucket] = useState(false); // Toggle for bucket upload
+  const [uploadProgress, setUploadProgress] = useState<string>("");
+  const [importHistory, setImportHistory] = useState<{ filename: string; size: number; createdAt: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // For large file detection (farmers with lots of data)
+  const LARGE_FILE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 
   // ── CSV parsing + preview ──────────────────────────────────────────────────
 
@@ -57,6 +115,55 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
       setGlobalError("");
       setOverridingMappings({});
 
+      // Check if file is large enough to warrant bucket upload
+      const isLargeFile = f.size > LARGE_FILE_THRESHOLD;
+
+      if (isLargeFile) {
+        // Use bucket upload for large files
+        setUploadProgress("Uploading file to storage...");
+        setUseBucket(true);
+
+        const uploadResult = await uploadContactsToBucket(brandId, f);
+
+        if (!uploadResult.success) {
+          setGlobalError(uploadResult.error);
+          setStep("idle");
+          return;
+        }
+
+        setUploadProgress(`Processing ${uploadResult.recordCount.toLocaleString()} records...`);
+
+        // Process from bucket
+        const processResult = await processBucketImport(brandId, uploadResult.fileUrl);
+
+        setImporting(false);
+        setUploadProgress("");
+
+        if (!processResult.success) {
+          setGlobalError(processResult.error);
+          setStep("idle");
+          return;
+        }
+
+        setResult({
+          created: processResult.created,
+          updated: processResult.updated,
+          skipped: processResult.skipped,
+          errors: [],
+        });
+        setStep("result");
+
+        // Load import history
+        const historyResult = await listImportHistory(brandId);
+        if (historyResult.success) {
+          setImportHistory(historyResult.imports);
+        }
+
+        return;
+      }
+
+      // Browser-based processing for smaller files
+      setUseBucket(false);
       const text = await f.text();
       const previewResult = await previewContactImport(text);
 
@@ -75,7 +182,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
       setPreview(previewResult.preview);
       setStep("preview");
     },
-    []
+    [brandId, LARGE_FILE_THRESHOLD]
   );
 
   const handleDrop = useCallback(
@@ -255,24 +362,24 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
     return (
       <div className="space-y-3">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border border-zinc-800 rounded-lg">
-            <thead className="bg-zinc-900">
+          <table className="w-full text-xs border border-[var(--admin-border)] rounded-lg">
+            <thead className="bg-[var(--admin-card)]">
               <tr>
-                <th className="px-3 py-2 text-left text-zinc-400 font-medium">
+                <th className="px-3 py-2 text-left text-[var(--admin-text-muted)] font-semibold">
                   CSV Column
                 </th>
-                <th className="px-3 py-2 text-left text-zinc-400 font-medium">
+                <th className="px-3 py-2 text-left text-[var(--admin-text-muted)] font-semibold">
                   Maps To
                 </th>
-                <th className="px-3 py-2 text-left text-zinc-400 font-medium">
+                <th className="px-3 py-2 text-left text-[var(--admin-text-muted)] font-semibold">
                   Sample Values
                 </th>
               </tr>
             </thead>
             <tbody>
               {preview.mappings.map((m) => (
-                <tr key={m.csvColumn} className="border-t border-slate-100">
-                  <td className="px-3 py-2 text-slate-800 font-mono text-xs">
+                <tr key={m.csvColumn} className="border-t border-[var(--admin-border)]">
+                  <td className="px-3 py-2 text-[var(--admin-text-primary)] font-mono text-xs">
                     {m.csvColumn}
                   </td>
                   <td className="px-3 py-2">
@@ -290,7 +397,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
                               : (val as ImportField),
                         }));
                       }}
-                      className="text-xs border border-zinc-600 rounded px-2 py-1"
+                      className="text-xs border border-[var(--admin-border)] rounded px-2 py-1 bg-white text-[var(--admin-text-primary)]"
                     >
                       <option value="ignore">— ignore —</option>
                       {Object.entries(FIELD_LABELS).map(([k, label]) => (
@@ -300,7 +407,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
                       ))}
                     </select>
                   </td>
-                  <td className="px-3 py-2 text-zinc-500 text-xs">
+                  <td className="px-3 py-2 text-[var(--admin-text-muted)] text-xs">
                     {m.sampleValues.length > 0
                       ? m.sampleValues.join(", ")
                       : "—"}
@@ -312,7 +419,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
         </div>
 
         {preview.ignoredColumns.length > 0 && (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--admin-text-muted)]">
             Extra columns (stored in metadata):
             <span className="font-mono">
               {" "}
@@ -348,44 +455,44 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
     if (!preview) return null;
     return (
       <div className="overflow-x-auto">
-        <table className="w-full text-xs border border-zinc-800 rounded-lg">
-          <thead className="bg-zinc-900">
+        <table className="w-full text-xs border border-[var(--admin-border)] rounded-lg">
+          <thead className="bg-[var(--admin-card)]">
             <tr>
-              <th className="px-2 py-1 text-left text-zinc-400">#</th>
-              <th className="px-2 py-1 text-left text-zinc-400">email</th>
-              <th className="px-2 py-1 text-left text-zinc-400">phone</th>
-              <th className="px-2 py-1 text-left text-zinc-400">first_name</th>
-              <th className="px-2 py-1 text-left text-zinc-400">last_name</th>
-              <th className="px-2 py-1 text-left text-zinc-400">full_name</th>
-              <th className="px-2 py-1 text-left text-zinc-400">email_opt_in</th>
-              <th className="px-2 py-1 text-left text-zinc-400">sms_opt_in</th>
-              <th className="px-2 py-1 text-left text-zinc-400">tags</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">#</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">email</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">phone</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">first_name</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">last_name</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">full_name</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">email_opt_in</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">sms_opt_in</th>
+              <th className="px-2 py-1 text-left text-[var(--admin-text-muted)]">tags</th>
             </tr>
           </thead>
           <tbody>
             {preview.sampleRows.map((row, i) => (
-              <tr key={i} className="border-t border-slate-100">
-                <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                <td className="px-2 py-1">{row.email ?? ""}</td>
-                <td className="px-2 py-1">{row.phone ?? ""}</td>
-                <td className="px-2 py-1">{row.first_name ?? ""}</td>
-                <td className="px-2 py-1">{row.last_name ?? ""}</td>
-                <td className="px-2 py-1">{row.full_name ?? ""}</td>
-                <td className="px-2 py-1">
+              <tr key={i} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-card-hover)]">
+                <td className="px-2 py-1 text-[var(--admin-text-muted)]">{i + 1}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-primary)]">{row.email ?? ""}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-primary)]">{row.phone ?? ""}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-primary)]">{row.first_name ?? ""}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-primary)]">{row.last_name ?? ""}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-primary)]">{row.full_name ?? ""}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-muted)]">
                   {row.email_opt_in === undefined
                     ? ""
                     : row.email_opt_in
                       ? "true"
                       : "false"}
                 </td>
-                <td className="px-2 py-1">
+                <td className="px-2 py-1 text-[var(--admin-text-muted)]">
                   {row.sms_opt_in === undefined
                     ? ""
                     : row.sms_opt_in
                       ? "true"
                       : "false"}
                 </td>
-                <td className="px-2 py-1">{row.tags?.join("; ") ?? ""}</td>
+                <td className="px-2 py-1 text-[var(--admin-text-muted)]">{row.tags?.join("; ") ?? ""}</td>
               </tr>
             ))}
           </tbody>
@@ -397,21 +504,50 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
   // ── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-800">Import Contacts</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--admin-text-primary)]">
+            {Icons.uploadCloud("w-3 h-3 text-[var(--admin-bg)]")}
+          </div>
+          <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Import Contacts</h3>
+        </div>
         {step !== "idle" && (
           <button
             onClick={handleReset}
-            className="text-xs text-zinc-500 hover:text-zinc-300"
+            className="text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors"
           >
             ← Start over
           </button>
         )}
       </div>
 
+      {/* Large file banner */}
+      {file && file.size > LARGE_FILE_THRESHOLD && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+            {Icons.check("h-4 w-4 text-emerald-600")}
+          </div>
+          <div>
+            <p className="font-semibold text-emerald-700">Large file detected</p>
+            <p className="text-xs text-emerald-600">File will be uploaded to cloud storage for processing</p>
+          </div>
+        </div>
+      )}
+
+      {/* Upload progress */}
+      {uploadProgress && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-4 text-sm">
+          <div className="flex items-center gap-3">
+            {Icons.spinner("h-5 w-5 text-blue-600 animate-spin")}
+            <span className="text-blue-700 font-medium">{uploadProgress}</span>
+          </div>
+        </div>
+      )}
+
       {globalError && (
-        <div className="rounded-lg bg-red-900/30 border border-red-200 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
           {globalError}
         </div>
       )}
@@ -420,7 +556,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
       {step === "idle" && (
         <>
           <div
-            className="border-2 border-dashed border-zinc-600 rounded-xl p-8 text-center"
+            className="border-2 border-dashed border-[var(--admin-border)] rounded-xl p-8 text-center hover:border-emerald-400 transition-colors"
             onDragOver={(e) => {
               e.preventDefault();
             }}
@@ -435,15 +571,18 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
               id="csv-upload"
             />
             <label htmlFor="csv-upload" className="cursor-pointer">
-              <div className="text-zinc-400 text-sm">
-                <span className="font-medium text-blue-400 hover:text-blue-700">
+              <div className="text-[var(--admin-text-muted)] text-sm">
+                <span className="font-semibold text-emerald-600 hover:text-emerald-700">
                   Click to upload
                 </span>
                 {" "}or drag and drop a CSV file
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-[var(--admin-text-muted)] mt-1">
                 Works with Mailchimp, Square, Shopify, WooCommerce, QuickBooks, and
                 generic spreadsheets
+              </p>
+              <p className="text-[10px] text-[var(--admin-text-muted)] mt-2 text-emerald-600">
+                Large files (5MB+) automatically uploaded to cloud storage
               </p>
             </label>
           </div>
@@ -456,14 +595,14 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
           {preview.warnings.map((w, i) => (
             <div
               key={i}
-              className="rounded-lg bg-amber-900/30 border border-amber-200 px-4 py-3 text-sm text-amber-700"
+              className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700"
             >
               {w}
             </div>
           ))}
 
-          <div className="rounded-lg bg-blue-900/30 border border-blue-200 px-4 py-3 text-sm text-blue-700">
-            <p className="font-medium mb-1">{file?.name}</p>
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+            <p className="font-semibold mb-1">{file?.name}</p>
             <p>
               Column mappings detected — review below, adjust if needed, then
               confirm import.
@@ -475,14 +614,14 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
           </div>
 
           <div>
-            <p className="text-xs text-zinc-500 mb-2 font-medium">
+            <p className="text-xs text-[var(--admin-text-muted)] mb-2 font-semibold uppercase tracking-wide">
               Import Summary
             </p>
             {renderStats()}
           </div>
 
           <div>
-            <p className="text-xs text-zinc-500 mb-2 font-medium">
+            <p className="text-xs text-[var(--admin-text-muted)] mb-2 font-semibold uppercase tracking-wide">
               Sample rows (first {preview.sampleRows.length})
             </p>
             {renderSampleRows()}
@@ -490,17 +629,17 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
 
           {preview.skippedReasons.length > 0 && (
             <div>
-              <p className="text-xs text-zinc-500 mb-1 font-medium">
+              <p className="text-xs text-[var(--admin-text-muted)] mb-1 font-semibold">
                 Skipped rows ({preview.skippedReasons.length})
               </p>
-              <div className="max-h-32 overflow-y-auto text-xs text-zinc-500 space-y-1">
+              <div className="max-h-32 overflow-y-auto text-xs text-[var(--admin-text-muted)] space-y-1">
                 {preview.skippedReasons.slice(0, 10).map((s) => (
                   <p key={s.rowIndex}>
                     Row {s.rowIndex + 1}: {s.reason}
                   </p>
                 ))}
                 {preview.skippedReasons.length > 10 && (
-                  <p className="text-slate-400">
+                  <p className="text-[var(--admin-text-muted)]">
                     ...and{" "}
                     {preview.skippedReasons.length - 10} more
                   </p>
@@ -510,7 +649,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
           )}
 
           {preview.totalRows > LARGE_FILE_ROWS && (
-            <div className="rounded-lg bg-amber-900/30 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
               Large file ({preview.totalRows.toLocaleString()} rows) — confirm to
               proceed.
             </div>
@@ -519,14 +658,14 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
           <div className="flex gap-3">
             <button
               onClick={() => handleReset()}
-              className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+              className="rounded-lg border border-[var(--admin-border)] px-4 py-2 text-sm text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={() => handleConfirm()}
               disabled={preview.validRows === 0}
-              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
             >
               Import {preview.validRows} contacts
             </button>
@@ -536,7 +675,7 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
 
       {/* ── STEP: importing ────────────────────────────────────── */}
       {step === "importing" && (
-        <div className="rounded-lg bg-blue-900/30 border border-blue-200 px-4 py-6 text-center text-sm text-blue-700">
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-6 text-center text-sm text-emerald-700 font-semibold">
           Importing {importRows.length} contacts...
         </div>
       )}
@@ -544,26 +683,29 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
       {/* ── STEP: result ────────────────────────────────────────── */}
       {step === "result" && result && (
         <div className="space-y-3">
-          <div className="rounded-lg bg-green-900/30 border border-green-200 px-4 py-3 text-sm space-y-1">
-            <p className="font-semibold text-green-400">Import complete</p>
-            <p className="text-green-600">Created: {result.created}</p>
-            <p className="text-green-600">Updated: {result.updated}</p>
-            <p className="text-green-600">Skipped: {result.skipped}</p>
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm space-y-1">
+            <p className="font-semibold text-emerald-700 flex items-center gap-2">
+              {Icons.check("h-4 w-4")}
+              Import complete
+            </p>
+            <p className="text-emerald-600">Created: {result.created.toLocaleString()}</p>
+            <p className="text-emerald-600">Updated: {result.updated.toLocaleString()}</p>
+            <p className="text-emerald-600">Skipped: {result.skipped.toLocaleString()}</p>
           </div>
 
           {result.errors.length > 0 && (
-            <div className="rounded-lg bg-red-900/30 border border-red-200 px-4 py-3 text-sm">
-              <p className="font-medium text-red-400 mb-2">
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm">
+              <p className="font-semibold text-red-600 mb-2">
                 Errors ({result.errors.length})
               </p>
               <div className="max-h-40 overflow-y-auto space-y-1">
                 {result.errors.slice(0, 10).map((e, i) => (
-                  <p key={i} className="text-red-400 text-xs">
+                  <p key={i} className="text-red-600 text-xs">
                     {e.error}: {JSON.stringify(e.row).slice(0, 80)}
                   </p>
                 ))}
                 {result.errors.length > 10 && (
-                  <p className="text-red-400 text-xs">
+                  <p className="text-red-600 text-xs">
                     ...and {result.errors.length - 10} more
                   </p>
                 )}
@@ -573,10 +715,32 @@ export default function ContactImportForm({ brandId }: { brandId: string }) {
 
           <button
             onClick={handleReset}
-            className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+            className="rounded-lg border border-[var(--admin-border)] px-4 py-2 text-sm text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] transition-colors"
           >
             Import more
           </button>
+        </div>
+      )}
+
+      {/* Import history for bucket imports */}
+      {importHistory.length > 0 && (
+        <div className="border-t border-[var(--admin-border)] pt-4 mt-4">
+          <p className="text-xs font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-3">
+            Previous Imports
+          </p>
+          <div className="space-y-2">
+            {importHistory.slice(0, 5).map((imp, i) => (
+              <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--admin-card)]">
+                <div className="flex items-center gap-2">
+                  {Icons.file("h-4 w-4 text-[var(--admin-text-muted)]")}
+                  <span className="text-[var(--admin-text-primary)]">{imp.filename}</span>
+                </div>
+                <span className="text-[var(--admin-text-muted)]">
+                  {(imp.size / 1024).toFixed(1)} KB
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -594,28 +758,16 @@ function Stat({
   highlight?: boolean;
   warn?: boolean;
 }) {
+  const bgColor = highlight ? "bg-emerald-50 border-emerald-200" : warn ? "bg-amber-50 border-amber-200" : "bg-[var(--admin-card)] border-[var(--admin-border)]";
+  const valueColor = highlight ? "text-emerald-700" : warn ? "text-amber-700" : "text-[var(--admin-text-primary)]";
+  const labelColor = highlight ? "text-emerald-600" : warn ? "text-amber-600" : "text-[var(--admin-text-muted)]";
+
   return (
-    <div
-      className={`rounded-lg border px-4 py-3 text-center ${
-        highlight
-          ? "bg-blue-900/30 border-blue-200"
-          : warn
-            ? "bg-amber-900/30 border-amber-200"
-            : "bg-zinc-900 border-zinc-800"
-      }`}
-    >
-      <p
-        className={`text-xl font-semibold ${
-          highlight
-            ? "text-blue-700"
-            : warn
-              ? "text-amber-700"
-              : "text-zinc-300"
-        }`}
-      >
+    <div className={`rounded-lg border px-4 py-3 text-center ${bgColor}`}>
+      <p className={`text-xl font-bold ${valueColor}`}>
         {value.toLocaleString()}
       </p>
-      <p className="text-xs text-zinc-500 mt-0.5">{label}</p>
+      <p className={`text-xs mt-0.5 ${labelColor}`}>{label}</p>
     </div>
   );
 }

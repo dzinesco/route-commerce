@@ -4,19 +4,51 @@ import { useState } from "react";
 import { searchHarvestLots, HarvestLot } from "@/actions/route-trace/lots";
 import StatusBadge from "./StatusBadge";
 import Link from "next/link";
+import QRScanModal from "./QRScanModal";
+
+function getAgeStatus(harvestDate: string): { label: string; className: string } | null {
+  const harvested = new Date(harvestDate + "T00:00:00");
+  const now = new Date();
+  const days = Math.floor((now.getTime() - harvested.getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return null;
+  if (days <= 3) return { label: `${days}d`, className: "bg-green-100 text-green-700" };
+  if (days <= 7) return { label: `${days}d`, className: "bg-amber-100 text-amber-700" };
+  if (days <= 14) return { label: `${days}d`, className: "bg-orange-100 text-orange-700" };
+  return { label: `${days}d`, className: "bg-red-100 text-red-700" };
+}
+
+// One-color outline icons
+const Icons = {
+  camera: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </svg>
+  ),
+  search: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
+    </svg>
+  ),
+  plus: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M12 5v14"/>
+    </svg>
+  ),
+};
 
 export default function AdminLookupPage({ brandId }: { brandId: string }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HarvestLot[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [scanMode, setScanMode] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!query.trim()) return;
     setLoading(true);
-    setScanMode(false);
     const res = await searchHarvestLots(brandId, query.trim());
     setResults(res.success ? res.lots : []);
     setSearched(true);
@@ -25,8 +57,6 @@ export default function AdminLookupPage({ brandId }: { brandId: string }) {
 
   function handleScanResult(lotNumber: string) {
     setQuery(lotNumber);
-    setScanMode(false);
-    // Trigger search immediately
     setLoading(true);
     searchHarvestLots(brandId, lotNumber).then((res) => {
       setResults(res.success ? res.lots : []);
@@ -37,8 +67,25 @@ export default function AdminLookupPage({ brandId }: { brandId: string }) {
 
   return (
     <div className="space-y-5">
+      {/* Scan button */}
+      <button
+        onClick={() => setShowScanModal(true)}
+        className="w-full rounded-xl bg-emerald-600 px-5 py-4 text-sm font-bold text-white hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+      >
+        <span className="text-white">{Icons.camera("h-5 w-5")}</span>
+        Scan QR Code
+      </button>
+
+      {/* QRScanModal */}
+      {showScanModal && (
+        <QRScanModal
+          onClose={() => setShowScanModal(false)}
+          onScanResult={handleScanResult}
+        />
+      )}
+
       {/* Search card */}
-      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-stone-200 bg-white">
         <div className="border-b border-stone-100 px-6 py-5">
           <h2 className="text-lg font-semibold text-stone-900">Trace Lookup</h2>
           <p className="mt-1 text-sm text-stone-500">Search by lot number or crop type to find a harvest lot.</p>
@@ -54,56 +101,19 @@ export default function AdminLookupPage({ brandId }: { brandId: string }) {
           <button
             type="submit"
             disabled={loading || !query.trim()}
-            className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
           >
-            {loading ? "Searching..." : "🔍 Search"}
+            {loading ? "Searching..." : <>{Icons.search("h-4 w-4")} Search</>}
           </button>
         </form>
-        {scanMode && (
-          <div className="px-6 pb-6">
-            <div className="rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-8 text-center">
-              <div className="text-4xl mb-3">📷</div>
-              <p className="text-sm font-semibold text-stone-700">Camera scan ready</p>
-              <p className="text-xs text-stone-400 mt-1">Point camera at a Route Trace QR code to look up a lot</p>
-              <div className="mt-4 flex justify-center gap-3">
-                <button
-                  onClick={() => setScanMode(false)}
-                  className="rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    // Simulate scan with manual entry fallback
-                    const input = prompt("Enter lot number from QR scan:");
-                    if (input) handleScanResult(input.trim());
-                  }}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                >
-                  Enter Manually
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {!scanMode && (
-          <div className="px-6 pb-6">
-            <button
-              onClick={() => setScanMode(true)}
-              className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 transition-colors flex items-center gap-2"
-            >
-              📷 Scan QR Code
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Results */}
       {searched && (
-        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden">
           {results.length === 0 ? (
             <div className="p-10 text-center">
-              <div className="text-3xl mb-3">🔍</div>
+              <div className="text-stone-300 mb-3">{Icons.search("h-10 w-10")}</div>
               <p className="text-sm text-stone-500">No lots found for "{query}"</p>
             </div>
           ) : (

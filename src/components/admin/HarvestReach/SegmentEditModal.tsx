@@ -2,6 +2,22 @@
 
 import { useState } from "react";
 
+// Icon components
+const Icons = {
+  x: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+  ),
+  layers: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 17 12 22 22 17"/>
+      <polyline points="2 12 12 17 22 12"/>
+    </svg>
+  ),
+};
+
 type Props = {
   initialName?: string;
   initialDescription?: string;
@@ -22,55 +38,78 @@ export default function SegmentEditModal({ initialName = "", initialDescription 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-md p-6 flex flex-col gap-4 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-zinc-100">
-            {initialName ? "Update Segment" : "Save Segment"}
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-zinc-400 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-[var(--admin-border)]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--admin-border)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+              {Icons.layers("h-5 w-5 text-white")}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[var(--admin-text-primary)]">
+                {initialName ? "Update Segment" : "Save Segment"}
+              </h2>
+              <p className="text-xs text-[var(--admin-text-muted)]">
+                {initialName ? "Update segment details" : "Create a new audience segment"}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-2 rounded-lg hover:bg-[var(--admin-card-hover)] text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors"
+          >
+            {Icons.x("h-5 w-5")}
           </button>
         </div>
 
-        <div className="flex flex-col gap-3">
+        {/* Content */}
+        <div className="p-6 flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Segment Name</label>
+            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Segment Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSave()}
               placeholder="e.g. Fort Pierce Regulars"
-              className="w-full border border-zinc-600 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-[var(--admin-border)] rounded-lg px-3 py-2.5 text-sm bg-white text-[var(--admin-text-primary)] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">
+              Description <span className="text-[var(--admin-text-muted)] font-normal">(optional)</span>
+            </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Customers who pick up at the Fort Pierce stop regularly"
               rows={3}
-              className="w-full border border-zinc-600 rounded-lg px-3 py-2 text-sm resize-none"
+              className="w-full border border-[var(--admin-border)] rounded-lg px-3 py-2.5 text-sm bg-white text-[var(--admin-text-primary)] resize-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
             />
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-[var(--admin-border)]">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-zinc-600 text-sm font-medium text-zinc-400 hover:bg-zinc-800 transition-colors"
+            className="flex-1 py-2.5 rounded-lg border border-[var(--admin-border)] text-sm font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!name.trim() || saving}
-            className="flex-1 py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving…" : "Save Segment"}
           </button>

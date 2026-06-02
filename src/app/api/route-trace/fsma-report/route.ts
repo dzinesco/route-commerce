@@ -54,18 +54,25 @@ export async function GET(request: Request) {
     return new Response("Missing brandId, startDate, or endDate", { status: 400 });
   }
 
-  const lotsRaw = await adminFetchJson("get_lots_for_period", {
+  // Use existing get_harvest_lots RPC and filter by date in JavaScript
+  const allLots = await adminFetchJson("get_harvest_lots", {
     p_brand_id: brandId,
-    p_start_date: startDate,
-    p_end_date: endDate,
+    p_status: null,
   });
 
-  const lots: LotRow[] = (lotsRaw ?? []) as LotRow[];
-  if (!lots || lots.length === 0) {
+  const lots: LotRow[] = (allLots ?? []) as LotRow[];
+  // Filter by date range
+  const filteredLots = lots.filter(lot => {
+    const harvestDate = lot.harvest_date;
+    if (!harvestDate) return false;
+    return harvestDate >= startDate && harvestDate <= endDate;
+  });
+
+  if (filteredLots.length === 0) {
     return new Response("No lots found for this period", { status: 404 });
   }
 
-  const lotIds = lots.map((l) => l.lot_id);
+  const lotIds = filteredLots.map((l) => l.lot_id);
   const eventsRaw = await adminFetchJson("get_events_for_lots", { p_lot_ids: lotIds });
   const allEvents: EventRow[] = (eventsRaw ?? []) as EventRow[];
 
@@ -81,16 +88,16 @@ export async function GET(request: Request) {
   lines.push(`Brand ID,${brandId}`);
   lines.push(`Report Period,${startDate} to ${endDate}`);
   lines.push(`Generated,${new Date().toLocaleString("en-US")}`);
-  lines.push(`Total Lots,${lots.length}`);
+  lines.push(`Total Lots,${filteredLots.length}`);
   lines.push("");
 
-  const totalQty = lots.reduce((s, l) => s + (l.quantity_lbs ?? 0), 0);
-  const totalUsed = lots.reduce((s, l) => s + (l.quantity_used_lbs ?? 0), 0);
-  const crops = [...new Set(lots.map((l) => l.crop_type))];
-  const units = [...new Set(lots.map((l) => l.yield_unit ?? "lbs"))];
+  const totalQty = filteredLots.reduce((s, l) => s + (l.quantity_lbs ?? 0), 0);
+  const totalUsed = filteredLots.reduce((s, l) => s + (l.quantity_used_lbs ?? 0), 0);
+  const crops = [...new Set(filteredLots.map((l) => l.crop_type))];
+  const units = [...new Set(filteredLots.map((l) => l.yield_unit ?? "lbs"))];
   const primaryUnit = units.length === 1 ? units[0] : "lbs";
   lines.push("SUMMARY");
-  lines.push(`Total Lots Harvested,${lots.length}`);
+  lines.push(`Total Lots Harvested,${filteredLots.length}`);
   lines.push(`Total Weight (${primaryUnit}),${totalQty.toLocaleString()}`);
   lines.push(`Total Used (${primaryUnit}),${totalUsed.toLocaleString()}`);
   lines.push(`Remaining (${primaryUnit}),${(totalQty - totalUsed).toLocaleString()}`);
@@ -102,7 +109,7 @@ export async function GET(request: Request) {
   lines.push("ONE-UP / ONE-DOWN TRACEABILITY");
   lines.push("Lot Number,Crop,Variety,Harvest Date,Field,Block,Worker,Packer,Qty (lbs),Used (lbs),Remaining (lbs),Yield Est. (lbs),Yield Unit,Yield Variance %,Bin ID,Status,Event,Event Time,Location,Bin ID,Notes,Recorded By");
 
-  for (const lot of lots) {
+  for (const lot of filteredLots) {
     const evts = eventsByLot[lot.lot_id] ?? [];
     const remaining = (lot.quantity_lbs ?? 0) - (lot.quantity_used_lbs ?? 0);
     if (evts.length === 0) {

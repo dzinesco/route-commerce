@@ -11,6 +11,12 @@ import {
   getRecentLotEvents,
 } from "@/actions/route-trace/lots";
 
+export const metadata = {
+  title: "Lot Lookup | Route Trace",
+  description: "Search and lookup harvest lots by lot number, bin ID, or container ID. Quick traceability search for produce distribution.",
+  keywords: ["lot lookup", "search lots", "find lot", "traceability search", "lot number search", "bin lookup"],
+};
+
 export default async function LookupPage() {
   const adminUser = await getAdminUser();
   if (!adminUser) redirect("/login");

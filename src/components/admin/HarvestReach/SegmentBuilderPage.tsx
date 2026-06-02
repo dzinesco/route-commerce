@@ -12,6 +12,17 @@ type Props = {
   initialSegments: Segment[];
 };
 
+// Icon components
+const Icons = {
+  layers: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 17 12 22 22 17"/>
+      <polyline points="2 12 12 17 22 12"/>
+    </svg>
+  ),
+};
+
 export default function SegmentBuilderPage({ brandId, initialSegments }: Props) {
   const [segments, setSegments] = useState<Segment[]>(initialSegments);
   const [activeSegment, setActiveSegment] = useState<Segment | null>(null);
@@ -68,21 +79,26 @@ export default function SegmentBuilderPage({ brandId, initialSegments }: Props) 
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page header */}
+    <div className="p-4 sm:p-6 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-100">Segment Builder</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            Build filters to define your audience, then save and reuse the segment.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-text-primary)]">
+            {Icons.layers("w-4 h-4 text-[var(--admin-bg)]")}
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-[var(--admin-text-primary)]">Segment Builder</h2>
+            <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)]">
+              Build filters to define your audience, then save and reuse the segment.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Main layout */}
-      <div className="flex gap-5">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* Left sidebar */}
-        <div className="w-72 flex-shrink-0">
+        <div className="lg:w-72 flex-shrink-0">
           <SegmentListSidebar
             segments={segments}
             activeSegmentId={activeSegment?.id}
@@ -93,7 +109,7 @@ export default function SegmentBuilderPage({ brandId, initialSegments }: Props) 
         </div>
 
         {/* Main content: builder + preview */}
-        <div className="flex-1 grid grid-cols-2 gap-5 min-h-[580px]">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <SegmentBuilderPanel
             brandId={brandId}
             rules={currentRules}

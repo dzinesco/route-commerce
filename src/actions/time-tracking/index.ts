@@ -18,12 +18,15 @@ function rpcBody(body: Record<string, unknown>) {
 
 export type TimeWorker = {
   id: string;
+  brand_id: string;
   name: string;
   role: string;
   lang: string;
+  pin: string;
   active: boolean;
   last_used_at: string | null;
   created_at: string;
+  worker_number: number | null;
 };
 
 export type TimeTask = {
@@ -62,12 +65,15 @@ export async function getTimeTrackingWorkers(brandId: string): Promise<TimeWorke
   if (useMockData) {
     return mockWorkers.map(w => ({
       id: w.id,
+      brand_id: brandId,
       name: w.name,
       role: w.role,
       lang: w.language,
+      pin: "0000",
       active: w.is_active,
       last_used_at: null,
       created_at: new Date().toISOString(),
+      worker_number: null,
     }));
   }
   const res = await fetch(
@@ -80,7 +86,18 @@ export async function getTimeTrackingWorkers(brandId: string): Promise<TimeWorke
   );
   if (!res.ok) return [];
   const data = await res.json();
-  return data?.workers ?? [];
+  return (data?.workers ?? []).map((w: Record<string, unknown>) => ({
+    id: w.id as string,
+    brand_id: w.brand_id as string,
+    name: w.name as string,
+    role: w.role as string,
+    lang: w.lang as string,
+    pin: w.pin as string,
+    active: w.active as boolean,
+    last_used_at: w.last_used_at as string | null,
+    created_at: w.created_at as string,
+    worker_number: w.worker_number as number | null,
+  }));
 }
 
 export async function createTimeWorker(

@@ -3,6 +3,29 @@
 import { useState } from "react";
 import type { Segment } from "@/actions/harvest-reach/segments";
 
+// Icon components
+const Icons = {
+  plus: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  ),
+  trash: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  ),
+  search: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
+    </svg>
+  ),
+};
+
 type Props = {
   segments: Segment[];
   activeSegmentId?: string;
@@ -20,47 +43,52 @@ export default function SegmentListSidebar({ segments, activeSegmentId, onSelect
   );
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4 flex flex-col gap-4">
+    <div className="rounded-xl border border-[var(--admin-border)] bg-white p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-800">Saved Segments</h3>
+        <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Saved Segments</h3>
         <button
           onClick={onNew}
-          className="w-7 h-7 rounded-lg bg-stone-900 text-white flex items-center justify-center text-base leading-none hover:bg-stone-800 transition-colors"
+          className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors"
           aria-label="New segment"
         >
-          +
+          {Icons.plus("w-4 h-4")}
         </button>
       </div>
 
-      <input
-        type="search"
-        placeholder="Search segments…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="border border-zinc-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-900"
-      />
+      <div className="relative">
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          {Icons.search("h-4 w-4 text-[var(--admin-text-muted)]")}
+        </div>
+        <input
+          type="search"
+          placeholder="Search segments…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-3 py-2 text-sm border border-[var(--admin-border)] rounded-lg bg-white text-[var(--admin-text-primary)] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+        />
+      </div>
 
       <div className="flex flex-col gap-1.5">
         {filtered.length === 0 && (
-          <p className="text-xs text-slate-400 text-center py-4">
+          <p className="text-xs text-[var(--admin-text-muted)] text-center py-4">
             {search ? "No segments match." : "No saved segments yet."}
           </p>
         )}
         {filtered.map((segment) => (
           <div key={segment.id} className="group relative">
             {confirmDelete === segment.id ? (
-              <div className="rounded-xl border border-red-200 bg-red-900/30 p-3 flex flex-col gap-2">
-                <p className="text-xs text-red-400 font-medium">Delete &ldquo;{segment.name}&rdquo;?</p>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 flex flex-col gap-2">
+                <p className="text-xs text-red-600 font-medium">Delete "{segment.name}"?</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => { onDelete(segment.id); setConfirmDelete(null); }}
-                    className="flex-1 py-1.5 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium"
+                    className="flex-1 py-1.5 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold transition-colors"
                   >
                     Delete
                   </button>
                   <button
                     onClick={() => setConfirmDelete(null)}
-                    className="flex-1 py-1.5 text-xs rounded-lg border border-zinc-600 bg-zinc-900 hover:bg-zinc-800 font-medium"
+                    className="flex-1 py-1.5 text-xs rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] font-medium transition-colors"
                   >
                     Cancel
                   </button>
@@ -71,24 +99,22 @@ export default function SegmentListSidebar({ segments, activeSegmentId, onSelect
                 onClick={() => onSelect(segment)}
                 className={`px-3 py-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-2 transition-all ${
                   activeSegmentId === segment.id
-                    ? "bg-stone-100 border border-stone-300"
-                    : "hover:bg-zinc-800 border border-transparent"
+                    ? "bg-emerald-50 border border-emerald-200"
+                    : "hover:bg-[var(--admin-card-hover)] border border-transparent"
                 }`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">{segment.name}</p>
+                  <p className="text-sm font-medium text-[var(--admin-text-primary)] truncate">{segment.name}</p>
                   {segment.description && (
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{segment.description}</p>
+                    <p className="text-xs text-[var(--admin-text-muted)] truncate mt-0.5">{segment.description}</p>
                   )}
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); setConfirmDelete(segment.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all p-1"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 transition-all"
                   aria-label="Delete segment"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  {Icons.trash("w-4 h-4")}
                 </button>
               </div>
             )}

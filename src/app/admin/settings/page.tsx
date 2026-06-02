@@ -3,6 +3,11 @@ import { getAdminUser } from "@/lib/admin-permissions";
 import { getAdminUsers, getBrands } from "@/actions/admin/users";
 import SettingsClient from "@/components/admin/SettingsClient";
 
+export const metadata = {
+  title: "Settings - Route Commerce Admin",
+  description: "Manage your brand settings, workers, tasks, and user permissions",
+};
+
 export default async function AdminSettingsPage() {
   const adminUser = await getAdminUser();
   if (!adminUser) redirect("/login");
@@ -14,28 +19,16 @@ export default async function AdminSettingsPage() {
     getBrands(),
   ]);
 
-  // Breadcrumb nav (for page context)
-  const breadcrumb = (
-    <nav className="flex items-center gap-2 text-xs text-stone-500 mb-3">
-      <a href="/admin" className="hover:text-stone-600 transition-colors">Admin</a>
-      <span>/</span>
-      <span className="text-stone-600">Settings</span>
-    </nav>
-  );
-
   return (
-    <main>
-      {breadcrumb}
-      <SettingsClient
-        brandId={brandId}
-        users={error ? [] : users}
-        brands={brands}
-        currentUser={{
-          id: adminUser.id ?? adminUser.user_id,
-          role: adminUser.role,
-          can_manage_users: adminUser.can_manage_users,
-        }}
-      />
-    </main>
+    <SettingsClient
+      brandId={brandId}
+      users={error ? [] : users}
+      brands={brands}
+      currentUser={{
+        id: adminUser.id ?? adminUser.user_id,
+        role: adminUser.role,
+        can_manage_users: adminUser.can_manage_users,
+      }}
+    />
   );
 }

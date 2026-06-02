@@ -238,33 +238,44 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
               </span>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Publishable Key</label>
-            <input
-              type="text"
-              value={stripePublishableKey}
-              onChange={(e) => setStripePublishableKey(e.target.value)}
-              placeholder="pk_live_..."
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Secret Key</label>
-            <input
-              type="password"
-              value={stripeSecretKey}
-              onChange={(e) => setStripeSecretKey(e.target.value)}
-              placeholder="sk_live_..."
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-400"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save Stripe Settings"}
-          </button>
+          
+          {!settings?.stripe_publishable_key ? (
+            <div className="space-y-3">
+              <p className="text-sm text-blue-200">
+                Connect your Stripe account to process payments. You'll be redirected to Stripe to authorize the connection.
+              </p>
+              <a
+                href="/api/stripe/oauth"
+                className="inline-block rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Connect with Stripe
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-green-400">
+                ✓ Your Stripe account is connected and ready to accept payments.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!confirm("Disconnect Stripe? You'll need to reconnect to accept payments.")) return;
+                  const result = await savePaymentSettings({
+                    brandId: activeBrandId,
+                    provider: null,
+                    stripePublishableKey: "",
+                    stripeSecretKey: "",
+                  });
+                  if (result.success) {
+                    window.location.reload();
+                  }
+                }}
+                className="text-sm text-red-400 hover:underline"
+              >
+                Disconnect Stripe
+              </button>
+            </div>
+          )}
         </div>
       )}
 

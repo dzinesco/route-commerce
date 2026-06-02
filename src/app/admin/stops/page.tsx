@@ -45,48 +45,59 @@ export default async function AdminStopsPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen px-6 py-10">
-        <div className="mx-auto max-w-6xl">
-          <nav className="flex items-center gap-2 text-xs text-stone-500 mb-6">
-            <a href="/admin" className="hover:text-stone-600 transition-colors">Admin</a>
-            <span>/</span>
-            <span className="text-stone-600">Tour Stops</span>
-          </nav>
-          <h1 className="text-3xl font-bold text-red-600">
-            Error loading stops
-          </h1>
-          <pre className="mt-4 rounded-xl bg-white border border-stone-200 p-4 text-sm text-stone-600">
-            {error.message}
-          </pre>
+      <main className="min-h-screen bg-[var(--admin-bg)]">
+        <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+          <div className="max-w-6xl mx-auto">
+            <nav className="flex items-center gap-2 text-xs sm:text-sm mb-6">
+              <a href="/admin" className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]">Admin</a>
+              <span className="text-[var(--admin-text-muted)]">/</span>
+              <span className="text-[var(--admin-text-primary)] font-medium">Stops & Routes</span>
+            </nav>
+            <h1 className="text-2xl sm:text-3xl font-black text-red-600 tracking-tight">
+              Error loading stops
+            </h1>
+            <pre className="mt-4 rounded-xl bg-white border border-[var(--admin-border)] p-4 text-sm text-[var(--admin-text-secondary)]">
+              {error.message}
+            </pre>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto max-w-6xl">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-xs text-stone-500 mb-6">
-          <a href="/admin" className="hover:text-stone-600 transition-colors">Admin</a>
-          <span>/</span>
-          <span className="text-stone-600">Tour Stops</span>
-        </nav>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-stone-950 tracking-tight">Tour Stops</h1>
-            <p className="mt-2 text-sm text-stone-500">
-              {adminUser?.brand_id
-                ? "Managing stops for your brand."
-                : "Manage routes, pickup locations, dates, and cutoff times."}
-            </p>
+    <main className="min-h-screen bg-[var(--admin-bg)]">
+      {/* Header */}
+      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-emerald-600">
+              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-[var(--admin-text-primary)] tracking-tight">Stops & Routes</h1>
+              <p className="text-xs sm:text-sm text-[var(--admin-text-muted)]">
+                {adminUser?.brand_id ? "Managing stops for your brand." : "Manage routes, pickup locations, dates, and cutoff times."}
+              </p>
+            </div>
           </div>
-
           <StopsHeaderActions brandId={adminUser?.brand_id ?? ""} />
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white border border-stone-200 shadow-sm">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 mt-4 text-xs sm:text-sm">
+          <a href="/admin" className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]">Admin</a>
+          <span className="text-[var(--admin-text-muted)]">/</span>
+          <span className="text-[var(--admin-text-primary)] font-medium">Stops & Routes</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+        <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-white shadow-sm">
           <StopTableClient stops={stops ?? []} />
         </div>
       </div>

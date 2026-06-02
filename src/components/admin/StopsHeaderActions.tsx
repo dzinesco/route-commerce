@@ -45,11 +45,13 @@ export default function StopsHeaderActions({ brandId }: Props) {
         </button>
       </div>
 
-      <ScheduleImportModal
-        brandId={brandId}
-        onClose={() => setShowImport(false)}
-        onComplete={handleImportComplete}
-      />
+      {showImport && (
+        <ScheduleImportModal
+          brandId={brandId}
+          onClose={() => setShowImport(false)}
+          onComplete={handleImportComplete}
+        />
+      )}
 
       <AddStopModal
         isOpen={showAdd}

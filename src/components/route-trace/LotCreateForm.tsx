@@ -4,6 +4,25 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createHarvestLot } from "@/actions/route-trace/lots";
 
+// One-color outline icons
+const Icons = {
+  plant: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22V12M12 12C12 12 7 10 7 5c0-2.5 2.5-5 5-5s5 2.5 5 5c0 5-5 7-5 7z" />
+    </svg>
+  ),
+  chevronUp: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m18 15-6-6-6 6"/>
+    </svg>
+  ),
+  chevronDown: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6"/>
+    </svg>
+  ),
+};
+
 export default function LotCreateForm({ brandId }: { brandId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -59,7 +78,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
       <div className="border-b border-stone-100 px-6 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-100">
-            <span className="text-base">🌱</span>
+            <span className="text-green-600">{Icons.plant("h-5 w-5")}</span>
           </div>
           <div>
             <h2 className="text-lg font-bold text-stone-900">New Harvest Lot</h2>
@@ -262,7 +281,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
             className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 hover:text-stone-600"
           >
             <span>Notes</span>
-            <span>{notesOpen ? "▲" : "▼"}</span>
+            <span className="text-stone-500">{notesOpen ? Icons.chevronUp("h-4 w-4") : Icons.chevronDown("h-4 w-4")}</span>
           </button>
           {notesOpen && (
             <textarea
@@ -282,7 +301,7 @@ export default function LotCreateForm({ brandId }: { brandId: string }) {
             disabled={isPending || !crop_type || !harvest_date || !field_location}
             className="rounded-xl bg-green-600 px-8 py-4 text-base font-bold text-white hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm"
           >
-            {isPending ? "Creating..." : "🌱 Create Lot"}
+            {isPending ? "Creating..." : <><span className="inline-flex items-center gap-1.5">{Icons.plant("h-4 w-4")} Create Lot</span></>}
           </button>
         </div>
       </form>

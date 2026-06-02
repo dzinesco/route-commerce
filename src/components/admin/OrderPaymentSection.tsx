@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/format-date";
 import { updateOrder } from "@/actions/orders/update-order";
 import { createRefund } from "@/actions/orders/create-refund";
@@ -29,6 +28,10 @@ type OrderPaymentSectionProps = {
   existingRefunds: Refund[];
 };
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+}
+
 export default function OrderPaymentSection({
   orderId,
   brandId,
@@ -36,11 +39,8 @@ export default function OrderPaymentSection({
   payment_processor,
   payment_status,
   payment_transaction_id,
-  refunded_amount,
-  refund_reason,
   existingRefunds,
 }: OrderPaymentSectionProps) {
-  const router = useRouter();
   const [processor, setProcessor] = useState(payment_processor ?? "");
   const [status, setStatus] = useState(payment_status ?? "manual");
   const [transactionId, setTransactionId] = useState(payment_transaction_id ?? "");
@@ -102,28 +102,28 @@ export default function OrderPaymentSection({
   const remainingBalance = Math.max(0, orderTotal - totalRefunded);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {error && (
-        <div className="rounded-xl bg-red-900/30 p-4 text-sm text-red-400">{error}</div>
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-600">
+          {error}
+        </div>
       )}
 
       {/* Payment details */}
       <form onSubmit={handleSavePayment} className="space-y-4">
         {saved && (
-          <div className="rounded-xl bg-green-900/30 p-4 text-sm text-green-400">
-            Payment details saved.
+          <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-700">
+            ✓ Payment details saved
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">
-              Processor
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Processor</label>
             <select
               value={processor}
               onChange={(e) => setProcessor(e.target.value)}
-              className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
+              className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
             >
               <option value="">—</option>
               {["manual", "stripe", "square", "cash", "venmo", "other"].map((p) => (
@@ -135,13 +135,11 @@ export default function OrderPaymentSection({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">
-              Payment Status
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Payment Status</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
+              className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
             >
               {["pending", "paid", "failed", "refunded", "cancelled"].map((s) => (
                 <option key={s} value={s}>
@@ -153,22 +151,20 @@ export default function OrderPaymentSection({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Transaction ID
-          </label>
+          <label className="mb-1 block text-xs font-semibold text-stone-500">Transaction ID</label>
           <input
             type="text"
             value={transactionId}
             onChange={(e) => setTransactionId(e.target.value)}
             placeholder="External payment reference"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
+            className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving}
-          className="w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Payment Details"}
         </button>
@@ -177,31 +173,31 @@ export default function OrderPaymentSection({
       {/* Refund history */}
       {existingRefunds.length > 0 && (
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-300">
+          <p className="mb-3 text-sm font-semibold text-stone-700">
             Refunds ({existingRefunds.length})
           </p>
           <div className="space-y-2">
             {existingRefunds.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-slate-50 px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3"
               >
                 <div>
-                  <p className="font-medium text-zinc-100">
-                    ${Number(r.amount).toFixed(2)}
+                  <p className="font-semibold text-stone-900">
+                    {formatCurrency(Number(r.amount))}
                   </p>
                   {r.reason && (
-                    <p className="text-xs text-zinc-500">{r.reason}</p>
+                    <p className="text-xs text-stone-500">{r.reason}</p>
                   )}
-                  <p className="text-xs text-slate-400">
-                    {formatDate(new Date(r.created_at))}
+                  <p className="text-xs text-stone-400">
+                    {formatDate(r.created_at)}
                   </p>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                     r.status === "completed"
-                      ? "bg-green-900/40 text-green-400"
-                      : "bg-zinc-950 text-zinc-500"
+                      ? "bg-green-50 text-green-700"
+                      : "bg-stone-100 text-stone-500"
                   }`}
                 >
                   {r.status}
@@ -209,28 +205,26 @@ export default function OrderPaymentSection({
               </div>
             ))}
           </div>
-          <div className="mt-2 flex justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm">
-            <span className="text-zinc-500">Total refunded</span>
-            <span className="font-medium text-zinc-100">
-              ${totalRefunded.toFixed(2)}
+          <div className="mt-2 flex justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm">
+            <span className="text-stone-500">Total refunded</span>
+            <span className="font-semibold text-stone-900">
+              {formatCurrency(totalRefunded)}
             </span>
           </div>
         </div>
       )}
 
       {/* Record a refund */}
-      <div className="rounded-xl border border-dashed border-zinc-600 p-4">
-        <p className="mb-3 text-sm font-medium text-zinc-300">Record a Refund</p>
+      <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50 p-4">
+        <p className="mb-3 text-sm font-semibold text-stone-700">Record a Refund</p>
         {refundSaved && (
-          <div className="mb-3 rounded-xl bg-green-900/30 p-3 text-sm text-green-400">
-            Refund recorded.
+          <div className="mb-3 rounded-xl bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+            ✓ Refund recorded
           </div>
         )}
         <form onSubmit={handleRefund} className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              Amount
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Amount</label>
             <input
               type="number"
               step="0.01"
@@ -238,26 +232,24 @@ export default function OrderPaymentSection({
               max={remainingBalance}
               value={refundAmount}
               onChange={(e) => setRefundAmount(e.target.value)}
-              placeholder={`Max $${remainingBalance.toFixed(2)}`}
-              className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-2 text-sm outline-none focus:border-slate-900"
+              placeholder={`Max ${formatCurrency(remainingBalance)}`}
+              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              Reason
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Reason</label>
             <input
               type="text"
               value={refundReason}
               onChange={(e) => setRefundReason(e.target.value)}
               placeholder="Customer request, defective product, etc."
-              className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-2 text-sm outline-none focus:border-slate-900"
+              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
           </div>
           <button
             type="submit"
             disabled={!refundAmount || Number(refundAmount) <= 0 || refunding}
-            className="w-full rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-900/30 disabled:opacity-50"
+            className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
           >
             {refunding ? "Processing..." : "Record Refund"}
           </button>

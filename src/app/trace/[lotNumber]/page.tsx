@@ -3,6 +3,21 @@ import { getTraceChain } from "@/actions/route-trace/lots";
 import ShareTraceButton from "@/components/route-trace/ShareTraceButton";
 import { svcHeaders } from "@/lib/svc-headers";
 
+export async function generateMetadata({ params }: { params: Promise<{ lotNumber: string }> }) {
+  const { lotNumber } = await params;
+  
+  return {
+    title: `Lot ${lotNumber} | Fresh Produce Traceability`,
+    description: `View the complete traceability record for harvest lot ${lotNumber}. Track fresh produce from field to delivery with full supply chain transparency.`,
+    keywords: [`lot ${lotNumber}`, "produce traceability", "farm to fork", "harvest lot", "fresh produce", "food safety", "supply chain"],
+    openGraph: {
+      title: `Lot ${lotNumber} | Fresh Produce Traceability`,
+      description: `Complete farm-to-fork traceability record. View harvest details, supply chain events, and delivery information for lot ${lotNumber}.`,
+      type: "website",
+    },
+  };
+}
+
 const EVENT_ICONS: Record<string, string> = {
   harvested: "🌱",
   field_packed: "📦",

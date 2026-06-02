@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-// Warm earth-tone dark sidebar design
-// Colors: stone-900 bg, stone-300 text, emerald accent
+// Elegant warm sidebar design
+// Colors: parchment 100 bg, soft linen text, powder petal accent
 
 const TOP_LINKS = [
   { href: "/admin", label: "Dashboard", icon: "grid" },
@@ -17,15 +17,11 @@ const TOP_LINKS = [
   { href: "/admin/route-trace", label: "Route Trace", icon: "clipboard" },
   { href: "/admin/time-tracking", label: "Time Tracking", icon: "clock" },
   { href: "/admin/communications", label: "Communications", icon: "mail" },
+  { href: "/admin/settings", label: "Settings", icon: "settings" },
+  { href: "/admin/advanced", label: "Advanced", icon: "advanced" },
 ];
 
-const SETTINGS_SUB_LINKS = [
-  { href: "/admin/settings", label: "General" },
-  { href: "/admin/settings#workers", label: "Workers & PINs" },
-  { href: "/admin/settings#tasks", label: "Tasks" },
-  { href: "/admin/settings#users", label: "Users & Permissions" },
-  { href: "/admin/settings#integrations", label: "Integrations" },
-];
+const SETTINGS_SUB_LINKS: never[] = [];
 
 function GridIcon({ className }: { className?: string }) {
   return (
@@ -84,6 +80,14 @@ function MailIcon({ className }: { className?: string }) {
   );
 }
 
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "w-4 h-4"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+    </svg>
+  );
+}
+
 function SettingsCogIcon({ open }: { open: boolean }) {
   return (
     <svg className={`w-4 h-4 transition-transform ${open ? "rotate-45" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -116,6 +120,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   clipboard: <ClipboardIcon />,
   clock: <ClockIcon />,
   mail: <MailIcon />,
+  settings: <SettingsCogIcon open={false} />,
+  advanced: <SparkleIcon />,
 };
 
 type SidebarProps = {
@@ -126,7 +132,6 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const roleLabel = userRole === "platform_admin" ? "Platform Admin"
     : userRole === "brand_admin" ? "Brand Admin"
@@ -138,8 +143,6 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
     if (href === "/admin/settings") return pathname === "/admin/settings" || pathname.startsWith("/admin/settings");
     return pathname.startsWith(href);
   };
-
-  const isSettingsPage = pathname.startsWith("/admin/settings");
 
   async function handleLogout() {
     document.cookie = "dev_session=;path=/;max-age=0";
@@ -157,7 +160,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
         className="fixed top-4 left-4 z-50 lg:hidden"
         aria-label="Open sidebar"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-md border border-stone-200">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-md border border-[var(--admin-border)]">
           <HamburgerIcon />
         </div>
       </button>
@@ -170,37 +173,37 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar panel - Warm earth-tone dark */}
+      {/* Sidebar panel - Elegant warm dark */}
       <aside className={[
         "fixed top-0 left-0 h-full w-60 z-50",
-        "bg-stone-900 border-r border-stone-800",
+        "border-r border-[var(--admin-sidebar-bg)]",
         "flex flex-col transition-transform duration-300 lg:translate-x-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
-      ].join(" ")}>
+      ].join(" ")}
+      style={{ backgroundColor: "var(--admin-sidebar-bg)" }}>
 
         {/* Logo row */}
-        <div className="flex items-center h-16 px-5 border-b border-stone-800 flex-shrink-0">
-          <Link
-            href="/admin"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-3 text-stone-100 hover:text-emerald-400 transition-colors"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 shadow-sm">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="flex items-center gap-3">
+        <div className="flex items-center h-16 px-5 border-b flex-shrink-0" style={{ borderColor: "rgba(208, 203, 180, 0.2)" }}>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 text-white hover:opacity-90 transition-colors"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl shadow-sm" style={{ backgroundColor: "var(--admin-accent)" }}>
+                <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <span className="text-sm font-semibold tracking-tight">Admin</span>
-              <a
-                href="/"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs text-stone-500 hover:text-stone-300 transition-colors ml-2"
-              >
-                ← Back to Site
-              </a>
-            </div>
-          </Link>
+            </Link>
+            <a
+              href="/"
+              className="text-xs transition-colors" style={{ color: "var(--admin-sidebar-text)" }}
+            >
+              ← Back to Site
+            </a>
+          </div>
         </div>
 
         {/* Nav links */}
@@ -215,81 +218,47 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
                 className={[
                   "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                   active
-                    ? "bg-emerald-900/20 text-emerald-400 border-l-2 border-emerald-500"
-                    : "text-stone-300 hover:text-stone-100 hover:bg-stone-800/50 border-l-2 border-transparent",
+                    ? "border-l-2"
+                    : "border-l-2 border-transparent hover:border-l-2",
                 ].join(" ")}
+                style={active ? { 
+                  backgroundColor: "rgba(202, 117, 67, 0.15)", 
+                  color: "#dea889",
+                  borderColor: "var(--admin-accent)"
+                } : { 
+                  color: "var(--admin-sidebar-text)",
+                  borderColor: "transparent"
+                }}
               >
-                <span className={[
-                  "flex-shrink-0 transition-colors",
-                  active ? "text-emerald-400" : "text-stone-500 group-hover:text-stone-300"
-                ].join(" ")}>
+                <span className="flex-shrink-0 transition-colors" style={{ 
+                  color: active ? "var(--admin-accent)" : "rgba(208, 203, 180, 0.6)"
+                }}>
                   {ICON_MAP[item.icon]}
                 </span>
                 {item.label}
                 {active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--admin-accent)" }} />
                 )}
               </Link>
             );
           })}
-
-          {/* Settings collapsible section */}
-          <div className="pt-4 pb-1">
-            <div className="h-px bg-stone-800 mb-4" />
-            <button
-              onClick={() => setSettingsOpen(v => !v)}
-              className={[
-                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                isSettingsPage
-                  ? "bg-emerald-900/20 text-emerald-400 border-l-2 border-emerald-500"
-                  : "text-stone-300 hover:text-stone-100 hover:bg-stone-800/50 border-l-2 border-transparent",
-              ].join(" ")}
-            >
-              <span className="flex items-center gap-3">
-                <span className={isSettingsPage ? "text-emerald-400" : "text-stone-500"}>
-                  <SettingsCogIcon open={settingsOpen} />
-                </span>
-                Settings
-              </span>
-              <ChevronIcon open={settingsOpen} />
-            </button>
-
-            {settingsOpen && (
-              <div className="mt-2 ml-2 space-y-0.5 border-l border-stone-700 pl-3">
-                {SETTINGS_SUB_LINKS.map((item) => {
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={[
-                        "flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200",
-                        active
-                          ? "bg-emerald-900/20 text-emerald-400"
-                          : "text-stone-400 hover:text-stone-200 hover:bg-stone-800/50",
-                      ].join(" ")}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </nav>
 
         {/* Bottom: role + sign out */}
-        <div className="px-4 py-5 border-t border-stone-800 flex-shrink-0">
+        <div className="px-4 py-5 border-t flex-shrink-0" style={{ borderColor: "rgba(208, 203, 180, 0.2)" }}>
           {roleLabel && (
-            <div className="px-3 py-2 mb-3 rounded-lg bg-stone-800 border border-stone-700">
-              <p className="text-[10px] text-stone-500 font-medium uppercase tracking-widest mb-0.5">{roleLabel}</p>
-              <p className="text-xs text-stone-400">Signed in</p>
+            <div className="px-3 py-2 mb-3 rounded-lg border" style={{ 
+              backgroundColor: "rgba(208, 203, 180, 0.1)",
+              borderColor: "rgba(208, 203, 180, 0.2)"
+            }}>
+              <p className="text-[10px] font-medium uppercase tracking-widest mb-0.5" style={{ color: "rgba(195, 195, 193, 0.6)" }}>{roleLabel}</p>
+              <p className="text-xs" style={{ color: "rgba(195, 195, 193, 0.8)" }}>Signed in</p>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="w-full px-3 py-2 rounded-lg text-sm font-medium text-stone-400 hover:text-stone-200 hover:bg-stone-800 transition-all border border-transparent"
+            className="w-full px-3 py-2 rounded-lg text-sm font-medium transition-all border border-transparent"
+            style={{ color: "rgba(195, 195, 193, 0.7)" }}
           >
             Sign out
           </button>

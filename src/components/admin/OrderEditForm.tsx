@@ -49,6 +49,10 @@ type EditableItem = {
   removed: boolean;
 };
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+}
+
 export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -157,38 +161,38 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-xl bg-red-900/30 p-4 text-sm text-red-400">
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-600">
           {error}
         </div>
       )}
 
       {saved && (
-        <div className="rounded-xl bg-green-900/30 p-4 text-sm text-green-400">
-          Order updated successfully.
+        <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-700">
+          ✓ Order updated successfully
         </div>
       )}
 
       {/* Order items */}
       <div>
-        <p className="mb-2 text-sm font-medium text-zinc-300">
+        <p className="mb-3 text-sm font-semibold text-stone-700">
           Order Items ({visibleItems.length})
         </p>
         {visibleItems.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-zinc-600 p-4 text-center text-sm text-zinc-500">
-            No items.
+          <p className="rounded-xl border border-dashed border-stone-300 p-4 text-center text-sm text-stone-400">
+            No items
           </p>
         ) : (
           <div className="space-y-3">
             {visibleItems.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                className="rounded-xl border border-stone-200 bg-white p-4"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <p className="font-medium text-zinc-100">{item.productName}</p>
+                  <p className="font-medium text-stone-900">{item.productName}</p>
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-900/30"
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                   >
                     Remove
                   </button>
@@ -196,9 +200,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
 
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-zinc-500">
-                      Qty
-                    </label>
+                    <label className="mb-1 block text-xs font-medium text-stone-500">Qty</label>
                     <input
                       type="number"
                       min="1"
@@ -206,13 +208,11 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                       onChange={(e) =>
                         updateItem(item.id, "quantity", Number(e.target.value))
                       }
-                      className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-zinc-500">
-                      Price
-                    </label>
+                    <label className="mb-1 block text-xs font-medium text-stone-500">Price</label>
                     <input
                       type="number"
                       step="0.01"
@@ -221,13 +221,13 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                       onChange={(e) =>
                         updateItem(item.id, "price", Number(e.target.value))
                       }
-                      className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
 
-                <p className="mt-2 text-right text-sm font-semibold text-zinc-100">
-                  ${(Number(item.price) * item.quantity).toFixed(2)}
+                <p className="mt-2 text-right text-sm font-semibold text-stone-900">
+                  {formatCurrency(Number(item.price) * item.quantity)}
                 </p>
               </div>
             ))}
@@ -235,95 +235,48 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
         )}
       </div>
 
-      {/* Pricing — subtotal derived from items */}
+      {/* Pricing */}
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Subtotal (auto-calculated)
-          </label>
+          <label className="mb-1 block text-xs font-semibold text-stone-500">Subtotal (auto-calculated)</label>
           <input
             type="number"
             step="0.01"
             value={subtotal}
             readOnly
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-base text-zinc-500"
+            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm text-stone-500"
           />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Discount Amount
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={discount_amount}
-            onChange={(e) => setDiscount_amount(Number(e.target.value))}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Discount Reason
-          </label>
-          <input
-            type="text"
-            value={discount_reason}
-            onChange={(e) => setDiscount_reason(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Tax Amount
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={order.tax_amount ?? 0}
-            onChange={(e) => {}}
-            readOnly
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-base text-zinc-500"
-          />
-          <p className="mt-1 text-xs text-slate-400 italic">Taxes calculated at payment integration.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">
-              Tax Rate
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Discount Amount</label>
             <input
-              type="text"
-              value={order.tax_rate ?? ""}
-              readOnly
-              placeholder="e.g. 0.08"
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-base text-zinc-500"
+              type="number"
+              step="0.01"
+              min="0"
+              value={discount_amount}
+              onChange={(e) => setDiscount_amount(Number(e.target.value))}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">
-              Tax Location
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Discount Reason</label>
             <input
               type="text"
-              value={order.tax_location ?? ""}
-              readOnly
-              placeholder="e.g. NC"
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-base text-zinc-500"
+              value={discount_reason}
+              onChange={(e) => setDiscount_reason(e.target.value)}
+              placeholder="Optional"
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
           <div className="flex justify-between">
-            <span className="text-lg font-medium text-zinc-300">Total</span>
-            <span className="text-2xl font-bold text-zinc-100">
-              ${(subtotal + Number(order.tax_amount ?? 0) - discount_amount).toFixed(2)}
+            <span className="text-sm font-medium text-stone-600">Total</span>
+            <span className="text-xl font-bold text-stone-900">
+              {formatCurrency(subtotal + Number(order.tax_amount ?? 0) - discount_amount)}
             </span>
           </div>
         </div>
@@ -332,57 +285,49 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
       {/* Customer fields */}
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Name
-          </label>
+          <label className="mb-1 block text-xs font-semibold text-stone-500">Name</label>
           <input
             type="text"
             value={customer_name}
             onChange={(e) => setCustomer_name(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
+            className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
           />
         </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Email
-          </label>
-          <input
-            type="email"
-            value={customer_email}
-            onChange={(e) => setCustomer_email(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={customer_phone}
-            onChange={(e) => setCustomer_phone(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Email</label>
+            <input
+              type="email"
+              value={customer_email}
+              onChange={(e) => setCustomer_email(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-stone-500">Phone</label>
+            <input
+              type="tel"
+              value={customer_phone}
+              onChange={(e) => setCustomer_phone(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+            />
+          </div>
         </div>
       </div>
 
       {/* Status & pickup */}
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-300">
-            Status
-          </label>
-          <div className="flex gap-3">
+          <label className="mb-2 block text-xs font-semibold text-stone-500">Status</label>
+          <div className="flex gap-2">
             {["pending", "confirmed", "cancelled"].map((s) => (
               <button
                 key={s}
                 onClick={() => setStatus(s)}
-                className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium capitalize transition-colors ${
+                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold capitalize transition-colors ${
                   status === s
-                    ? "bg-slate-900 text-white"
-                    : "bg-zinc-950 text-zinc-400 hover:bg-slate-200"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
                 }`}
               >
                 {s}
@@ -392,46 +337,36 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-300">
-            Pickup
-          </label>
+          <label className="mb-2 block text-xs font-semibold text-stone-500">Pickup</label>
           <button
             onClick={() => setPickup_complete((v) => !v)}
-            className={`w-full rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+            className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
               pickup_complete
-                ? "bg-green-900/40 text-green-400"
-                : "bg-zinc-950 text-zinc-400 hover:bg-slate-200"
+                ? "bg-green-100 text-green-700 border border-green-200"
+                : "bg-amber-100 text-amber-700 border border-amber-200"
             }`}
           >
-            {pickup_complete ? "Picked Up" : "Not Picked Up"}
+            {pickup_complete ? "✓ Picked Up" : "○ Not Picked Up"}
           </button>
-          {order.pickup_complete && order.pickup_completed_at && (
-            <p className="mt-1 text-xs text-slate-400">
-              Completed{" "}
-              {new Date(order.pickup_completed_at).toLocaleString()}
-            </p>
-          )}
         </div>
       </div>
 
       {/* Internal notes */}
       <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Internal Notes
-        </label>
+        <label className="mb-1 block text-xs font-semibold text-stone-500">Internal Notes</label>
         <textarea
           value={internal_notes}
           onChange={(e) => setInternal_notes(e.target.value)}
-          rows={3}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
+          rows={2}
           placeholder="Private notes for staff..."
+          className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500 resize-none"
         />
       </div>
 
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full rounded-xl bg-slate-900 px-6 py-4 text-lg font-bold text-white disabled:opacity-50"
+        className="w-full rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
       >
         {saving ? "Saving..." : "Save Changes"}
       </button>

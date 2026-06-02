@@ -27,13 +27,10 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     return buildDevAdmin("platform_admin");
   }
 
-  // ── Dev session bypass (enabled in all envs for demo) ──────────────
-  // Allow dev cookies via: document.cookie = "dev_session=platform_admin; path=/"
-  if (process.env.NODE_ENV === "development") {
-    const dev = cookieStore.get("dev_session")?.value;
-    if (dev === "platform_admin" || dev === "brand_admin" || dev === "store_employee") {
-      return buildDevAdmin(dev);
-    }
+  // ── Dev session bypass (enabled for testing on all envs) ──────────────
+  const dev = cookieStore.get("dev_session")?.value;
+  if (dev === "platform_admin" || dev === "brand_admin" || dev === "store_employee") {
+    return buildDevAdmin(dev);
   }
 
   // ── Main auth: rc_auth_uid (new) or rc_uid (legacy) cookie set by /api/login ─

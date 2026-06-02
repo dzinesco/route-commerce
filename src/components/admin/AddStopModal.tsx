@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { createStop } from "@/actions/stops/create-stop";
-import { formatDate } from "@/lib/format-date";
+import GlassModal from "@/components/admin/GlassModal";
 
 type Props = {
   isOpen: boolean;
@@ -25,18 +25,16 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
-  const [city, setCity] = useState(duplicateFrom?.city ?? "");
-  const [state, setState] = useState(duplicateFrom?.state ?? "");
-  const [location, setLocation] = useState(duplicateFrom?.location ?? "");
-  const [date, setDate] = useState(duplicateFrom?.date ?? "");
-  const [time, setTime] = useState(duplicateFrom?.time ?? "");
-  const [address, setAddress] = useState(duplicateFrom?.address ?? "");
-  const [zip, setZip] = useState(duplicateFrom?.zip ?? "");
-  const [cutoffTime, setCutoffTime] = useState(duplicateFrom?.cutoff_time ?? "");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [location, setLocation] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [address, setAddress] = useState("");
+  const [zip, setZip] = useState("");
+  const [cutoffTime, setCutoffTime] = useState("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
 
-  // Reset form when modal opens/closes or duplicate changes
   useEffect(() => {
     if (isOpen) {
       setCity(duplicateFrom?.city ?? "");
@@ -51,27 +49,6 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
       setError(null);
     }
   }, [isOpen, duplicateFrom]);
-
-  // Lock body scroll
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [isOpen]);
-
-  // Escape key handler
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleEscape);
-      return () => window.removeEventListener("keydown", handleEscape);
-    }
-  }, [isOpen, onClose]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,248 +86,235 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
     }
   }, [brandId, city, state, location, date, time, address, zip, cutoffTime, status, onSuccess, onClose]);
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
+  const isDuplicate = Boolean(duplicateFrom);
+  const title = isDuplicate ? "Duplicate Stop" : "Add New Stop";
+  const subtitle = isDuplicate && duplicateFrom
+    ? `From ${duplicateFrom.city}, ${duplicateFrom.state}`
+    : "Create a new tour stop for your route.";
+
+  const inputStyle = {
+    background: 'rgba(0, 0, 0, 0.02)',
+    border: '1px solid rgba(0, 0, 0, 0.06)',
+    outline: 'none',
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    e.target.style.background = 'rgba(16, 185, 129, 0.04)';
+    e.target.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+    e.target.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)';
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    e.target.style.background = 'rgba(0, 0, 0, 0.02)';
+    e.target.style.border = '1px solid rgba(0, 0, 0, 0.06)';
+    e.target.style.boxShadow = 'none';
   };
 
   if (!isOpen) return null;
 
-  const isDuplicate = Boolean(duplicateFrom);
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={handleBackdropClick}
-    >
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-2xl border border-stone-200">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-          <div>
-            <h2 className="text-xl font-semibold text-stone-950">
-              {isDuplicate ? "Duplicate Stop" : "Add New Stop"}
-            </h2>
-            <p className="mt-0.5 text-sm text-stone-500">
-              {isDuplicate && duplicateFrom
-                ? `Pre-filled from ${duplicateFrom.city}, ${duplicateFrom.state}`
-                : "Create a new tour stop for your route."}
-            </p>
+    <GlassModal title={title} subtitle={subtitle} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-xl px-4 py-3 text-sm text-red-600 backdrop-blur-sm" 
+            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            {error}
           </div>
-          <button
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        )}
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2 space-y-1.5">
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">City</label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Denver"
+              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">State</label>
+            <input
+              type="text"
+              value={state}
+              onChange={(e) => setState(e.target.value.toUpperCase())}
+              placeholder="CO"
+              maxLength={2}
+              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              required
+            />
+          </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-5">
-            {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Location</label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Whole Foods Market"
+            className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
+            style={inputStyle}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            required
+          />
+        </div>
 
-            {/* Location row */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                  City <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Denver"
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                  State <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={state}
-                  onChange={(e) => setState(e.target.value.toUpperCase())}
-                  placeholder="CO"
-                  maxLength={2}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Location name */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                Location Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Whole Foods Market"
-                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                required
-              />
-            </div>
-
-            {/* Date & Time row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                  Pickup Time
-                </label>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Address & ZIP */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                  Street Address
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 Main St"
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                  ZIP Code
-                </label>
-                <input
-                  type="text"
-                  value={zip}
-                  onChange={(e) => setZip(e.target.value)}
-                  placeholder="80202"
-                  className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Cutoff time */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                Order Cutoff Time
-              </label>
-              <input
-                type="time"
-                value={cutoffTime}
-                onChange={(e) => setCutoffTime(e.target.value)}
-                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
-              />
-              <p className="mt-1 text-xs text-stone-400">
-                Customers can only order until this time on the day before pickup.
-              </p>
-            </div>
-
-            {/* Status toggle */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-2">
-                Status
-              </label>
-              <div className="flex gap-3">
-                <label className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 cursor-pointer transition-all ${
-                  status === "draft"
-                    ? "border-amber-300 bg-amber-50 text-amber-800"
-                    : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
-                }`}>
-                  <input
-                    type="radio"
-                    name="status"
-                    value="draft"
-                    checked={status === "draft"}
-                    onChange={() => setStatus("draft")}
-                    className="sr-only"
-                  />
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    status === "draft" ? "bg-amber-200 text-amber-900" : "bg-stone-100 text-stone-500"
-                  }`}>
-                    Draft
-                  </span>
-                  <span className="text-sm font-medium">Save as draft</span>
-                </label>
-                <label className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 cursor-pointer transition-all ${
-                  status === "active"
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                    : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
-                }`}>
-                  <input
-                    type="radio"
-                    name="status"
-                    value="active"
-                    checked={status === "active"}
-                    onChange={() => setStatus("active")}
-                    className="sr-only"
-                  />
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    status === "active" ? "bg-emerald-200 text-emerald-900" : "bg-stone-100 text-stone-500"
-                  }`}>
-                    Active
-                  </span>
-                  <span className="text-sm font-medium">Publish now</span>
-                </label>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 transition-all"
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              required
+            />
           </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Pickup Time</label>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 transition-all"
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+          </div>
+        </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between border-t border-stone-100 px-6 py-4 bg-stone-50">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2 space-y-1.5">
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Main St"
+              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">ZIP</label>
+            <input
+              type="text"
+              value={zip}
+              onChange={(e) => setZip(e.target.value)}
+              placeholder="80202"
+              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Cutoff Time</label>
+          <input
+            type="time"
+            value={cutoffTime}
+            onChange={(e) => setCutoffTime(e.target.value)}
+            className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 transition-all"
+            style={inputStyle}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+          <p className="mt-1 text-xs text-stone-400 ml-1">Orders close this time the day before pickup</p>
+        </div>
+
+        {/* Status toggle */}
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Status</label>
+          <div className="flex gap-3">
             <button
               type="button"
-              onClick={onClose}
-              className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+              onClick={() => setStatus("draft")}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all"
+              style={{
+                border: status === "draft" ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(0, 0, 0, 0.08)',
+                background: status === "draft" ? 'rgba(245, 158, 11, 0.08)' : 'rgba(0, 0, 0, 0.02)',
+              }}
             >
-              Cancel
+              <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{
+                background: status === "draft" ? 'rgba(245, 158, 11, 0.2)' : 'rgba(0, 0, 0, 0.05)',
+                color: status === "draft" ? '#b45309' : 'rgba(0, 0, 0, 0.4)',
+              }}>Draft</span>
+              <span className="text-sm font-medium" style={{ color: status === "draft" ? '#92400e' : 'rgba(0, 0, 0, 0.4)' }}>Save as draft</span>
             </button>
             <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors shadow-sm shadow-emerald-200"
+              type="button"
+              onClick={() => setStatus("active")}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all"
+              style={{
+                border: status === "active" ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(0, 0, 0, 0.08)',
+                background: status === "active" ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.02)',
+              }}
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Creating...
-                </span>
-              ) : (
-                isDuplicate ? "Duplicate Stop" : "Create Stop"
-              )}
+              <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{
+                background: status === "active" ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 0, 0, 0.05)',
+                color: status === "active" ? '#047857' : 'rgba(0, 0, 0, 0.4)',
+              }}>Active</span>
+              <span className="text-sm font-medium" style={{ color: status === "active" ? '#065f46' : 'rgba(0, 0, 0, 0.4)' }}>Publish now</span>
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 pt-4" style={{ borderTop: '1px solid rgba(0, 0, 0, 0.04)' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-5 py-2.5 text-sm font-medium text-stone-500 hover:text-stone-700 transition-all hover:bg-stone-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all"
+            style={{ 
+              background: loading 
+                ? 'rgba(16, 185, 129, 0.4)' 
+                : 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
+              boxShadow: loading 
+                ? 'none' 
+                : '0 4px 12px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Creating...
+              </span>
+            ) : (
+              isDuplicate ? "Duplicate Stop" : "Create Stop"
+            )}
+          </button>
+        </div>
+      </form>
+    </GlassModal>
   );
 }
 

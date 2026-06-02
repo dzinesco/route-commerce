@@ -51,6 +51,7 @@ export async function savePaymentSettings(params: {
   provider: PaymentProvider | null;
   stripePublishableKey?: string;
   stripeSecretKey?: string;
+  stripeUserId?: string;
   squareAccessToken?: string;
   squareLocationId?: string;
   squareSyncEnabled?: boolean;
@@ -84,6 +85,7 @@ export async function savePaymentSettings(params: {
         p_provider: params.provider,
         p_stripe_publishable_key: params.stripePublishableKey ?? null,
         p_stripe_secret_key: params.stripeSecretKey ?? null,
+        p_stripe_user_id: params.stripeUserId ?? null,
         p_square_access_token: params.squareAccessToken ?? null,
         p_square_location_id: params.squareLocationId ?? null,
         p_square_sync_enabled: params.squareSyncEnabled ?? null,

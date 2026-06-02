@@ -20,6 +20,48 @@ import {
   type NotificationLogEntry,
 } from "@/actions/time-tracking";
 
+// One-color outline icons
+const Icons = {
+  clock: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  dollarSign: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" x2="12" y1="2" y2="22"/>
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  ),
+  clipboard: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>
+    </svg>
+  ),
+  chart: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" x2="12" y1="20" y2="10"/>
+      <line x1="18" x2="18" y1="20" y2="4"/>
+      <line x1="6" x2="6" y1="20" y2="16"/>
+    </svg>
+  ),
+  check: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
+  ),
+  alert: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+      <path d="M12 9v4"/>
+      <path d="M12 17h.01"/>
+    </svg>
+  ),
+};
+
 type Tab = "dashboard" | "settings";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -316,7 +358,7 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => triggerDownload(buildExportUrl("quickbooks"))}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-emerald-500 transition-all text-left">
-                <span className="text-lg">📒</span>
+                <span className="text-stone-400">{Icons.clock("h-5 w-5")}</span>
                 <div>
                   <p className="text-sm font-semibold text-stone-800">QuickBooks</p>
                   <p className="text-xs text-stone-500">Time import CSV</p>
@@ -324,7 +366,7 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </button>
               <button onClick={() => triggerDownload(buildExportUrl("payroll"))}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-blue-500 transition-all text-left">
-                <span className="text-lg">💰</span>
+                <span className="text-stone-400">{Icons.dollarSign("h-5 w-5")}</span>
                 <div>
                   <p className="text-sm font-semibold text-stone-800">Payroll</p>
                   <p className="text-xs text-stone-500">ADP / Gusto / Generic</p>
@@ -332,7 +374,7 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </button>
               <button onClick={() => triggerDownload(buildExportUrl("detailed"))}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-violet-500 transition-all text-left">
-                <span className="text-lg">📋</span>
+                <span className="text-stone-400">{Icons.clipboard("h-5 w-5")}</span>
                 <div>
                   <p className="text-sm font-semibold text-stone-800">Detailed Log</p>
                   <p className="text-xs text-stone-500">Full audit report</p>
@@ -340,7 +382,7 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </button>
               <button onClick={() => triggerDownload(buildExportUrl("summary"))}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-amber-500 transition-all text-left">
-                <span className="text-lg">📊</span>
+                <span className="text-stone-400">{Icons.chart("h-5 w-5")}</span>
                 <div>
                   <p className="text-sm font-semibold text-stone-800">Period Summary</p>
                   <p className="text-xs text-stone-500">Per-worker totals</p>
@@ -385,10 +427,10 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${meta.color}`}>{meta.en}</span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`text-sm font-bold ${entry.email_sent ? "text-emerald-600" : "text-stone-300"}`}>{entry.email_sent ? "✓" : "—"}</span>
+                        <span className="text-emerald-600">{Icons.check("h-4 w-4")}</span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`text-sm font-bold ${entry.sms_sent ? "text-emerald-600" : "text-stone-300"}`}>{entry.sms_sent ? "✓" : "—"}</span>
+                        <span className="text-stone-300">{entry.sms_sent ? Icons.check("h-4 w-4 text-emerald-600") : "—"}</span>
                       </td>
                     </tr>
                   );
@@ -535,7 +577,7 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
           {/* Colorado notice */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
             <div className="flex items-start gap-3">
-              <span className="text-amber-600 text-lg mt-0.5">⚠️</span>
+              <span className="text-amber-600 mt-0.5">{Icons.alert("h-5 w-5")}</span>
               <div>
                 <p className="text-sm font-semibold text-amber-800">Colorado Overtime Law</p>
                 <p className="text-xs text-amber-700 mt-1">Colorado requires daily overtime (1.5×) after 12 hours in a workday, or weekly overtime after 40 hours in a workweek.</p>

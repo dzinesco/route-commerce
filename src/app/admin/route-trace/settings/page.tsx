@@ -11,6 +11,12 @@ import {
   getRecentLotEvents,
 } from "@/actions/route-trace/lots";
 
+export const metadata = {
+  title: "Route Trace Settings",
+  description: "Configure Route Trace traceability workflow settings, defaults, and add-on features for your produce distribution operation.",
+  keywords: ["route trace settings", "traceability configuration", "FSMA settings", "traceability defaults"],
+};
+
 export default async function RouteTraceSettingsPage() {
   const adminUser = await getAdminUser();
   if (!adminUser) redirect("/login");

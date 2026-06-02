@@ -3,6 +3,9 @@
 import { getAdminUser } from "@/lib/admin-permissions";
 import { svcHeaders } from "@/lib/svc-headers";
 
+// Product images bucket - UUID from Supabase
+const PRODUCT_IMAGES_BUCKET_ID = "80aa01da-ab4b-44f8-b6e7-700552457e18";
+
 export type UploadProductImageResult =
   | { success: true; imageUrl: string }
   | { success: false; error: string };
@@ -32,7 +35,7 @@ export async function uploadProductImage(
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/product-images/${path}`,
+    `${supabaseUrl}/storage/v1/object/${PRODUCT_IMAGES_BUCKET_ID}/${path}`,
     {
       method: "PUT",
       headers: { ...svcHeaders(supabaseKey), "Authorization": `Bearer ${supabaseKey}`, "Content-Type": `image/${ext}`, "x-upsert": "true" },
@@ -44,7 +47,7 @@ export async function uploadProductImage(
     return { success: false, error: `Upload failed: ${await uploadRes.text()}` };
   }
 
-  const publicUrl = `${supabaseUrl}/storage/v1/object/public/product-images/${path}`;
+  const publicUrl = `${supabaseUrl}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET_ID}/${path}`;
 
   // If productId is "__NEW__", we just upload and return the URL (caller handles saving it)
   if (productId === "__NEW__") {

@@ -4,6 +4,7 @@ import OrderEditForm from "@/components/admin/OrderEditForm";
 import OrderPaymentSection from "@/components/admin/OrderPaymentSection";
 import OrderPickupAction from "@/components/admin/OrderPickupAction";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
+import { formatDate } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 
 type OrderDetailPageProps = {
@@ -12,6 +13,10 @@ type OrderDetailPageProps = {
   }>;
 };
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+}
+
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = await params;
 
@@ -19,15 +24,17 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   if (!order) {
     return (
-      <main className="min-h-screen bg-stone-100 px-6 py-12">
+      <main className="min-h-screen px-6 py-10">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-3xl font-bold text-red-600">Order not found</h1>
           <a
             href="/admin/orders"
-            className="mt-4 inline-block text-stone-500 hover:text-stone-700"
+            className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700"
           >
             ← Back to Orders
           </a>
+          <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="text-lg font-semibold text-red-700">Order not found</p>
+          </div>
         </div>
       </main>
     );
@@ -46,58 +53,69 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const brandId = order.stops?.brand_id ?? null;
   const subtotal = Number(order.subtotal);
   const discount_amount = Number(order.discount_amount ?? 0);
-  const total = Math.max(0, subtotal - discount_amount);
+  const taxAmount = Number(order.tax_amount ?? 0);
+  const total = subtotal + taxAmount - discount_amount;
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-12">
-      <div className="mx-auto max-w-4xl">
-        <a
-          href="/admin/orders"
-          className="text-sm text-stone-500 hover:text-stone-700"
-        >
-          ← Back to Orders
-        </a>
-
-        {/* Customer info */}
-        <div className="card mt-6">
-          <div className="flex items-start justify-between gap-4">
+    <main className="min-h-screen px-6 py-8">
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <a
+              href="/admin/orders"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </a>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-stone-500">
-                Customer
-              </p>
-              <h1 className="mt-2 text-3xl font-bold text-stone-950">
-                {order.customer_name}
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                  order.pickup_complete
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-yellow-100 text-yellow-700"
-                }`}
-              >
-                {order.pickup_complete ? "Picked Up" : "Pending"}
-              </span>
-              <OrderPickupAction
-                orderId={order.id}
-                brandId={brandId}
-                currentlyPickedUp={order.pickup_complete}
-              />
+              <h1 className="text-2xl font-bold text-stone-950 tracking-tight">Order Details</h1>
+              <p className="text-sm text-stone-500">{formatDate(order.created_at)}</p>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+              order.pickup_complete
+                ? "bg-green-50 text-green-700 border border-green-200"
+                : "bg-amber-50 text-amber-700 border border-amber-200"
+            }`}>
+              {order.pickup_complete ? "✓ Picked Up" : "⏳ Pending"}
+            </span>
+            {order.payment_processor && (
+              <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700 border border-violet-200">
+                {order.payment_processor}
+              </span>
+            )}
+          </div>
+        </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Customer info */}
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">Customer</p>
+              <h2 className="mt-1 text-2xl font-bold text-stone-950">{order.customer_name}</h2>
+            </div>
+            <OrderPickupAction
+              orderId={order.id}
+              brandId={brandId}
+              currentlyPickedUp={order.pickup_complete}
+            />
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-4">
             {order.customer_phone && (
               <div>
-                <p className="text-sm font-medium text-stone-500">Phone</p>
-                <p className="mt-1 text-lg text-stone-950">{order.customer_phone}</p>
+                <p className="text-xs font-semibold text-stone-400">Phone</p>
+                <p className="mt-0.5 text-sm font-medium text-stone-700">{order.customer_phone}</p>
               </div>
             )}
             {order.customer_email && (
               <div>
-                <p className="text-sm font-medium text-stone-500">Email</p>
-                <p className="mt-1 text-lg text-stone-950">{order.customer_email}</p>
+                <p className="text-xs font-semibold text-stone-400">Email</p>
+                <p className="mt-0.5 text-sm font-medium text-stone-700">{order.customer_email}</p>
               </div>
             )}
           </div>
@@ -105,84 +123,76 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
         {/* Stop info */}
         {order.stops && (
-          <div className="card mt-6">
-            <p className="text-sm font-medium text-stone-500">Stop</p>
-            <p className="mt-1 text-xl font-semibold text-stone-950">
+          <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">Pickup Location</p>
+            <p className="mt-1 text-lg font-bold text-stone-950">
               {order.stops.city}, {order.stops.state}
             </p>
-            <p className="mt-1 text-sm text-stone-500">{order.stops.date}</p>
+            <p className="mt-0.5 text-sm text-stone-500">{formatDate(order.stops.date)}</p>
           </div>
         )}
 
         {/* Order items */}
-        <div className="card mt-6">
-          <h2 className="text-2xl font-bold text-stone-950">Order Items</h2>
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-stone-950">Order Items</h3>
 
           {order.order_items && order.order_items.length > 0 ? (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 divide-y divide-stone-100">
               {order.order_items.map((item: any) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between border-b border-stone-200 pb-3 last:border-0"
+                  className="flex items-center justify-between py-3"
                 >
                   <div>
-                    <p className="font-medium text-stone-950">
+                    <p className="font-medium text-stone-900">
                       {item.products?.name ?? "Unknown Product"}
                     </p>
-                    <p className="text-sm text-stone-500">Qty: {item.quantity}</p>
+                    <p className="text-xs text-stone-400">Qty: {item.quantity} × {formatCurrency(Number(item.price))}</p>
                   </div>
-                  <p className="font-semibold text-stone-950">
-                    ${(Number(item.price) * item.quantity).toFixed(2)}
+                  <p className="font-semibold text-stone-900">
+                    {formatCurrency(Number(item.price) * item.quantity)}
                   </p>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="mt-4 text-stone-500">No items found.</p>
+            <p className="mt-4 text-sm text-stone-400">No items found</p>
           )}
 
-          <div className="mt-6 border-t border-stone-200 pt-6 space-y-2">
+          {/* Totals */}
+          <div className="mt-6 border-t border-stone-100 pt-6 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-stone-500">Subtotal</span>
-              <span className="text-stone-950">${subtotal.toFixed(2)}</span>
+              <span className="text-stone-900">{formatCurrency(subtotal)}</span>
             </div>
-            {Number(order.tax_amount ?? 0) > 0 && (
+            {taxAmount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-stone-500">Tax ({order.tax_rate ? `${(Number(order.tax_rate) * 100).toFixed(3)}%` : ""})</span>
-                <span className="text-stone-950">${Number(order.tax_amount).toFixed(2)}</span>
+                <span className="text-stone-500">Tax</span>
+                <span className="text-stone-900">{formatCurrency(taxAmount)}</span>
               </div>
             )}
             {discount_amount > 0 && (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">Discount</span>
-                  <span className="text-red-600">-${discount_amount.toFixed(2)}</span>
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-stone-500">Discount</span>
+                <span className="text-red-600">-{formatCurrency(discount_amount)}</span>
                 {order.discount_reason && (
-                  <p className="text-xs text-stone-500">{order.discount_reason}</p>
+                  <span className="text-xs text-stone-400 ml-2">({order.discount_reason})</span>
                 )}
-              </>
+              </div>
             )}
-            <div className="flex justify-between text-xl font-bold text-stone-950 pt-2 border-t border-stone-200">
+            <div className="flex justify-between text-lg font-bold text-stone-950 pt-2 border-t border-stone-200">
               <span>Total</span>
-              <span>${(subtotal + Number(order.tax_amount ?? 0) - discount_amount).toFixed(2)}</span>
+              <span>{formatCurrency(total)}</span>
             </div>
-            {order.tax_location && (
-              <p className="text-xs text-stone-500">Tax sourced from: {order.tax_location}</p>
-            )}
           </div>
         </div>
 
         {/* Payment & Refunds */}
-        <div className="card mt-6">
-          <h2 className="text-2xl font-bold text-stone-950">
-            Payment & Refunds
-          </h2>
-          <p className="mt-1 text-stone-600">
-            Record payment details and manage refunds for this order.
-          </p>
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-stone-950">Payment & Refunds</h3>
+          <p className="mt-1 text-sm text-stone-500">Record payment details and manage refunds</p>
 
-          <div className="mt-6">
+          <div className="mt-5">
             <OrderPaymentSection
               orderId={order.id}
               brandId={brandId}
@@ -198,22 +208,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </div>
 
         {/* Edit form */}
-        <div className="card mt-6">
-          <h2 className="text-2xl font-bold text-stone-950">Edit Order</h2>
-          <p className="mt-1 text-stone-600">
-            Update customer details, pricing, and status.
-          </p>
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-stone-950">Edit Order</h3>
+          <p className="mt-1 text-sm text-stone-500">Update customer details, pricing, and status</p>
 
-          <div className="mt-6">
+          <div className="mt-5">
             <OrderEditForm order={order as any} brandId={brandId} />
           </div>
         </div>
 
-        {/* Internal notes display */}
+        {/* Internal notes */}
         {order.internal_notes && (
-          <div className="card mt-6 border-amber-300 bg-amber-50">
-            <p className="text-sm font-medium text-amber-700">Internal Notes</p>
-            <p className="mt-1 text-stone-950">{order.internal_notes}</p>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Internal Notes</p>
+            <p className="mt-1 text-sm text-stone-700">{order.internal_notes}</p>
           </div>
         )}
       </div>
