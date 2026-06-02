@@ -36,7 +36,7 @@ export default function PageHeader({
               {crumb.href ? (
                 <Link 
                   href={crumb.href} 
-                  className="hover:text-[var(--admin-text-secondary)] transition-colors"
+                  className="hover:text-[var(--admin-text-secondary)] transition-colors duration-150"
                 >
                   {crumb.label}
                 </Link>
@@ -44,7 +44,9 @@ export default function PageHeader({
                 <span className="text-[var(--admin-text-secondary)]">{crumb.label}</span>
               )}
               {index < breadcrumb.length - 1 && (
-                <span className="text-[var(--admin-text-muted)]">/</span>
+                <svg className="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               )}
             </span>
           ))}
@@ -56,7 +58,7 @@ export default function PageHeader({
         {/* Left: Icon + Title + Subtitle */}
         <div className="flex items-center gap-4">
           {icon && (
-            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--admin-accent-light)] text-[var(--admin-accent)] shadow-[var(--admin-shadow-sm)]">
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--admin-accent-light)] text-[var(--admin-accent)] shadow-[var(--admin-shadow-sm)] transition-transform duration-200 hover:scale-105">
               {icon}
             </div>
           )}

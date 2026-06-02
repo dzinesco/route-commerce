@@ -20,7 +20,7 @@ export default function AdminPagination({
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -43,8 +43,8 @@ export default function AdminPagination({
 
           if (showEllipsisBefore || showEllipsisAfter) {
             return (
-              <span key={`ellipsis-${page}`} className="px-2 text-[var(--admin-text-muted)]">
-                ...
+              <span key={`ellipsis-${page}`} className="px-3 py-2 text-[var(--admin-text-muted)] text-sm">
+                &hellip;
               </span>
             );
           }
@@ -53,10 +53,10 @@ export default function AdminPagination({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+              className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg text-sm font-medium transition-all duration-150 ${
                 page === currentPage
-                  ? "bg-[var(--admin-accent-light)] text-[var(--admin-accent-text)] border border-[var(--admin-accent)]"
-                  : "text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)]"
+                  ? "bg-[var(--admin-accent)] text-white shadow-md"
+                  : "text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] border border-transparent hover:border-[var(--admin-border)]"
               }`}
             >
               {page + 1}
@@ -68,7 +68,7 @@ export default function AdminPagination({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages - 1}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

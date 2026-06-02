@@ -151,7 +151,7 @@ export default function IndianRiverFAQPage() {
         <LayoutContainer>
           <div className="max-w-3xl mx-auto">
             {/* Page header */}
-            <div className="text-center mb-14 p-10 rounded-3xl bg-white border-2 border-stone-200 shadow-xl">
+            <div className="text-center mb-14 p-10 rounded-3xl bg-white border-2 border-stone-200 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-blue-100">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-4">Questions</p>
               <h1 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-tight">
                 FAQ

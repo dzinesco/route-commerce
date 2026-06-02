@@ -27,7 +27,7 @@ export default function AdminTable<T extends Record<string, unknown>>({
   className = "",
 }: AdminTableProps<T>) {
   return (
-    <div className={`overflow-x-auto rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-sm)] ${className}`}>
+    <div className={`overflow-x-auto rounded-2xl border border-[var(--admin-border)] bg-white shadow-[var(--admin-shadow-sm)] transition-shadow duration-200 hover:shadow-[var(--admin-shadow-md)] ${className}`}>
       <table className="w-full text-left text-sm min-w-[600px]">
         <thead>
           <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
@@ -42,15 +42,21 @@ export default function AdminTable<T extends Record<string, unknown>>({
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-5 py-16 text-center text-sm text-[var(--admin-text-muted)]">
-                {emptyMessage}
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="w-8 h-8 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  {emptyMessage}
+                </div>
               </td>
             </tr>
           ) : (
-            data.map((item) => (
+            data.map((item, index) => (
               <tr
                 key={keyExtractor(item)}
-                className={`hover:bg-[var(--admin-bg-subtle)]/40 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
+                className={`group hover:bg-[var(--admin-bg-subtle)]/40 transition-all duration-150 ${onRowClick ? "cursor-pointer" : ""}`}
                 onClick={() => onRowClick?.(item)}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={`px-5 py-3.5 ${col.className ?? ""}`}>

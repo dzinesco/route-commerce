@@ -59,7 +59,8 @@ export default function AdminButton({
     inline-flex items-center justify-center font-semibold
     transition-all duration-200 cursor-pointer
     disabled:opacity-50 disabled:cursor-not-allowed
-    shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+    active:scale-[0.98]
   `;
 
   const variantClass = variantClasses[variant];

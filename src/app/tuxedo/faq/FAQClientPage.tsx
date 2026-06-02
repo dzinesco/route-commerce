@@ -90,46 +90,46 @@ function FAQAccordion({ items, searchQuery }: { items: FAQItem[]; searchQuery: s
     );
   }, [items, searchQuery]);
 
-  if (filtered.length === 0) {
-    return (
-      <div className="rounded-2xl bg-white p-6 sm:p-8 text-center shadow-sm ring-1 ring-stone-200/60">
-        <p className="text-stone-500 text-sm">No results for &quot;{searchQuery}&quot;</p>
-        <p className="mt-1 text-stone-400 text-sm">Try a different term or browse all categories below.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-2">
-      {filtered.map((item) => {
-        const isOpen = open === item.question;
-        return (
-          <div
-            key={item.question}
-            className="rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/60 overflow-hidden transition-all duration-300 hover:ring-stone-300"
-          >
-            <button
-              onClick={() => setOpen(isOpen ? null : item.question)}
-              className="flex w-full items-center justify-between px-4 sm:px-6 py-4 sm:py-5 text-left group"
-              aria-expanded={isOpen}
-            >
-              <span className="font-semibold text-stone-950 pr-3 sm:pr-4 text-sm sm:text-[15px] leading-snug group-hover:text-emerald-700 transition-colors">
-                {item.question}
-              </span>
-              <span className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? "bg-emerald-600 text-white rotate-180" : "bg-stone-100 text-stone-400 group-hover:bg-stone-200"}`}>
-                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </span>
-            </button>
-            <div className={`overflow-hidden transition-all duration-300 ease-out ${isOpen ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
-              <div className="px-4 sm:px-6 pb-5 sm:pb-6 pt-1 border-t border-stone-100">
-                <p className="text-sm text-stone-500 leading-relaxed">{item.answer}</p>
+      {filtered.length === 0 ? (
+        <div className="rounded-2xl bg-white p-6 sm:p-8 text-center shadow-sm ring-1 ring-stone-200/60 transition-all duration-300 hover:shadow-lg hover:ring-stone-300">
+          <p className="text-stone-500 text-sm">No results for &quot;{searchQuery}&quot;</p>
+          <p className="mt-1 text-stone-400 text-sm">Try a different term or browse all categories below.</p>
+        </div>
+      ) : (
+        <>
+          {filtered.map((item) => {
+            const isOpen = open === item.question;
+            return (
+              <div
+                key={item.question}
+                className="rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/60 overflow-hidden transition-all duration-300 hover:ring-stone-300"
+              >
+                <button
+                  onClick={() => setOpen(isOpen ? null : item.question)}
+                  className="flex w-full items-center justify-between px-4 sm:px-6 py-4 sm:py-5 text-left group"
+                  aria-expanded={isOpen}
+                >
+                  <span className="font-semibold text-stone-950 pr-3 sm:pr-4 text-sm sm:text-[15px] leading-snug group-hover:text-emerald-700 transition-colors">
+                    {item.question}
+                  </span>
+                  <span className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? "bg-emerald-600 text-white rotate-180" : "bg-stone-100 text-stone-400 group-hover:bg-stone-200"}`}>
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </span>
+                </button>
+                <div className={`overflow-hidden transition-all duration-300 ease-out ${isOpen ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
+                  <div className="px-4 sm:px-6 pb-5 sm:pb-6 pt-1 border-t border-stone-100">
+                    <p className="text-sm text-stone-500 leading-relaxed">{item.answer}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
@@ -162,7 +162,7 @@ export default function TuxedoFAQPage() {
               placeholder="Search questions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-stone-200 bg-white pl-10 sm:pl-11 pr-5 py-3.5 sm:py-4 text-sm sm:text-base text-stone-900 placeholder-stone-400 outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors shadow-sm"
+              className="w-full rounded-2xl border border-stone-200 bg-white pl-10 sm:pl-11 pr-5 py-3.5 sm:py-4 text-sm sm:text-base text-stone-900 placeholder-stone-400 outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900/20 transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg"
             />
             {searchQuery && (
               <button

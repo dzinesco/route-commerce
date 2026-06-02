@@ -42,14 +42,14 @@ export function AdminToggle({
         aria-checked={checked}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
-        className={`relative inline-flex shrink-0 items-center rounded-full transition-colors ${
+        className={`relative inline-flex shrink-0 items-center rounded-full transition-all duration-200 ease-out ${
           checked
-            ? "bg-[var(--admin-accent)]"
+            ? "bg-[var(--admin-accent)] shadow-[0_0_8px_rgba(202,117,67,0.4)]"
             : "bg-[var(--admin-text-muted)]"
         } ${classes.track}`}
       >
         <span
-          className={`inline-block rounded-full bg-white shadow transition-transform ${classes.thumb} ${classes.translate}`}
+          className={`inline-block rounded-full bg-white shadow-md transition-transform duration-200 ease-out ${classes.thumb} ${classes.translate}`}
         />
       </button>
       {(label || description) && (

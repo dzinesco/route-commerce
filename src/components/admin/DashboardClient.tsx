@@ -4,6 +4,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import UpgradePlanModal from "@/components/admin/UpgradePlanModal";
 import { PageHeader, AdminButton, AdminFilterTabs, AdminBadge } from "@/components/admin/design-system";
+import { getDashboardStats, type DashboardStats } from "@/actions/dashboard";
 
 type Section = {
   title: string;
@@ -179,39 +180,6 @@ type Props = {
   limits: { max_users: number; max_stops_monthly: number; max_products: number };
 };
 
-// Stats data type
-interface StatsData {
-  todayOrders: number;
-  todayRevenue: number;
-  pendingStops: number;
-  activeProducts: number;
-  weeklyOrders: number[];
-  recentOrders: Array<{
-    id: string;
-    customer_name: string;
-    total: number;
-    status: string;
-    created_at: string;
-  }>;
-}
-
-// Simulated stats for demo
-const getStatsData = async (brandId: string | null): Promise<StatsData> => {
-  // In production, fetch from API
-  return {
-    todayOrders: 12,
-    todayRevenue: 847.50,
-    pendingStops: 3,
-    activeProducts: 45,
-    weeklyOrders: [8, 15, 12, 22, 18, 25, 12],
-    recentOrders: [
-      { id: "ord-001", customer_name: "Fresh Market Co", total: 125.00, status: "pending", created_at: "2h ago" },
-      { id: "ord-002", customer_name: "Green Valley Grocery", total: 89.50, status: "processing", created_at: "4h ago" },
-      { id: "ord-003", customer_name: "Farm Fresh Direct", total: 234.00, status: "shipped", created_at: "6h ago" },
-    ],
-  };
-};
-
 export default function DashboardClient({
   brandId,
   brandName,
@@ -223,14 +191,14 @@ export default function DashboardClient({
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("operations");
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
-  const [stats, setStats] = useState<StatsData | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
       setIsLoadingStats(true);
       try {
-        const data = await getStatsData(brandId);
+        const data = await getDashboardStats();
         setStats(data);
       } catch (err) {
         console.error("Failed to load stats:", err);
@@ -239,7 +207,7 @@ export default function DashboardClient({
       }
     };
     loadStats();
-  }, [brandId]);
+  }, []);
 
   const usagePct = {
     users: limits.max_users > 0 ? (usage.users / limits.max_users) * 100 : 0,

@@ -354,13 +354,13 @@ export default function IndianRiverDirectPage() {
             ) : (
               <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {products.map((product) => (
-                  <div key={product.id} className="rounded-2xl bg-white border-2 border-stone-200 overflow-hidden shadow-xl hover:shadow-2xl hover:-translate-y-2 hover:border-blue-200 transition-all duration-300">
+                  <div key={product.id} className="rounded-2xl bg-white border-2 border-stone-200 overflow-hidden shadow-xl hover:shadow-2xl hover:-translate-y-2 hover:border-blue-200 transition-all duration-300 group">
                     {/* Product Image */}
-                    <div className="aspect-[4/3] bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center relative">
+                    <div className="aspect-[4/3] bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center relative overflow-hidden">
                       {product.image_url ? (
-                        <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+                        <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                       ) : (
-                        <div className="text-6xl opacity-30">🍑</div>
+                        <div className="text-6xl opacity-30 transition-transform duration-500 group-hover:scale-110">🍑</div>
                       )}
                       {/* Badges */}
                       <div className="absolute top-3 left-3 flex flex-wrap gap-2">
@@ -393,7 +393,7 @@ export default function IndianRiverDirectPage() {
                           {product.price_tba ? "Price TBA" : `$${product.price.toFixed(2)}`}
                         </span>
                         {product.price > 0 && (
-                          <button className="rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-sm font-bold text-white transition-all shadow-lg hover:shadow-xl">
+                          <button className="rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 px-5 py-2.5 text-sm font-bold text-white transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0">
                             {product.preorder ? "Pre-Order" : "Add to Cart"}
                           </button>
                         )}
@@ -483,10 +483,10 @@ export default function IndianRiverDirectPage() {
               <h2 className="text-2xl md:text-3xl font-black text-white">Ready to order?</h2>
               <p className="mt-2 text-blue-100">Find a stop near you or browse our seasonal products.</p>
               <div className="mt-8 flex gap-4 justify-center flex-wrap">
-                <Link href="/indian-river-direct#stops" className="rounded-2xl bg-white px-8 py-4 font-bold text-blue-600 hover:bg-blue-50 active:bg-blue-100 hover:-translate-y-0.5 hover:shadow-lg shadow-sm transition-all text-sm tracking-wider">
+                <Link href="/indian-river-direct#stops" className="rounded-2xl bg-white px-8 py-4 font-bold text-blue-600 hover:bg-blue-50 active:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl shadow-sm transition-all duration-200 text-sm tracking-wider">
                   Find a Stop
                 </Link>
-                <Link href="/indian-river-direct/about" className="rounded-2xl bg-blue-700/50 backdrop-blur-sm border border-white/30 px-8 py-4 font-bold text-white hover:bg-blue-600/80 hover:-translate-y-0.5 hover:shadow-lg shadow-sm transition-all text-sm tracking-wider">
+                <Link href="/indian-river-direct/about" className="rounded-2xl bg-blue-700/50 backdrop-blur-sm border border-white/30 px-8 py-4 font-bold text-white hover:bg-blue-600/80 hover:-translate-y-0.5 hover:shadow-xl shadow-sm transition-all duration-200 text-sm tracking-wider">
                   Our Story
                 </Link>
               </div>

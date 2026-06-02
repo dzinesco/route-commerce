@@ -42,7 +42,7 @@ export default function AdminFilterBar({
   const options = statusOptions ?? defaultOptions;
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-white p-4 shadow-[var(--admin-shadow-sm)]">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-white p-4 shadow-[var(--admin-shadow-sm)] transition-shadow duration-200 hover:shadow-[var(--admin-shadow-md)]">
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-[12rem]">
@@ -54,7 +54,7 @@ export default function AdminFilterBar({
             placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-xl border border-[var(--admin-border)] bg-white py-2 pl-10 pr-4 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] placeholder:text-[var(--admin-text-muted)]"
+            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg-subtle)] py-2 pl-10 pr-4 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:bg-white focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] transition-all duration-150"
           />
         </div>
 

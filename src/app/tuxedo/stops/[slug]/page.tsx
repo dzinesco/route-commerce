@@ -134,7 +134,7 @@ export default function StopPage() {
             </div>
 
             {/* Stop info */}
-            <div className="rounded-3xl bg-white p-8 mb-14 shadow-sm ring-1 ring-stone-200/60">
+            <div className="rounded-3xl bg-white p-8 mb-14 shadow-sm ring-1 ring-stone-200/60 transition-all duration-300 hover:shadow-xl hover:ring-stone-300/60">
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="flex items-start gap-4 py-4 px-5 rounded-2xl bg-stone-50">
                   <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${isBlue ? "bg-blue-50" : "bg-emerald-50"}`}>

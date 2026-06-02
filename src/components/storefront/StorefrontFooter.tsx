@@ -58,11 +58,11 @@ export default function StorefrontFooter({
                 type="email"
                 placeholder="your@email.com"
                 aria-label="Email address"
-                className="w-full sm:w-52 lg:w-64 rounded-l-xl sm:rounded-l-lg border border-stone-600 bg-stone-900 px-4 py-3 sm:py-2.5 text-sm text-stone-200 placeholder-stone-500 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400/50"
+                className="w-full sm:w-52 lg:w-64 rounded-l-xl sm:rounded-l-lg border border-stone-600 bg-stone-900 px-4 py-3 sm:py-2.5 text-sm text-stone-200 placeholder-stone-500 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400/50 transition-all duration-200"
               />
               <button
                 type="submit"
-                className={`rounded-r-xl sm:rounded-r-lg ${subscribeBtnClass} px-4 sm:px-5 py-3 sm:py-2.5 text-sm font-medium text-white transition-colors active:scale-95`}
+                className={`rounded-r-xl sm:rounded-r-lg ${subscribeBtnClass} px-4 sm:px-5 py-3 sm:py-2.5 text-sm font-medium text-white transition-all duration-200 active:scale-95 hover:-translate-y-0.5`}
               >
                 Subscribe
               </button>
