@@ -86,12 +86,62 @@ const faqJsonLd = {
   ]
 };
 
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": BASE_URL
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Tuxedo Corn",
+      "item": `${BASE_URL}/tuxedo`
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "FAQ",
+      "item": `${BASE_URL}/tuxedo/faq`
+    }
+  ]
+};
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Tuxedo Corn",
+  url: `${BASE_URL}/tuxedo`,
+  logo: {
+    "@type": "ImageObject",
+    url: `${BASE_URL}/logo-tuxedo.png`
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    telephone: "+1-970-323-6874",
+    contactType: "customer service",
+    availableLanguage: "English"
+  }
+};
+
 export default function TuxedoFAQLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <FAQClientPage />
     </>

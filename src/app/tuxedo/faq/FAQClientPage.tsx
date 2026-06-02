@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
-import LayoutContainer from "@/components/layout/LayoutContainer";
 
 type FAQItem = {
   question: string;
@@ -93,8 +92,8 @@ function FAQAccordion({ items, searchQuery }: { items: FAQItem[]; searchQuery: s
 
   if (filtered.length === 0) {
     return (
-      <div className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-stone-200/60">
-        <p className="text-stone-500 text-sm">No results for "{searchQuery}"</p>
+      <div className="rounded-2xl bg-white p-6 sm:p-8 text-center shadow-sm ring-1 ring-stone-200/60">
+        <p className="text-stone-500 text-sm">No results for &quot;{searchQuery}&quot;</p>
         <p className="mt-1 text-stone-400 text-sm">Try a different term or browse all categories below.</p>
       </div>
     );
@@ -111,36 +110,20 @@ function FAQAccordion({ items, searchQuery }: { items: FAQItem[]; searchQuery: s
           >
             <button
               onClick={() => setOpen(isOpen ? null : item.question)}
-              className="flex w-full items-center justify-between px-6 py-5 text-left group"
+              className="flex w-full items-center justify-between px-4 sm:px-6 py-4 sm:py-5 text-left group"
               aria-expanded={isOpen}
             >
-              <span className="font-semibold text-stone-950 pr-4 text-[15px] leading-snug group-hover:text-emerald-700 transition-colors">
+              <span className="font-semibold text-stone-950 pr-3 sm:pr-4 text-sm sm:text-[15px] leading-snug group-hover:text-emerald-700 transition-colors">
                 {item.question}
               </span>
-              <span
-                className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isOpen
-                    ? "bg-emerald-600 text-white rotate-180"
-                    : "bg-stone-100 text-stone-400 group-hover:bg-stone-200"
-                }`}
-              >
-                <svg
-                  className="w-3.5 h-3.5 transition-transform duration-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
+              <span className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? "bg-emerald-600 text-white rotate-180" : "bg-stone-100 text-stone-400 group-hover:bg-stone-200"}`}>
+                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </span>
             </button>
-            <div
-              className={`overflow-hidden transition-all duration-300 ease-out ${
-                isOpen ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <div className="px-6 pb-6 pt-1 border-t border-stone-100">
+            <div className={`overflow-hidden transition-all duration-300 ease-out ${isOpen ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
+              <div className="px-4 sm:px-6 pb-5 sm:pb-6 pt-1 border-t border-stone-100">
                 <p className="text-sm text-stone-500 leading-relaxed">{item.answer}</p>
               </div>
             </div>
@@ -158,74 +141,63 @@ export default function TuxedoFAQPage() {
     <div className="min-h-screen bg-stone-50">
       <StorefrontHeader brandName="Tuxedo Corn" brandSlug="tuxedo" brandAccent="green" />
 
-      <main className="py-16 md:py-20">
-        <LayoutContainer>
-          <div className="max-w-3xl mx-auto">
-            {/* Page header */}
-            <div className="text-center mb-14">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-4">Questions</p>
-              <h1 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-tight">
-                FAQ
-              </h1>
-              <p className="mt-5 text-lg text-stone-500 leading-relaxed">
-                Everything you need to know about ordering, pickup, and shipping.
-              </p>
-            </div>
-
-            {/* Search */}
-            <div className="mb-12 relative">
-              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                <svg className="h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search questions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-5 py-4 text-sm text-stone-900 placeholder-stone-400 outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors shadow-sm"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute inset-y-0 right-4 flex items-center text-stone-400 hover:text-stone-600 transition-colors"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* FAQ categories */}
-            <div className="space-y-14">
-              {FAQ_CATEGORIES.map((cat) => (
-                <div key={cat.category}>
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-stone-400 mb-5">
-                    {cat.category}
-                  </h2>
-                  <FAQAccordion items={cat.items} searchQuery={searchQuery} />
-                </div>
-              ))}
-            </div>
-
-            {/* Still have questions CTA */}
-            <div className="mt-16 rounded-3xl bg-stone-950 px-10 py-12 text-center shadow-xl">
-              <p className="text-2xl font-black text-white tracking-tight">Still have questions?</p>
-              <p className="mt-2 text-stone-400 text-sm">We are happy to help — reach out anytime.</p>
-              <Link
-                href="/tuxedo/contact"
-                className="mt-8 inline-flex items-center gap-2.5 rounded-full bg-emerald-600 px-8 py-4 font-bold text-white hover:bg-emerald-500 active:bg-emerald-700 transition-all text-sm tracking-wider hover:shadow-lg hover:shadow-emerald-900/30"
-              >
-                Contact Us
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            </div>
+      <main className="py-12 sm:py-16 md:py-20 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto">
+          {/* Page header */}
+          <div className="text-center mb-10 sm:mb-14">
+            <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest text-emerald-600 mb-3 sm:mb-4">Questions</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-stone-950 leading-tight">FAQ</h1>
+            <p className="mt-4 sm:mt-5 text-base sm:text-lg text-stone-500 leading-relaxed">Everything you need to know about ordering, pickup, and shipping.</p>
           </div>
-        </LayoutContainer>
+
+          {/* Search */}
+          <div className="mb-8 sm:mb-12 relative">
+            <div className="absolute inset-y-0 left-4 sm:left-5 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search questions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-2xl border border-stone-200 bg-white pl-10 sm:pl-11 pr-5 py-3.5 sm:py-4 text-sm sm:text-base text-stone-900 placeholder-stone-400 outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-colors shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-4 flex items-center text-stone-400 hover:text-stone-600 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* FAQ categories */}
+          <div className="space-y-10 sm:space-y-14">
+            {FAQ_CATEGORIES.map((cat) => (
+              <div key={cat.category}>
+                <h2 className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-stone-400 mb-4 sm:mb-5">{cat.category}</h2>
+                <FAQAccordion items={cat.items} searchQuery={searchQuery} />
+              </div>
+            ))}
+          </div>
+
+          {/* Still have questions CTA */}
+          <div className="mt-12 sm:mt-16 rounded-2xl sm:rounded-3xl bg-stone-950 px-6 sm:px-10 py-10 sm:py-12 text-center shadow-xl">
+            <p className="text-xl sm:text-2xl font-black text-white tracking-tight">Still have questions?</p>
+            <p className="mt-2 text-stone-400 text-sm">We are happy to help — reach out anytime.</p>
+            <Link href="/tuxedo/contact" className="mt-6 sm:mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 sm:px-8 py-3 sm:py-4 font-bold text-white hover:bg-emerald-500 active:bg-emerald-700 transition-all text-sm tracking-wider hover:shadow-lg hover:shadow-emerald-900/30">
+              Contact Us
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
       </main>
 
       <StorefrontFooter brandName="Tuxedo Corn" brandSlug="tuxedo" brandAccent="green" />
