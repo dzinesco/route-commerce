@@ -87,7 +87,7 @@ interface OnboardingProps {
   onComplete?: () => void;
 }
 
-export function OnboardingFlow({ brandId, userId, onComplete }: OnboardingProps) {
+export function OnboardingFlow({ brandId: _brandId, userId: _userId, onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const router = useRouter();
@@ -151,7 +151,7 @@ export function OnboardingFlow({ brandId, userId, onComplete }: OnboardingProps)
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Setup Complete!</h2>
           <p className="text-gray-600 mb-6">
-            You're ready to start growing your wholesale business.
+            You&apos;re ready to start growing your wholesale business.
           </p>
           <button
             onClick={() => router.push("/admin")}

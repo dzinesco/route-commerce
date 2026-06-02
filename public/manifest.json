@@ -1,11 +1,11 @@
 {
   "name": "Route Commerce",
-  "short_name": "RouteCommerce",
+  "short_name": "Route Commerce",
   "description": "Multi-tenant B2B e-commerce platform for fresh produce wholesale distribution",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#faf8f5",
+  "theme_color": "#1a4d2e",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -57,7 +57,30 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "shopping"],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "View Orders",
+      "short_name": "Orders",
+      "description": "View and manage orders",
+      "url": "/admin/orders",
+      "icons": [{ "src": "/icons/orders-shortcut.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Product",
+      "short_name": "Add Product",
+      "description": "Add a new product",
+      "url": "/admin/products/new",
+      "icons": [{ "src": "/icons/products-shortcut.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Create Stop",
+      "short_name": "Create Stop",
+      "description": "Schedule a new pickup stop",
+      "url": "/admin/stops/new",
+      "icons": [{ "src": "/icons/stops-shortcut.png", "sizes": "96x96" }]
+    }
+  ],
   "screenshots": [
     {
       "src": "/screenshots/dashboard.png",
@@ -67,49 +90,11 @@
       "label": "Admin Dashboard"
     },
     {
-      "src": "/screenshots/storefront.png",
+      "src": "/screenshots/mobile-storefront.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Mobile Storefront"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Open admin dashboard",
-      "url": "/admin",
-      "icons": [
-        {
-          "src": "/icons/shortcut-dashboard.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Orders",
-      "short_name": "Orders",
-      "description": "View recent orders",
-      "url": "/admin/orders",
-      "icons": [
-        {
-          "src": "/icons/shortcut-orders.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Products",
-      "short_name": "Products",
-      "description": "Manage products",
-      "url": "/admin/products",
-      "icons": [
-        {
-          "src": "/icons/shortcut-products.png",
-          "sizes": "96x96"
-        }
-      ]
     }
   ],
   "related_applications": [],

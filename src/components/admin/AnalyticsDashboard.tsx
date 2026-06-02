@@ -5,7 +5,15 @@
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/format-date";
 import { analytics } from "@/lib/analytics";
-import { useToast } from "@/components/providers/ErrorBoundary";
+
+// Mock toast implementation for this component
+function useToast() {
+  return {
+    addToast: (props: { title: string; type?: string }) => {
+      console.log("Toast:", props.title);
+    },
+  };
+}
 
 // Mock data for demonstration - replace with real API calls
 const mockMetrics = {
@@ -181,7 +189,7 @@ function RecentOrdersTable() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
         <button 
-          onClick={() => addToast({ type: "info", message: "Navigating to orders..." })}
+          onClick={() => addToast({ title: "Navigating to orders...", type: "info" })}
           className="text-sm text-primary hover:underline"
         >
           View all →

@@ -1,16 +1,17 @@
-// Service Worker for PWA functionality
-// Caching, offline support, and push notifications
+// Service Worker for PWA - Caching and offline support
 
-const CACHE_NAME = 'route-commerce-v1';
+const CACHE_NAME = "route-commerce-v1";
+const OFFLINE_URL = "/offline";
+
 const STATIC_ASSETS = [
-  '/',
-  '/offline',
-  '/manifest.json',
-  '/favicon.svg',
+  "/",
+  "/manifest.json",
+  "/favicon.svg",
+  "/og-default.jpg",
 ];
 
 // Install event - cache static assets
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
@@ -19,8 +20,8 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
+// Activate event - clean old caches
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -34,147 +35,96 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch event - network first, fallback to cache
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
+self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
-  if (request.method !== 'GET') return;
+  if (event.request.method !== "GET") return;
 
-  // Skip external requests
-  if (url.origin !== self.location.origin) return;
+  // Skip API requests
+  if (event.request.url.includes("/api/")) return;
 
-  // API requests - network only
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return new Response(
-          JSON.stringify({ error: 'Offline', cached: false }),
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-      })
-    );
-    return;
-  }
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) return;
 
-  // Static assets - cache first
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|woff2?)$/) ||
-    url.pathname.startsWith('/_next/static/')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        return cached || fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone);
-          });
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // Pages - network first, fallback to cache
   event.respondWith(
-    fetch(request)
+    fetch(event.request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, clone);
-        });
+        // Clone response for caching
+        const responseClone = response.clone();
+
+        // Cache successful responses
+        if (response.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+
         return response;
       })
       .catch(() => {
-        return caches.match(request).then((cached) => {
-          if (cached) return cached;
-          
-          // Return offline page for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/offline');
+        // Return cached response or offline page
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
           }
-          
-          return new Response('Offline', { status: 503 });
+          // Return offline page for navigation requests
+          if (event.request.mode === "navigate") {
+            return caches.match(OFFLINE_URL);
+          }
+          return new Response("Network error", { status: 408 });
         });
       })
   );
 });
 
-// Push notification handler
-self.addEventListener('push', (event) => {
+// Push notification handling
+self.addEventListener("push", (event) => {
   if (!event.data) return;
 
   const data = event.data.json();
-  const { title, body, icon, url, tag } = data;
 
   const options = {
-    body,
-    icon: icon || '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
-    tag: tag || 'default',
-    data: { url },
-    actions: [
-      { action: 'view', title: 'View' },
-      { action: 'dismiss', title: 'Dismiss' },
-    ],
+    body: data.body,
+    icon: "/icons/icon-192x192.png",
+    badge: "/icons/badge-72x72.png",
     vibrate: [100, 50, 100],
-    requireInteraction: true,
+    data: {
+      url: data.url || "/",
+    },
+    actions: data.actions || [],
   };
 
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+// Notification click handling
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || "/";
+
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // Focus existing window or open new one
+      for (const client of clientList) {
+        if (client.url === url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
   );
 });
 
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  const url = event.notification.data?.url || '/';
-
-  if (event.action === 'view' || !event.action) {
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window' }).then((clients) => {
-        // Focus existing window if available
-        for (const client of clients) {
-          if (client.url === url && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        // Open new window
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(url);
-        }
-      })
-    );
-  }
-});
-
 // Background sync for offline actions
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-orders') {
+self.addEventListener("sync", (event) => {
+  if (event.tag === "sync-orders") {
     event.waitUntil(syncOrders());
-  } else if (event.tag === 'sync-water-logs') {
-    event.waitUntil(syncWaterLogs());
   }
 });
 
 async function syncOrders() {
-  // Sync pending orders from IndexedDB
-  console.log('Syncing orders...');
+  // Implement order sync logic
+  console.log("Syncing orders in background...");
 }
-
-async function syncWaterLogs() {
-  // Sync pending water logs from IndexedDB
-  console.log('Syncing water logs...');
-}
-
-// Message handler for cache invalidation
-self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
-  } else if (event.data === 'clear-cache') {
-    caches.delete(CACHE_NAME);
-  }
-});

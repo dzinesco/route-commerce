@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import ToastNotificationContainer from "@/components/notifications/ToastNotification";
+import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
@@ -51,6 +53,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>{children}</Providers>
+        <ToastNotificationContainer />
+        <CookieConsentBanner />
       </body>
     </html>
   );

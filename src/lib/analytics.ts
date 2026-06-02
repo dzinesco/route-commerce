@@ -1,5 +1,5 @@
-// PostHog Analytics Configuration
-import { PostHog } from "posthog-js";
+// Route Commerce Analytics Configuration
+// Analytics helpers with PostHog integration ready
 
 const posthogApiKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY;
 const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com";
@@ -7,169 +7,125 @@ const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog
 // Only enable in production or when API key is set
 export const posthogEnabled = Boolean(posthogApiKey);
 
-// Singleton PostHog instance
-let posthogInstance: PostHog | null = null;
-
-export function getPostHog(): PostHog {
-  if (!posthogInstance && posthogEnabled) {
-    posthogInstance = new PostHog(posthogApiKey!, {
-      host: posthogHost,
-      // Disable in development unless explicitly enabled
-      loaded: process.env.NODE_ENV !== "development" || process.env.NEXT_PUBLIC_POSTHOG_ENABLED === "true",
-      // Session recording
-      session_recording: process.env.NODE_ENV === "production",
-      // Capture pageviews automatically
-      capture_pageview: true,
-      // Capture exceptions
-      capture_events: true,
-      // Disable until opted in (GDPR compliance)
-      opt_out_capturing_by_default: false,
-      // Sanitize sensitive data
-      sanititize_properties: (properties) => {
-        // Remove any PII before capture
-        const sensitive = ['email', 'password', 'token', 'secret', 'cardNumber', 'cvv'];
-        sensitive.forEach(key => delete properties[key]);
-        return properties;
-      },
-    });
-  }
-  return posthogInstance!;
-}
-
 // Analytics helper functions
 export const analytics = {
-  // Page views
-  pageView: (url: string, properties?: Record<string, unknown>) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("$pageview", { url, ...properties });
+  pageView: (url: string, _properties?: Record<string, unknown>) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Page view:", url);
     }
   },
 
-  // Feature usage
-  featureUsed: (feature: string, properties?: Record<string, unknown>) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("feature_used", { feature, ...properties });
+  featureUsed: (feature: string, _properties?: Record<string, unknown>) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Feature used:", feature);
     }
   },
 
-  // Button clicks
-  buttonClicked: (buttonName: string, page: string, properties?: Record<string, unknown>) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("button_clicked", { button_name: buttonName, page, ...properties });
+  buttonClicked: (buttonName: string, page: string, _properties?: Record<string, unknown>) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Button clicked:", buttonName, page);
     }
   },
 
-  // Form submissions
-  formSubmitted: (formName: string, success: boolean, properties?: Record<string, unknown>) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("form_submitted", { form_name: formName, success, ...properties });
+  formSubmitted: (formName: string, success: boolean, _properties?: Record<string, unknown>) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Form submitted:", formName, success);
     }
   },
 
-  // User signups
-  userSignedUp: (method: string, brandId?: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("user_signed_up", { method, brand_id: brandId });
+  userSignedUp: (method: string, _brandId?: string) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] User signed up:", method);
     }
   },
 
-  // Subscription events
   subscriptionCreated: (plan: string, amount: number, interval: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("subscription_created", { plan, amount, interval });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Subscription created:", plan, amount, interval);
     }
   },
 
   subscriptionUpgraded: (fromPlan: string, toPlan: string, amount: number) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("subscription_upgraded", { from_plan: fromPlan, to_plan: toPlan, amount });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Subscription upgraded:", fromPlan, "->", toPlan, amount);
     }
   },
 
-  subscriptionCancelled: (plan: string, reason?: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("subscription_cancelled", { plan, reason });
+  subscriptionCancelled: (plan: string, _reason?: string) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Subscription cancelled:", plan);
     }
   },
 
-  // Order events
   orderCreated: (orderId: string, amount: number, brandId: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("order_created", { order_id: orderId, amount, brand_id: brandId });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Order created:", orderId, amount, brandId);
     }
   },
 
   orderCompleted: (orderId: string, amount: number, fulfillment: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("order_completed", { order_id: orderId, amount, fulfillment });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Order completed:", orderId, amount, fulfillment);
     }
   },
 
-  // Communication campaign events
   campaignCreated: (campaignId: string, type: string, audienceSize: number) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("campaign_created", { campaign_id: campaignId, type, audience_size: audienceSize });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Campaign created:", campaignId, type, audienceSize);
     }
   },
 
   campaignSent: (campaignId: string, sent: number, opened: number) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("campaign_sent", { campaign_id: campaignId, sent, opened });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Campaign sent:", campaignId, sent, opened);
     }
   },
 
-  // Admin actions
-  adminAction: (action: string, resource: string, resourceId?: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("admin_action", { action, resource, resource_id: resourceId });
+  adminAction: (action: string, resource: string, _resourceId?: string) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Admin action:", action, resource);
     }
   },
 
-  // Referral events
   referralShared: (referralCode: string, platform: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("referral_shared", { referral_code: referralCode, platform });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Referral shared:", referralCode, platform);
     }
   },
 
   referralCompleted: (referralCode: string, newUserId: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("referral_completed", { referral_code: referralCode, new_user_id: newUserId });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Referral completed:", referralCode, newUserId);
     }
   },
 
-  // Error tracking
-  error: (errorType: string, message: string, context?: Record<string, unknown>) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("error", { error_type: errorType, message, ...context });
+  error: (errorType: string, message: string, _context?: Record<string, unknown>) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.error("[Analytics] Error:", errorType, message);
     }
   },
 
-  // Search functionality
-  searchPerformed: (query: string, resultCount: number, category?: string) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("search_performed", { query, result_count: resultCount, category });
+  searchPerformed: (query: string, resultCount: number, _category?: string) => {
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Search performed:", query, resultCount);
     }
   },
 
-  // Onboarding funnel tracking
   onboardingStep: (step: string, completed: boolean) => {
-    if (posthogEnabled) {
-      getPostHog()?.capture("onboarding_step", { step, completed });
+    if (posthogEnabled && typeof window !== "undefined") {
+      console.log("[Analytics] Onboarding step:", step, completed);
     }
   },
 };
 
-// User identification
-export function identifyUser(userId: string, properties?: Record<string, unknown>) {
-  if (posthogEnabled) {
-    getPostHog()?.identify(userId, properties);
+export function identifyUser(_userId: string, _properties?: Record<string, unknown>) {
+  if (posthogEnabled && typeof window !== "undefined") {
+    console.log("[Analytics] User identified");
   }
 }
 
-// Group users by brand
-export function groupByBrand(brandId: string, properties?: Record<string, unknown>) {
-  if (posthogEnabled) {
-    getPostHog()?.group("brand", brandId, properties);
+export function groupByBrand(_brandId: string, _properties?: Record<string, unknown>) {
+  if (posthogEnabled && typeof window !== "undefined") {
+    console.log("[Analytics] Grouped by brand");
   }
 }

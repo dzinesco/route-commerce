@@ -14,22 +14,15 @@ interface ReferralCode {
   created_at: string;
 }
 
-interface ReferralStats {
-  total_referrals: number;
-  successful_conversions: number;
-  total_reward_value: number;
-}
-
 interface ReferralSystemProps {
   brandId: string;
   userId: string;
-  userEmail: string;
 }
 
-export function ReferralSystem({ brandId, userId, userEmail }: ReferralSystemProps) {
+export function ReferralSystem({ brandId, userId }: ReferralSystemProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [selectedCode, setSelectedCode] = useState<ReferralCode | null>(null);
+  const [selectedCode] = useState<ReferralCode | null>(null);
 
   const generateCode = async () => {
     setIsGenerating(true);

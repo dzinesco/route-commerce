@@ -1,199 +1,91 @@
-// Rate limiting configuration using Upstash Redis
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+// Rate Limiting Configuration
+import { NextResponse } from "next/server";
 
-// Only enable in production or when Redis is configured
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Rate limit configuration
+type Duration = `${number}${"s" | "m" | "h"}`;
 
-export const rateLimitEnabled = Boolean(redisUrl && redisToken);
+interface RateLimitConfig {
+  windowMs: number;
+  max: number;
+}
 
-// Create rate limiters for different tiers
-const createRateLimiter = (
-  requests: number,
-  window: string,
-  prefix: string
-): Ratelimit | null => {
-  if (!rateLimitEnabled) return null;
-  
-  const redis = new Redis({
-    url: redisUrl!,
-    token: redisToken!,
-  });
-
-  return new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(requests, window),
-    analytics: true,
-    prefix,
-    // Custom callback for when rate limit is exceeded
-    handler: async (remaining, reset, next) => {
-      if (remaining === 0) {
-        throw new Error(`Rate limit exceeded. Try again in ${Math.ceil((reset - Date.now()) / 1000)} seconds.`);
-      }
-      return next();
-    },
-  });
+// Rate limit definitions
+const RATE_LIMITS: Record<string, RateLimitConfig> = {
+  api: { windowMs: 60000, max: 100 }, // 100 requests per minute
+  checkout: { windowMs: 300000, max: 20 }, // 20 checkouts per 5 minutes
+  email: { windowMs: 600000, max: 50 }, // 50 emails per 10 minutes
+  auth: { windowMs: 900000, max: 10 }, // 10 auth attempts per 15 minutes
 };
 
-// API rate limits
-export const apiLimiter = createRateLimiter(100, "1 m", "api:global");
-export const authLimiter = createRateLimiter(10, "1 m", "api:auth");
-export const checkoutLimiter = createRateLimiter(20, "1 m", "api:checkout");
-export const emailLimiter = createRateLimiter(50, "1 h", "api:email");
-export const bulkOpsLimiter = createRateLimiter(10, "1 m", "api:bulk");
+// Simple in-memory store for rate limiting (use Redis in production)
+const rateLimitStore = new Map<string, { count: number; reset: number }>();
 
-// User-specific rate limits
-export const createUserLimiter = (identifier: string, limit: number, window: string) => {
-  if (!rateLimitEnabled) return null;
-  
-  const redis = new Redis({
-    url: redisUrl!,
-    token: redisToken!,
-  });
+// Clean up old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (value.reset < now) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 60000);
 
-  return new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(limit, window),
-    analytics: true,
-    prefix: `user:${identifier}`,
-  });
-};
-
-// Brand-specific rate limits (for multi-tenant enforcement)
-export const createBrandLimiter = (brandId: string, limit: number, window: string) => {
-  if (!rateLimitEnabled) return null;
-  
-  const redis = new Redis({
-    url: redisUrl!,
-    token: redisToken!,
-  });
-
-  return new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(limit, window),
-    analytics: true,
-    prefix: `brand:${brandId}`,
-  });
-};
-
-// Rate limit middleware helper
 export async function checkRateLimit(
-  limiter: Ratelimit | null,
+  limiter: { windowMs: number; max: number },
   identifier: string
 ): Promise<{ success: boolean; remaining: number; reset: number }> {
-  if (!limiter) {
-    return { success: true, remaining: Infinity, reset: Date.now() };
+  const key = `rate_limit_${identifier}`;
+  const now = Date.now();
+  const windowStart = now - limiter.windowMs;
+
+  const current = rateLimitStore.get(key);
+
+  if (!current || current.reset < now) {
+    // New window
+    rateLimitStore.set(key, { count: 1, reset: now + limiter.windowMs });
+    return { success: true, remaining: limiter.max - 1, reset: now + limiter.windowMs };
   }
 
-  const result = await limiter.limit(identifier);
-  return {
-    success: result.success,
-    remaining: result.remaining,
-    reset: result.reset,
-  };
+  if (current.count >= limiter.max) {
+    // Rate limit exceeded
+    return { success: false, remaining: 0, reset: current.reset };
+  }
+
+  // Increment count
+  current.count++;
+  rateLimitStore.set(key, current);
+
+  return { success: true, remaining: limiter.max - current.count, reset: current.reset };
 }
 
-// Response headers helper
-export function rateLimitHeaders(result: { remaining: number; reset: number }) {
-  return {
-    "X-RateLimit-Remaining": String(result.remaining),
-    "X-RateLimit-Reset": String(Math.ceil(result.reset / 1000)),
-  };
+export function rateLimitExceeded(seconds: number) {
+  return NextResponse.json(
+    { error: "Rate limit exceeded. Please try again later.", retry_after: seconds },
+    { status: 429, headers: { "Retry-After": String(seconds) } }
+  );
 }
 
-// CORS headers for API routes
-export function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
-    "Access-Control-Max-Age": "86400",
-  };
-}
-
-// Security headers
 export function securityHeaders() {
   return {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-  };
+    "Content-Security-Policy": "default-src 'self'",
+  } as const;
 }
 
-// Combined API response helper
-export function apiResponse<T>(
-  data: T,
-  status: number = 200,
-  meta?: Record<string, unknown>
-) {
-  return Response.json(
-    { success: true, data, meta },
-    { status, headers: securityHeaders() }
-  );
+export function rateLimitHeaders(rateCheck: { remaining: number; reset: number }) {
+  return {
+    "X-RateLimit-Limit": String(100),
+    "X-RateLimit-Remaining": String(rateCheck.remaining),
+    "X-RateLimit-Reset": String(Math.ceil(rateCheck.reset / 1000)),
+  } as const;
 }
 
-// Error response helper
-export function apiError(message: string, status: number = 400, details?: unknown) {
-  return Response.json(
-    { success: false, error: message, details },
-    { status, headers: securityHeaders() }
-  );
-}
-
-// Validation error helper
-export function validationError(errors: z.ZodError) {
-  return Response.json(
-    {
-      success: false,
-      error: "Validation failed",
-      details: errors.errors.map((e) => ({
-        path: e.path.join("."),
-        message: e.message,
-      })),
-    },
-    { status: 400, headers: securityHeaders() }
-  );
-}
-
-// Rate limit exceeded response
-export function rateLimitExceeded(retryAfter: number) {
-  return Response.json(
-    { success: false, error: "Rate limit exceeded" },
-    {
-      status: 429,
-      headers: {
-        ...securityHeaders(),
-        "Retry-After": String(retryAfter),
-        "X-RateLimit-Remaining": "0",
-      },
-    }
-  );
-}
-
-// Not authorized response
-export function unauthorized(message: string = "Not authorized") {
-  return Response.json(
-    { success: false, error: message },
-    { status: 401, headers: securityHeaders() }
-  );
-}
-
-// Forbidden response
-export function forbidden(message: string = "Access denied") {
-  return Response.json(
-    { success: false, error: message },
-    { status: 403, headers: securityHeaders() }
-  );
-}
-
-// Not found response
-export function notFound(resource: string = "Resource") {
-  return Response.json(
-    { success: false, error: `${resource} not found` },
-    { status: 404, headers: securityHeaders() }
-  );
-}
+// Pre-configured limiters
+export const apiLimiter = RATE_LIMITS.api;
+export const checkoutLimiter = RATE_LIMITS.checkout;
+export const emailLimiter = RATE_LIMITS.email;
+export const authLimiter = RATE_LIMITS.auth;
