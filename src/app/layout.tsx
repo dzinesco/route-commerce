@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
+
+// Clerk publishable key
+const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -50,7 +54,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers>{children}</Providers>
+        <ClerkProvider publishableKey={publishableKey}>
+          <Providers>{children}</Providers>
+        </ClerkProvider>
       </body>
     </html>
   );

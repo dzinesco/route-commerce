@@ -1,32 +1,49 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+// Clerk Middleware for Next.js App Router
+// Must be exported as default from proxy.ts in src/ directory
 
-// Simple route protection — admin pages redirect to login when no rc_auth_uid cookie.
-// Dev bypass: dev_session cookie bypasses this check in development only.
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-  // Skip non-admin routes
-  if (!pathname.startsWith("/admin")) {
-    return NextResponse.next();
-  }
+// Define public routes that don't require authentication
+const publicRoutes = [
+  "/",
+  "/login",
+  "/login2",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/pricing",
+  "/terms-and-conditions",
+  "/privacy-policy",
+  "/contact",
+  "/api/health",
+  "/api/webhooks/clerk",
+  "/api/stripe/webhook",
+  // Brand storefronts are public
+  "/tuxedo",
+  "/tuxedo/*",
+  "/indian-river-direct",
+  "/indian-river-direct/*",
+  // Error pages
+  "/error",
+  "/not-found",
+];
 
-  // Development bypass — dev_session cookie is set client-side by the login form
-  if (process.env.NODE_ENV === "development") {
-    const devSession = request.cookies.get("dev_session")?.value;
-    if (devSession) return NextResponse.next();
-  }
-
-  // Check rc_auth_uid (new) or rc_uid (legacy) cookie
-  const uid = request.cookies.get("rc_auth_uid")?.value ?? request.cookies.get("rc_uid")?.value;
-  if (uid) return NextResponse.next();
-
-  // Not authenticated — redirect to login
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("redirect", pathname);
-  return NextResponse.redirect(loginUrl);
-}
+// Export the clerkMiddleware as the default export
+export default clerkMiddleware({
+  // Public routes configuration
+  publicRoutes,
+  
+  // Debug mode in development
+  debug: process.env.NODE_ENV === "development",
+});
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    // Skip Next.js internals and all files in the _next directory
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
+    "/(api|trpc)(.*)",
+    // Include Clerk's auto-proxy path for authentication
+    "/__clerk/(.*)",
+  ],
 };
