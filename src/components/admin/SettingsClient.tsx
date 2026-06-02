@@ -58,6 +58,53 @@ const Icons = {
 
 type Brand = { id: string; name: string };
 
+// Brand Selector Component
+function BrandSelector({
+  brands,
+  selectedBrandId,
+  onSelect,
+}: {
+  brands: Brand[];
+  selectedBrandId: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-[var(--admin-text-muted)]">Select which brand&apos;s settings to manage:</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {brands.map((brand) => (
+          <button
+            key={brand.id}
+            onClick={() => onSelect(brand.id)}
+            className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+              selectedBrandId === brand.id
+                ? "border-[var(--admin-accent)] bg-[var(--admin-accent-light)] ring-2 ring-[var(--admin-accent)]"
+                : "border-[var(--admin-border)] hover:border-[var(--admin-accent)] hover:bg-stone-50"
+            }`}
+          >
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-white font-bold ${
+              selectedBrandId === brand.id ? "bg-[var(--admin-accent)]" : "bg-stone-400"
+            }`}>
+              {brand.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[var(--admin-text-primary)] truncate">{brand.name}</p>
+              {selectedBrandId === brand.id && (
+                <p className="text-xs text-[var(--admin-accent)]">Currently viewing</p>
+              )}
+            </div>
+            {selectedBrandId === brand.id && (
+              <svg className="w-5 h-5 text-[var(--admin-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   brandId: string;
   users: import("@/actions/admin/users").AdminUserRow[];
@@ -151,7 +198,32 @@ export default function SettingsClient({
 
         {activeTab === "brand" && (
           <div className="space-y-6">
-            {/* Brand Settings */}
+            {currentUser.role === "platform_admin" && brands.length > 0 && (
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
+                <div className="p-4 sm:p-6 border-b border-[var(--admin-border)]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500">
+                      {Icons.brand("w-4 h-4 text-white")}
+                    </div>
+                    <div>
+                      <h2 className="text-sm sm:text-lg font-bold text-[var(--admin-text-primary)]">Select Brand</h2>
+                      <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)]">Choose a brand to view and edit its settings</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 sm:p-6">
+                  <BrandSelector
+                    brands={brands}
+                    selectedBrandId={brandId}
+                    onSelect={(id) => {
+                      window.location.href = `/admin/settings?brand=${id}#brand`;
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Selected Brand Settings */}
             <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
               <div className="p-4 sm:p-6 border-b border-[var(--admin-border)]">
                 <div className="flex items-center gap-3">

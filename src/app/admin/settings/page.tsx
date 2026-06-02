@@ -9,18 +9,31 @@ export const metadata = {
   description: "Manage your brand settings, workers, tasks, and user permissions",
 };
 
-export default async function AdminSettingsPage() {
+export default async function AdminSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ brand?: string }>;
+}) {
   const adminUser = await getAdminUser();
   if (!adminUser) redirect("/login");
 
-  const brandId = adminUser.brand_id ?? "64294306-5f42-463d-a5e8-2ad6c81a96de";
+  const params = await searchParams;
+  const isPlatformAdmin = adminUser.role === "platform_admin";
+
+  // Platform admin can select a brand via query param, otherwise use their assigned brand
+  let brandId = adminUser.brand_id ?? "";
+  if (isPlatformAdmin && params.brand) {
+    brandId = params.brand;
+  } else if (!brandId) {
+    brandId = "64294306-5f42-463d-a5e8-2ad6c81a96de";
+  }
 
   const [{ users, error }, { brands }] = await Promise.all([
-    getAdminUsers(adminUser.role === "platform_admin" ? undefined : (adminUser.brand_id ?? undefined)),
+    getAdminUsers(isPlatformAdmin ? undefined : (adminUser.brand_id ?? undefined)),
     getBrands(),
   ]);
 
-  // Fetch payment settings for the brand tab
+  // Fetch payment settings for the current brand
   const paymentResult = await getPaymentSettings(brandId);
   const paymentSettings = paymentResult.success ? paymentResult.settings : null;
 
