@@ -89,7 +89,5 @@ export const config = {
   matcher: [
     // Skip Next.js internals and all files in the _next directory
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Run for API routes that need auth checking
-    "/(api)(?!.*\\.(?:json|ico|png|jpg|jpeg|gif|webp|svg|ttf|woff|woff2|less|css)).*)",
   ],
 };
