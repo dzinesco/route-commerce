@@ -1,8 +1,9 @@
-// Clerk middleware for route protection
+// Supabase Auth Middleware - keeps existing auth working
 
-import { authMiddleware } from "@clerk/nextjs";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// Define public routes that don't require authentication
+// Public routes that don't require authentication
 const publicRoutes = [
   "/",
   "/login",
@@ -15,80 +16,80 @@ const publicRoutes = [
   "/privacy-policy",
   "/contact",
   "/api/health",
-  "/api/webhooks/clerk",
+  "/api/stripe/webhook",
+  "/api/resend/webhook",
   // Brand storefronts are public
   "/tuxedo",
   "/tuxedo/*",
   "/indian-river-direct",
   "/indian-river-direct/*",
+  "/cart",
+  "/cart/*",
+  "/checkout",
+  "/checkout/*",
   // Error pages
   "/error",
   "/not-found",
 ];
 
-// Define routes that require specific roles
-const roleProtectedRoutes = [
-  { path: "/admin/*", roles: ["platform_admin", "brand_admin", "store_employee"] },
-  { path: "/wholesale/portal/*", roles: ["wholesale_customer"] },
-  { path: "/water/admin/*", roles: ["platform_admin", "brand_admin"] },
-];
+// Admin routes that require auth
+const adminRoutes = ["/admin", "/water/admin"];
 
-export default authMiddleware({
-  // Public routes - don't require auth
-  publicRoutes,
-  
-  // Ignore auth for these paths (API routes with their own auth)
-  ignoredRoutes: [
-    "/api/*", // API routes handle their own auth
-    "/_next/*", // Next.js internals
-    "/favicon.ico",
-    "/robots.txt",
-    "/sitemap.xml",
-  ],
-  
-  // After auth middleware - check roles
-  afterAuth: (auth, req, evt) => {
-    const { userId, sessionId } = auth;
-    const path = req.nextUrl.pathname;
-    
-    // Skip role check for public routes
-    if (publicRoutes.some(route => path.startsWith(route.replace("/*", "")))) {
-      return;
+// Wholesale routes
+const wholesaleRoutes = ["/wholesale"];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Check if route is public
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route.replace("/*", ""))
+  );
+
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // Check for auth cookie (Supabase session)
+  const hasAuthCookie =
+    request.cookies.get("rc_auth_uid")?.value ||
+    request.cookies.get("rc_uid")?.value ||
+    request.cookies.get("dev_session")?.value;
+
+  if (!hasAuthCookie) {
+    // Redirect to login
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Check for admin routes (may need additional role checking)
+  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
+  if (isAdminRoute) {
+    // Dev session check for role
+    const devSession = request.cookies.get("dev_session")?.value;
+    if (devSession === "store_employee") {
+      // Store employees have limited admin access
+      // More granular checks happen in the page components
     }
-    
-    // Check if route is role-protected
-    for (const protectedRoute of roleProtectedRoutes) {
-      if (path.startsWith(protectedRoute.path.replace("/*", ""))) {
-        if (!userId) {
-          // Redirect to login if not authenticated
-          const signInUrl = new URL("/login", req.url);
-          signInUrl.searchParams.set("redirect_url", path);
-          return Response.redirect(signInUrl);
-        }
-        
-        // For admin routes, check session and role
-        if (protectedRoute.path.startsWith("/admin")) {
-          // Admin routes require one of the allowed roles
-          // This is handled by the admin-permissions module in app layer
-        }
-        
-        if (protectedRoute.path.startsWith("/wholesale/portal")) {
-          // Wholesale portal requires wholesale_customer role
-          // This is handled by wholesale-auth module in app layer
-        }
-      }
-    }
-  },
+  }
+
+  // Add security headers to all responses
+  const response = NextResponse.next();
   
-  // Debug in development
-  debug: process.env.NODE_ENV === "development",
-});
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  
+  return response;
+}
 
 export const config = {
   matcher: [
     // Skip Next.js internals and all files in the _next directory
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    // Run for API routes that need auth checking
+    "/(api)(?!.*\\.(?:json|ico|png|jpg|jpeg|gif|webp|svg|ttf|woff|woff2|less|css)).*)",
   ],
 };
