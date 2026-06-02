@@ -38,7 +38,7 @@ export default async function StopDetailPage({ params }: StopDetailPageProps) {
 
   if (error || !stop) {
     return (
-      <main className="min-h-screen bg-stone-100 px-6 py-12">
+      <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
         <div className="mx-auto max-w-4xl">
           <h1 className="text-3xl font-bold text-red-600">Stop not found</h1>
           <pre className="mt-4 rounded-xl bg-white border border-stone-200 p-4 text-sm text-stone-600">
@@ -72,7 +72,7 @@ export default async function StopDetailPage({ params }: StopDetailPageProps) {
     .filter(Boolean);
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-12">
+    <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
         <a
           href="/admin/stops"

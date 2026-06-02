@@ -81,7 +81,7 @@ Citrus Gift Box,Seasonal citrus assortment,34.99,Shipping,TRUE,
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-10">
+    <main className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
           <div>

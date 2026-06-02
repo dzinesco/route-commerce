@@ -30,7 +30,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
   if (error || !product) {
     return (
-      <main className="min-h-screen bg-stone-100 px-6 py-12">
+      <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
         <div className="mx-auto max-w-4xl">
           <h1 className="text-3xl font-bold text-red-600">Product not found</h1>
           <pre className="mt-4 rounded-xl bg-white p-4 text-sm text-stone-600">
@@ -48,7 +48,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-12">
+    <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
         <a
           href="/admin/products"

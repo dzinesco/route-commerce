@@ -77,7 +77,7 @@ John Doe,john@example.com,555-5678,{STOP_ID},{PRODUCT_ID},1,shipping
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-10">
+    <main className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
           <Link href="/admin/orders" className="text-sm text-stone-500 hover:text-stone-800">

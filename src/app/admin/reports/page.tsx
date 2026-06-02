@@ -22,7 +22,7 @@ export default async function ReportsPage() {
     : adminUser.brand_id ?? null;
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-10">
+    <main className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-7xl">
         <PageHeader
           title="Reports"

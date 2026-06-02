@@ -41,7 +41,7 @@ export default async function LotDetailPage({ params }: { params: Promise<{ id: 
 
   if (!detailResult.success || !detailResult.lot) {
     return (
-      <div className="min-h-screen bg-stone-50 px-6 py-10">
+      <div className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
         <div className="mx-auto max-w-2xl">
           <div className="rounded-xl border border-red-200 bg-white p-6 text-center">
             <p className="text-red-600">Lot not found</p>
@@ -53,7 +53,7 @@ export default async function LotDetailPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 px-6 py-10">
+    <div className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
           <a href="/admin/route-trace/lots" className="text-sm text-stone-500 hover:text-stone-700">← Back to Lots</a>

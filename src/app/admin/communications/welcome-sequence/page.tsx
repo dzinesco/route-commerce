@@ -12,7 +12,7 @@ export default async function WelcomeSequencePage() {
   const brandName = settingsResult?.success ? (settingsResult.settings?.brand_name ?? "Farm") : "Farm";
 
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-10">
+    <main className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Header */}
         <div>

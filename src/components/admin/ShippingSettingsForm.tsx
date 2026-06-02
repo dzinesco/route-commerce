@@ -7,7 +7,7 @@ import {
   testFedExConnection,
   type ShippingSettings,
 } from "@/actions/shipping/settings";
-import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect } from "./design-system";
+import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect, AdminButton } from "./design-system";
 
 const SERVICE_OPTIONS = [
   { value: "FEDEX_OVERNIGHT", label: "FedEx Overnight" },
@@ -132,42 +132,78 @@ export default function ShippingSettingsForm({
       )}
 
       {/* Connection status banner */}
-      <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
-        isConfigured
-          ? "bg-emerald-900/30 border border-emerald-700 text-emerald-300"
-          : "bg-amber-900/30 border border-amber-700 text-amber-300"
-      }`}>
-        <span className={`h-2.5 w-2.5 rounded-full ${isConfigured ? "bg-emerald-500" : "bg-amber-900/300"}`} />
+      <div 
+        className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium border"
+        style={{
+          backgroundColor: isConfigured ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)",
+          borderColor: isConfigured ? "var(--admin-accent)" : "rgba(245, 158, 11, 0.3)",
+          color: isConfigured ? "var(--admin-accent)" : "rgb(245, 158, 11)",
+        }}
+      >
+        <span 
+          className="h-2.5 w-2.5 rounded-full" 
+          style={{ backgroundColor: isConfigured ? "var(--admin-accent)" : "rgb(245, 158, 11)" }} 
+        />
         {isConfigured
           ? `FedEx Connected — ${settings?.fedex_use_production ? "Production" : "Sandbox"} mode`
           : "FedEx Not Configured — enter credentials below to enable shipping rates and label generation"}
       </div>
 
       {error && (
-        <div className="rounded-xl bg-red-900/50 border border-red-700 p-4 text-sm text-red-200">{error}</div>
+        <div 
+          className="rounded-xl p-4 text-sm border"
+          style={{ 
+            backgroundColor: "rgba(239, 68, 68, 0.1)", 
+            borderColor: "rgba(239, 68, 68, 0.3)", 
+            color: "rgb(239, 68, 68)" 
+          }}
+        >
+          {error}
+        </div>
       )}
       {saved && (
-        <div className="rounded-xl bg-green-900/50 border border-green-700 p-4 text-sm text-green-200">
+        <div 
+          className="rounded-xl p-4 text-sm border"
+          style={{ 
+            backgroundColor: "rgba(16, 185, 129, 0.1)", 
+            borderColor: "rgba(16, 185, 129, 0.3)", 
+            color: "var(--admin-accent)" 
+          }}
+        >
           Shipping settings saved.
         </div>
       )}
       {testResult && (
-        <div className={`rounded-xl p-4 text-sm border ${testResult.success ? "bg-green-900/50 border-green-700 text-green-200" : "bg-red-900/50 border-red-700 text-red-200"}`}>
+        <div 
+          className="rounded-xl p-4 text-sm border"
+          style={{ 
+            backgroundColor: testResult.success ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)", 
+            borderColor: testResult.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)", 
+            color: testResult.success ? "var(--admin-accent)" : "rgb(239, 68, 68)" 
+          }}
+        >
           {testResult.message}
         </div>
       )}
 
       {/* FedEx credentials */}
-      <div className="space-y-5 rounded-xl border border-blue-400 bg-blue-900/20 p-5">
+      <div 
+        className="space-y-5 rounded-xl border p-5"
+        style={{ 
+          backgroundColor: "var(--admin-bg-subtle)", 
+          borderColor: "var(--admin-border)" 
+        }}
+      >
         <div>
-          <h3 className="font-semibold text-blue-300">FedEx API Credentials</h3>
-          <p className="mt-1 text-sm text-blue-400">
+          <h3 className="font-semibold" style={{ color: "var(--admin-text-primary)" }}>FedEx API Credentials</h3>
+          <p className="mt-1 text-sm" style={{ color: "var(--admin-text-muted)" }}>
             Used for shipping fresh sweet corn and onions. Get your credentials from{" "}
             <a
               href="https://developer.fedex.com"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:no-underline"
+              style={{ color: "var(--admin-accent)" }}
             >
               developer.fedex.com
             </a>
@@ -203,7 +239,8 @@ export default function ShippingSettingsForm({
             <button
               type="button"
               onClick={() => setShowSecret(!showSecret)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-zinc-400 text-xs"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs transition-colors"
+              style={{ color: "var(--admin-text-muted)" }}
             >
               {showSecret ? "Hide" : "Show"}
             </button>
@@ -211,23 +248,32 @@ export default function ShippingSettingsForm({
         </AdminInput>
 
         {/* Production toggle */}
-        <div className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3">
+        <div 
+          className="flex items-center gap-3 rounded-xl px-4 py-3 border"
+          style={{ 
+            backgroundColor: "var(--admin-bg)", 
+            borderColor: "var(--admin-border)" 
+          }}
+        >
           <button
             type="button"
             onClick={() => setFedexUseProduction(!fedexUseProduction)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              fedexUseProduction ? "bg-blue-600" : "bg-zinc-600"
-            }`}
+            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+            style={{ 
+              backgroundColor: fedexUseProduction ? "var(--admin-accent)" : "var(--admin-text-muted)" 
+            }}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-zinc-900 transition-transform ${
-                fedexUseProduction ? "translate-x-6" : "translate-x-1"
-              }`}
+              className="inline-block h-4 w-4 rounded-full transition-transform"
+              style={{ 
+                backgroundColor: "white",
+                transform: fedexUseProduction ? "translateX(26px)" : "translateX(4px)" 
+              }}
             />
           </button>
           <div>
-            <span className="text-sm font-medium text-zinc-200">Use Production Mode</span>
-            <p className="text-xs text-zinc-400">
+            <span className="text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>Use Production Mode</span>
+            <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
               {fedexUseProduction
                 ? "Live rates, real labels. Sandbox is currently active."
                 : "Sandbox/test mode. Use for testing before going live."}
@@ -237,32 +283,38 @@ export default function ShippingSettingsForm({
 
         {/* Test connection */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={handleTestConnection}
             disabled={testing || !fedexApiKey || !fedexApiSecret}
-            className="rounded-xl border border-blue-400 bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {testing ? (
               <span className="flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 Testing...
               </span>
             ) : (
               "Test Connection"
             )}
-          </button>
+          </AdminButton>
           {testResult?.success && (
-            <span className="text-sm text-green-400 font-medium">✓ Connection verified</span>
+            <span className="text-sm font-medium" style={{ color: "var(--admin-accent)" }}>✓ Connection verified</span>
           )}
         </div>
       </div>
 
       {/* Default shipping options */}
-      <div className="space-y-5 rounded-xl border border-zinc-700 bg-zinc-900 p-5">
+      <div 
+        className="space-y-5 rounded-xl border p-5"
+        style={{ 
+          backgroundColor: "var(--admin-bg-subtle)", 
+          borderColor: "var(--admin-border)" 
+        }}
+      >
         <div>
-          <h3 className="font-semibold text-zinc-200">Default Shipping Service</h3>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h3 className="font-semibold" style={{ color: "var(--admin-text-primary)" }}>Default Shipping Service</h3>
+          <p className="mt-1 text-sm" style={{ color: "var(--admin-text-muted)" }}>
             Applied automatically when creating shipments. Perishable orders always require Overnight or 2-Day Air regardless of this setting.
           </p>
         </div>
@@ -277,10 +329,16 @@ export default function ShippingSettingsForm({
       </div>
 
       {/* Handling notes */}
-      <div className="space-y-5 rounded-xl border border-zinc-700 bg-zinc-900 p-5">
+      <div 
+        className="space-y-5 rounded-xl border p-5"
+        style={{ 
+          backgroundColor: "var(--admin-bg-subtle)", 
+          borderColor: "var(--admin-border)" 
+        }}
+      >
         <div>
-          <h3 className="font-semibold text-zinc-200">Handling Instructions</h3>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h3 className="font-semibold" style={{ color: "var(--admin-text-primary)" }}>Handling Instructions</h3>
+          <p className="mt-1 text-sm" style={{ color: "var(--admin-text-muted)" }}>
             These notes are attached to shipments containing perishable or fragile items (sweet corn, onions, etc.). Appear on the carrier label and in the warehouse.
           </p>
         </div>
@@ -308,18 +366,19 @@ export default function ShippingSettingsForm({
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-3 text-zinc-500">
-          <div className="h-5 w-5 rounded-full border-2 border-zinc-500 border-t-transparent animate-spin" />
+        <div className="flex items-center gap-3" style={{ color: "var(--admin-text-muted)" }}>
+          <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin" />
           Loading settings...
         </div>
       ) : (
-        <button
+        <AdminButton
+          variant="primary"
+          size="md"
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Shipping Settings"}
-        </button>
+        </AdminButton>
       )}
     </form>
   );

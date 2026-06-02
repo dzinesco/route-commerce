@@ -29,12 +29,20 @@ export default async function TaxesPage({ params }: Props) {
       resolvedBrandId = firstBrand.id;
     } else {
       return (
-        <main className="min-h-screen bg-stone-100 px-6 py-12">
+        <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
           <div className="mx-auto max-w-6xl">
-            <div className="card p-8 text-center">
-              <h1 className="text-2xl font-bold text-stone-950">No Brands Found</h1>
-              <p className="mt-2 text-stone-500">Create a brand in the database first.</p>
-              <a href="/admin" className="mt-4 inline-block rounded-xl bg-stone-200 px-6 py-3 text-sm font-medium text-stone-700 border border-stone-300 hover:bg-stone-300 transition-colors">
+            <div className="rounded-2xl p-8 text-center border" style={{ 
+              backgroundColor: "white", 
+              borderColor: "var(--admin-border)" 
+            }}>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--admin-text-primary)" }}>No Brands Found</h1>
+              <p className="mt-2" style={{ color: "var(--admin-text-muted)" }}>Create a brand in the database first.</p>
+              <a href="/admin" className="mt-4 inline-block rounded-xl px-6 py-3 text-sm font-medium border transition-colors"
+                 style={{ 
+                   backgroundColor: "var(--admin-bg-subtle)", 
+                   borderColor: "var(--admin-border)", 
+                   color: "var(--admin-text-primary)" 
+                 }}>
                 Back to Admin
               </a>
             </div>
@@ -54,7 +62,7 @@ export default async function TaxesPage({ params }: Props) {
   const allBrands = (brands ?? []) as Array<{ id: string; name: string }>;
 
   return (
-    <main className="min-h-screen bg-stone-100">
+    <main className="min-h-screen" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-6xl px-6 py-10">
         <PageHeader
           title="Tax Dashboard"

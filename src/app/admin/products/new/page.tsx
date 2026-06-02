@@ -6,7 +6,7 @@ export default async function NewProductPage() {
   const adminUser = await getAdminUser();
   if (!adminUser?.can_manage_products) redirect("/admin/pickup");
   return (
-    <main className="min-h-screen bg-stone-100 px-6 py-12">
+    <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
         <div className="mb-8">
           <a
