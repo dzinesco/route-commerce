@@ -8,6 +8,7 @@ const TABS = [
   { id: "templates", label: "Templates" },
   { id: "contacts", label: "Contacts" },
   { id: "logs", label: "Logs" },
+  { id: "settings", label: "Settings" },
 ];
 
 // Icon components
@@ -81,7 +82,7 @@ const Icons = {
 export default function CommunicationsNav({
   activeTab,
 }: {
-  activeTab: "campaigns" | "templates" | "contacts" | "logs" | "segments" | "analytics" | "compose";
+  activeTab: "campaigns" | "templates" | "contacts" | "logs" | "segments" | "analytics" | "compose" | "settings";
 }) {
   return (
     <nav className="grid grid-cols-4 sm:grid-cols-7 gap-1 p-1.5 rounded-xl bg-white border border-stone-200">
@@ -104,6 +105,7 @@ export default function CommunicationsNav({
             {tab.id === "templates" && Icons.fileText("h-3.5 w-3.5 sm:h-4 sm:w-4")}
             {tab.id === "contacts" && Icons.userCheck("h-3.5 w-3.5 sm:h-4 sm:w-4")}
             {tab.id === "logs" && Icons.list("h-3.5 w-3.5 sm:h-4 sm:w-4")}
+            {tab.id === "settings" && Icons.settings("h-3.5 w-3.5 sm:h-4 sm:w-4")}
             <span>{tab.label}</span>
             {isActive && (
               <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-0.5 w-4 sm:w-8 bg-white rounded-full" />

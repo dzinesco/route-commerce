@@ -16,7 +16,14 @@ import type { Contact } from "@/actions/communications/contacts";
 import type { Segment } from "@/actions/harvest-reach/segments";
 import type { CampaignAnalytics } from "@/actions/harvest-reach/campaigns";
 
-type Tab = "campaigns" | "templates" | "contacts" | "segments" | "logs" | "analytics";
+type Tab = "campaigns" | "compose" | "templates" | "contacts" | "segments" | "logs" | "analytics";
+
+const ComposeIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+    <polyline points="22,6 12,13 2,6"/>
+  </svg>
+);
 
 const MailIcon = () => (
   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -119,6 +126,7 @@ export default function CommunicationsPage({
             }}
             tabs={[
               { value: "campaigns", label: "Campaigns", icon: <MailIcon /> },
+              { value: "compose", label: "Compose", icon: <ComposeIcon /> },
               { value: "templates", label: "Templates", icon: <FileTextIcon /> },
               { value: "contacts", label: "Contacts", icon: <UsersIcon /> },
               { value: "segments", label: "Segments", icon: <LayersIcon /> },
@@ -198,8 +206,20 @@ export default function CommunicationsPage({
           </div>
         )}
 
-        {/* Compose Mode */}
-        {(isComposing || editCampaignId) && (
+        {/* Compose Tab */}
+        {currentTab === "compose" && (
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-white">
+            <CampaignComposerPage
+              brandId={brandId}
+              campaigns={campaigns}
+              templates={templates}
+              segments={initialSegments}
+            />
+          </div>
+        )}
+
+        {/* Legacy Compose Mode (from edit mode) */}
+        {(isComposing || editCampaignId) && currentTab === "campaigns" && (
           <div className="rounded-2xl border border-[var(--admin-border)] bg-white">
             <CampaignComposerPage
               brandId={brandId}
