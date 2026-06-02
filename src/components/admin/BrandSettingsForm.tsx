@@ -10,6 +10,7 @@ import {
   uploadOlatheSweetLogoDark,
   type BrandSettings,
 } from "@/actions/brand-settings";
+import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect } from "./design-system";
 
 type Props = {
   settings: BrandSettings | null;
@@ -202,21 +203,13 @@ export default function BrandSettingsForm({
     <form onSubmit={handleSave} className="space-y-8">
       {/* Platform admin brand picker */}
       {isPlatformAdmin && brands.length > 0 && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Brand</label>
-          <select
+        <AdminInput label="Brand" helpText={`Viewing ${activeBrandName}`}>
+          <AdminSelect
             value={activeBrandId}
             onChange={(e) => setActiveBrandId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-base text-zinc-100 outline-none focus:border-emerald-500"
-          >
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-zinc-500">
-            Viewing <strong className="text-zinc-300">{activeBrandName}</strong>
-          </p>
-        </div>
+            options={brands.map((b) => ({ value: b.id, label: b.name }))}
+          />
+        </AdminInput>
       )}
 
       {error && (
@@ -238,46 +231,37 @@ export default function BrandSettingsForm({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Legal Business Name</label>
-            <input
-              type="text"
+          <AdminInput label="Legal Business Name">
+            <AdminTextInput
               value={legalBusinessName}
               onChange={(e) => setLegalBusinessName(e.target.value)}
               placeholder="Tuxedo Corn LLC"
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Phone</label>
-            <input
+          </AdminInput>
+          <AdminInput label="Phone">
+            <AdminTextInput
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="(772) 555-0100"
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Email</label>
-            <input
+          </AdminInput>
+          <AdminInput label="Email">
+            <AdminTextInput
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="orders@tuxedocorn.com"
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Website</label>
-            <input
+          </AdminInput>
+          <AdminInput label="Website">
+            <AdminTextInput
               type="url"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
               placeholder="https://tuxedocorn.com"
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
             />
-          </div>
+          </AdminInput>
         </div>
       </div>
 
@@ -291,60 +275,49 @@ export default function BrandSettingsForm({
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Street Address</label>
-            <input
-              type="text"
+          <AdminInput label="Street Address">
+            <AdminTextInput
               value={streetAddress}
               onChange={(e) => setStreetAddress(e.target.value)}
               placeholder="1234 Farm Road"
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
             />
-          </div>
+          </AdminInput>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300">City</label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Stuart"
-                className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-              />
+              <AdminInput label="City">
+                <AdminTextInput
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Stuart"
+                />
+              </AdminInput>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300">State</label>
-              <input
-                type="text"
+            <AdminInput label="State">
+              <AdminTextInput
                 value={state}
                 onChange={(e) => setState(e.target.value)}
                 placeholder="FL"
                 maxLength={2}
-                className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm uppercase text-zinc-100 outline-none focus:border-emerald-500"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300">ZIP / Postal Code</label>
-              <input
-                type="text"
+            </AdminInput>
+            <AdminInput label="ZIP / Postal Code">
+              <AdminTextInput
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
                 placeholder="34994"
-                className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
               />
-            </div>
+            </AdminInput>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">Country</label>
-            <select
+          <AdminInput label="Country">
+            <AdminSelect
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            >
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-            </select>
-          </div>
+              options={[
+                { value: "US", label: "United States" },
+                { value: "CA", label: "Canada" },
+              ]}
+            />
+          </AdminInput>
         </div>
       </div>
 
@@ -418,37 +391,29 @@ export default function BrandSettingsForm({
           </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Default Email Signature
-          </label>
-          <textarea
+        <AdminInput 
+          label="Default Email Signature"
+          helpText="Appears at the bottom of all outbound emails. Supports line breaks."
+        >
+          <AdminTextarea
             value={defaultEmailSignature}
             onChange={(e) => setDefaultEmailSignature(e.target.value)}
             rows={3}
-            placeholder="The Tuxedo Corn Team&#10;orders@tuxedocorn.com | (772) 555-0100&#10;Fresh from Florida since 1987"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+            placeholder={"The Tuxedo Corn Team\norders@tuxedocorn.com | (772) 555-0100\nFresh from Florida since 1987"}
           />
-          <p className="mt-1 text-xs text-zinc-500">
-            Appears at the bottom of all outbound emails. Supports line breaks.
-          </p>
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Invoice Footer Notes
-          </label>
-          <textarea
+        <AdminInput 
+          label="Invoice Footer Notes"
+          helpText="Printed at the bottom of invoices and order confirmations."
+        >
+          <AdminTextarea
             value={invoiceFooterNotes}
             onChange={(e) => setInvoiceFooterNotes(e.target.value)}
             rows={2}
-            placeholder="Thank you for your order! Pickup available at our farm stand.&#10;Questions? Call (772) 555-0100 or email orders@tuxedocorn.com"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+            placeholder={"Thank you for your order! Pickup available at our farm stand.\nQuestions? Call (772) 555-0100 or email orders@tuxedocorn.com"}
           />
-          <p className="mt-1 text-xs text-zinc-500">
-            Printed at the bottom of invoices and order confirmations.
-          </p>
-        </div>
+        </AdminInput>
       </div>
 
       {/* Storefront Customization */}
@@ -460,71 +425,55 @@ export default function BrandSettingsForm({
           </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Hero Tagline</label>
-          <input
-            type="text"
+        <AdminInput label="Hero Tagline" helpText="Subtitle below the brand name in the hero section.">
+          <AdminTextInput
             value={heroTagline}
             onChange={(e) => setHeroTagline(e.target.value)}
             placeholder="Fresh citrus delivered to stops near you."
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
           />
-          <p className="mt-1 text-xs text-zinc-500">Subtitle below the brand name in the hero section.</p>
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Hero Image URL</label>
-          <input
+        <AdminInput 
+          label="Hero Image URL"
+          helpText="Full-width hero background image. Recommended: 1600×600px, under 1MB. Paste a public image URL. For Tuxedo Corn: corn field photo. For IRD: citrus orchard."
+        >
+          <AdminTextInput
             type="url"
             value={heroImageUrl}
             onChange={(e) => setHeroImageUrl(e.target.value)}
             placeholder="https://cdn.example.com/hero-corn-field.jpg"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
           />
-          <p className="mt-1 text-xs text-zinc-500">
-            Full-width hero background image. Recommended: 1600×600px, under 1MB. Paste a public image URL.
-            For Tuxedo Corn: corn field photo. For IRD: citrus orchard.
-          </p>
-          {heroImageUrl && (
-            <div className="relative mt-2 rounded-lg overflow-hidden border border-zinc-700 h-32">
-              <NextImage src={heroImageUrl} alt="Hero preview" fill style={{ objectFit: "cover" }} />
-            </div>
-          )}
-        </div>
+        </AdminInput>
+        {heroImageUrl && (
+          <div className="relative mt-2 rounded-lg overflow-hidden border border-zinc-700 h-32">
+            <NextImage src={heroImageUrl} alt="Hero preview" fill style={{ objectFit: "cover" }} />
+          </div>
+        )}
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">About Page Headline</label>
-          <input
-            type="text"
+        <AdminInput label="About Page Headline">
+          <AdminTextInput
             value={aboutHeadline}
             onChange={(e) => setAboutHeadline(e.target.value)}
             placeholder="Our Story"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
           />
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">About Page Subheadline</label>
-          <input
-            type="text"
+        <AdminInput label="About Page Subheadline">
+          <AdminTextInput
             value={aboutSubheadline}
             onChange={(e) => setAboutSubheadline(e.target.value)}
             placeholder="Growing citrus in the Indian River region since 1985."
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
           />
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Custom Footer Text</label>
-          <textarea
+        <AdminInput label="Custom Footer Text" helpText="Appears above the copyright line in the brand footer.">
+          <AdminTextarea
             value={customFooterText}
             onChange={(e) => setCustomFooterText(e.target.value)}
             rows={2}
             placeholder="Fresh from Florida — Ships Sept through May"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
           />
-          <p className="mt-1 text-xs text-zinc-500">Appears above the copyright line in the brand footer.</p>
-        </div>
+        </AdminInput>
       </div>
 
       {/* Brand Colors */}
@@ -711,17 +660,14 @@ export default function BrandSettingsForm({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Schedule PDF Footer Notes</label>
-          <textarea
+        <AdminInput label="Schedule PDF Footer Notes" helpText="Printed at the bottom of the generated schedule PDF.">
+          <AdminTextarea
             value={schedulePdfNotes}
             onChange={(e) => setSchedulePdfNotes(e.target.value)}
             rows={1}
             placeholder="All orders prepaid. No refunds on unpicked orders."
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
           />
-          <p className="mt-1 text-xs text-zinc-500">Printed at the bottom of the generated schedule PDF.</p>
-        </div>
+        </AdminInput>
       </div>
 
       {loading ? (
@@ -838,27 +784,26 @@ function NexusStateInput({
         ))}
       </div>
       <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type state code (e.g. CO) and press Enter"
-          className="flex-1 rounded-xl border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 uppercase"
-          maxLength={2}
-        />
-        <div className="relative">
-          <select
+        <AdminInput label="" className="flex-1">
+          <AdminTextInput
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type state code (e.g. CO) and press Enter"
+            maxLength={2}
+          />
+        </AdminInput>
+        <AdminInput label="" className="w-32">
+          <AdminSelect
             value=""
             onChange={(e) => { if (e.target.value) addState(e.target.value); }}
-            className="h-[42px] rounded-xl border border-zinc-600 bg-zinc-800 px-3 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-          >
-            <option value="">Add state</option>
-            {US_STATES.filter((s) => !value.includes(s)).map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+            options={[
+              { value: "", label: "Add state" },
+              ...US_STATES.filter((s) => !value.includes(s)).map((s) => ({ value: s, label: s })),
+            ]}
+          />
+        </AdminInput>
       </div>
     </div>
   );

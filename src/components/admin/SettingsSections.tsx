@@ -349,7 +349,9 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
               {/* Colorado notice */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-amber-600 text-base mt-0.5">⚠️</span>
+                  <svg className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
                   <div>
                     <p className="text-sm font-semibold text-amber-800">Colorado Overtime Law</p>
                     <p className="text-xs text-amber-700 mt-1">Colorado requires daily overtime (1.5×) after 12 hours in a workday, or weekly overtime after 40 hours in a workweek.</p>
@@ -402,7 +404,11 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
                       {notificationEmails.map(e => (
                         <span key={e} className="inline-flex items-center gap-1.5 bg-stone-100 text-stone-700 text-xs px-2.5 py-1 rounded-lg">
                           {e}
-                          <button onClick={() => removeEmail(e)} className="text-stone-400 hover:text-red-500 ml-1">&times;</button>
+                          <button onClick={() => removeEmail(e)} className="text-stone-400 hover:text-red-500 ml-1">
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </span>
                       ))}
                     </div>
@@ -421,7 +427,11 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
                       {notificationSmsNumbers.map(n => (
                         <span key={n} className="inline-flex items-center gap-1.5 bg-stone-100 text-stone-700 text-xs px-2.5 py-1 rounded-lg">
                           {n}
-                          <button onClick={() => removeSms(n)} className="text-stone-400 hover:text-red-500 ml-1">&times;</button>
+                          <button onClick={() => removeSms(n)} className="text-stone-400 hover:text-red-500 ml-1">
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </span>
                       ))}
                     </div>
@@ -563,7 +573,11 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
           <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-md shadow-xl">
             <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-stone-900">{editingWorker ? "Edit Worker" : "Add Worker"}</h3>
-              <button onClick={() => setShowWorkerModal(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">&times;</button>
+              <button onClick={() => setShowWorkerModal(false)} className="text-stone-400 hover:text-stone-600">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <div className="p-6 space-y-4">
               {workerError && <div className="bg-red-50 border border-red-200 rounded-xl py-3 px-4 text-red-700 text-sm">{workerError}</div>}
@@ -631,7 +645,11 @@ export default function SettingsSections({ brandId, workersOnly, tasksOnly }: Pr
           <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-md shadow-xl">
             <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-stone-900">{editingTask ? "Edit Task" : "Add Task"}</h3>
-              <button onClick={() => setShowTaskModal(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">&times;</button>
+              <button onClick={() => setShowTaskModal(false)} className="text-stone-400 hover:text-stone-600">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <div className="p-6 space-y-4">
               {taskError && <div className="bg-red-50 border border-red-200 rounded-xl py-3 px-4 text-red-700 text-sm">{taskError}</div>}

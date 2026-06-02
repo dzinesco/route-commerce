@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { markPickupComplete } from "@/actions/pickup";
 import { formatDate } from "@/lib/format-date";
+import AdminBadge from "./design-system/AdminBadge";
+import { AdminButton, AdminSearchInput, AdminFilterTabs } from "./design-system";
 
 type OrderItem = {
   id: string;
@@ -62,12 +64,6 @@ function formatCurrency(amount: number) {
 
 // Icons
 const Icons = {
-  search: (className: string) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/>
-      <path d="m21 21-4.3-4.3"/>
-    </svg>
-  ),
   mapPin: (className: string) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
@@ -180,7 +176,7 @@ export default function AdminOrdersPanel({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--admin-accent)]">
             {Icons.package("h-5 w-5 text-white")}
           </div>
           <div>
@@ -191,7 +187,7 @@ export default function AdminOrdersPanel({
           </div>
         </div>
         {brandId && (
-          <span className="rounded-full bg-violet-50 border border-violet-200 px-2.5 py-1 text-xs font-medium text-violet-700">Brand scoped</span>
+          <AdminBadge variant="info">Brand scoped</AdminBadge>
         )}
       </div>
 
@@ -207,40 +203,32 @@ export default function AdminOrdersPanel({
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Picked Up</p>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">{pickedUpCount}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-accent)] mt-1">{pickedUpCount}</p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* Status Tabs */}
-        <div className="flex rounded-xl border border-[var(--admin-border)] bg-white p-1">
-          {(["all", "pending", "picked_up"] as StatusTab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setPage(0); }}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? "bg-emerald-600 text-white"
-                  : "text-stone-500 hover:bg-stone-50"
-              }`}
-            >
-              {tab === "all" ? "All" : tab === "pending" ? "Pending" : "Picked Up"}
-            </button>
-          ))}
-        </div>
+        <AdminFilterTabs
+          activeTab={activeTab}
+          onTabChange={(value) => { setActiveTab(value as StatusTab); setPage(0); }}
+          tabs={[
+            { value: "all", label: "All", count: filteredOrders.length },
+            { value: "pending", label: "Pending", count: pendingCount },
+            { value: "picked_up", label: "Picked Up", count: pickedUpCount },
+          ]}
+          size="md"
+        />
 
         {/* Search */}
-        <div className="relative flex-1">
-          {Icons.search("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400")}
-          <input
-            type="text"
-            placeholder="Search name, phone, or order #..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="w-full pl-10 pr-4 py-2.5 text-sm border border-[var(--admin-border)] rounded-xl bg-white text-[var(--admin-text-primary)] placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
+        <AdminSearchInput
+          placeholder="Search name, phone, or order #..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+          onClear={() => { setSearch(""); setPage(0); }}
+          showClear={true}
+        />
 
         {/* Stop Filter */}
         <div className="relative">
@@ -248,14 +236,14 @@ export default function AdminOrdersPanel({
             onClick={() => setShowStopDropdown(!showStopDropdown)}
             className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
               selectedStops.length > 0
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                ? "border-[var(--admin-accent)] bg-[var(--admin-accent-light)] text-[var(--admin-accent-text)]"
                 : "border-[var(--admin-border)] bg-white text-stone-600 hover:bg-stone-50"
             }`}
           >
             {Icons.mapPin("h-4 w-4")}
             <span>Stops</span>
             {selectedStops.length > 0 && (
-              <span className="rounded-full bg-emerald-600 text-white px-1.5 py-0.5 text-xs font-semibold">{selectedStops.length}</span>
+              <span className="rounded-full bg-[var(--admin-accent)] text-white px-1.5 py-0.5 text-xs font-semibold">{selectedStops.length}</span>
             )}
             {Icons.chevronDown("h-4 w-4")}
           </button>
@@ -266,7 +254,7 @@ export default function AdminOrdersPanel({
               <div className="absolute right-0 top-full mt-2 z-20 w-72 rounded-xl border border-[var(--admin-border)] bg-white shadow-lg">
                 <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
                   <span className="text-sm font-semibold text-stone-700">Filter by Stop</span>
-                  <button onClick={clearStops} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Clear all</button>
+                  <button onClick={clearStops} className="text-xs text-[var(--admin-accent)] hover:text-[var(--admin-accent-hover)] font-medium">Clear all</button>
                 </div>
                 <div className="max-h-64 overflow-y-auto p-2">
                   {stops.map((stop) => (
@@ -275,7 +263,7 @@ export default function AdminOrdersPanel({
                         type="checkbox"
                         checked={selectedStops.includes(stop.id)}
                         onChange={() => toggleStop(stop.id)}
-                        className="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+                        className="h-4 w-4 rounded border-stone-300 text-[var(--admin-accent)] focus:ring-[var(--admin-accent)]"
                       />
                       <div className="flex-1">
                         <span className="text-sm font-medium text-stone-700">{stop.city}, {stop.state}</span>
@@ -297,9 +285,9 @@ export default function AdminOrdersPanel({
             const stop = stops.find((s) => s.id === stopId);
             if (!stop) return null;
             return (
-              <span key={stopId} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-medium text-emerald-700">
+              <span key={stopId} className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-accent-light)] border border-[var(--admin-accent)] px-3 py-1 text-xs font-medium text-[var(--admin-accent-text)]">
                 {stop.city}, {stop.state}
-                <button onClick={() => toggleStop(stopId)} className="ml-1 hover:text-emerald-900">
+                <button onClick={() => toggleStop(stopId)} className="ml-1 hover:text-[var(--admin-accent-hover)]">
                   {Icons.x("h-3 w-3")}
                 </button>
               </span>
@@ -335,7 +323,7 @@ export default function AdminOrdersPanel({
               {paginatedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-stone-50 transition-colors">
                   <td className="px-4 py-3">
-                    <Link href={`/admin/orders/${order.id}`} className="font-mono text-xs text-emerald-600 hover:text-emerald-700">
+                    <Link href={`/admin/orders/${order.id}`} className="font-mono text-xs text-[var(--admin-accent)] hover:text-[var(--admin-accent-hover)]">
                       {shortId(order.id)}
                     </Link>
                   </td>
@@ -362,12 +350,12 @@ export default function AdminOrdersPanel({
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       {order.pickup_complete ? (
-                        <span className="rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[10px] font-semibold">Picked Up</span>
+                        <AdminBadge variant="success" dot>Picked Up</AdminBadge>
                       ) : (
-                        <span className="rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-[10px] font-semibold">Pending</span>
+                        <AdminBadge variant="warning" dot>Pending</AdminBadge>
                       )}
                       {order.payment_processor === "square" && (
-                        <span className="rounded-full bg-violet-100 text-violet-700 px-1.5 py-0.5 text-[10px] font-semibold">Square</span>
+                        <AdminBadge variant="info">Square</AdminBadge>
                       )}
                     </div>
                   </td>
@@ -406,12 +394,12 @@ export default function AdminOrdersPanel({
 
       {/* Toast */}
       {pickupToast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-lg">
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-[var(--admin-accent)] bg-[var(--admin-accent-light)] px-5 py-3 shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-              {Icons.check("h-4 w-4 text-emerald-600")}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--admin-accent)]">
+              {Icons.check("h-4 w-4 text-white")}
             </div>
-            <span className="font-medium text-emerald-800">Pickup confirmed!</span>
+            <span className="font-medium text-[var(--admin-accent-text)]">Pickup confirmed!</span>
           </div>
         </div>
       )}

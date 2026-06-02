@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { type SegmentRuleV2, type PreviewResult } from "@/actions/harvest-reach/segments";
+import { AdminSearchInput, AdminButton } from "@/components/admin/design-system";
 
 // Icon components
 const Icons = {
@@ -11,12 +12,6 @@ const Icons = {
       <circle cx="9" cy="7" r="4"/>
       <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
       <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  ),
-  search: (className: string) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/>
-      <path d="m21 21-4.3-4.3"/>
     </svg>
   ),
   spinner: (className: string) => (
@@ -82,7 +77,7 @@ export default function MatchingCustomersPanel({ brandId, rules }: Props) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Matching Customers</h3>
         {preview && (
-          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+          <span className="inline-flex items-center rounded-full bg-[var(--admin-accent-light)] px-2.5 py-0.5 text-xs font-semibold text-[var(--admin-accent)]">
             {total.toLocaleString()} total
           </span>
         )}
@@ -106,18 +101,12 @@ export default function MatchingCustomersPanel({ brandId, rules }: Props) {
         </div>
       ) : (
         <>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              {Icons.search("h-4 w-4 text-[var(--admin-text-muted)]")}
-            </div>
-            <input
-              type="search"
-              placeholder="Search by name or email…"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-              className="w-full pl-10 pr-3 py-2 text-sm border border-[var(--admin-border)] rounded-lg bg-white text-[var(--admin-text-primary)] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-            />
-          </div>
+          <AdminSearchInput
+            placeholder="Search by name or email…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            onClear={() => setSearch("")}
+          />
 
           {paged.length === 0 ? (
             <p className="text-sm text-[var(--admin-text-muted)] text-center py-6">No customers match these filters.</p>
@@ -128,7 +117,7 @@ export default function MatchingCustomersPanel({ brandId, rules }: Props) {
                   key={c.id}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--admin-card-hover)] transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-semibold text-emerald-700 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[var(--admin-accent-light)] flex items-center justify-center text-xs font-semibold text-[var(--admin-accent)] flex-shrink-0">
                     {c.name ? c.name.slice(0, 2).toUpperCase() : "??"}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -158,22 +147,26 @@ export default function MatchingCustomersPanel({ brandId, rules }: Props) {
                 Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, searched.length)} of {searched.length}
               </span>
               <div className="flex gap-2">
-                <button
+                <AdminButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] disabled:opacity-50 transition-colors"
+                  icon={Icons.chevronLeft("h-4 w-4")}
+                  iconPosition="left"
                 >
-                  {Icons.chevronLeft("h-4 w-4")}
-                  <span>Prev</span>
-                </button>
-                <button
+                  Prev
+                </AdminButton>
+                <AdminButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={(page + 1) * PAGE_SIZE >= searched.length}
-                  className="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] disabled:opacity-50 transition-colors"
+                  icon={Icons.chevronRight("h-4 w-4")}
+                  iconPosition="right"
                 >
-                  <span>Next</span>
-                  {Icons.chevronRight("h-4 w-4")}
-                </button>
+                  Next
+                </AdminButton>
               </div>
             </div>
           )}

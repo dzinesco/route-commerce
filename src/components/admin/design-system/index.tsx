@@ -12,11 +12,14 @@ export { default as AdminActionMenu, AdminActionButton } from "./AdminActionMenu
 export { default as AdminPagination, AdminSimplePagination } from "./AdminPagination";
 export { default as AdminBadge, AdminStatusBadge, AdminCountBadge } from "./AdminBadge";
 
+// Design system components
+export { default as AdminButton, AdminIconButton } from "./AdminButton";
+export { default as PageHeader } from "./PageHeader";
+export { default as AdminSearchInput } from "./AdminSearchInput";
+export { default as AdminFilterTabs, AdminStatusFilterTabs, AdminViewModeTabs } from "./AdminFilterTabs";
+
 // Form elements
 export { AdminInput, AdminTextInput, AdminTextarea, AdminSelect, AdminCheckbox, AdminSpinner, AdminLoadingOverlay } from "./AdminFormElements";
 
-// Modal component
-export { default as AdminModal } from "./AdminModal";
-
-// Re-export GlassModal for backward compatibility
+// Modal component - GlassModal is the standard modal (max-w-lg default), AdminModal is a smaller variant (max-w-md default)
 export { default as GlassModal } from "@/components/admin/GlassModal";

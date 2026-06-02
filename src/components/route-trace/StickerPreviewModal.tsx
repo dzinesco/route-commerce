@@ -90,7 +90,11 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
             <h3 className="text-base font-semibold text-stone-900 flex items-center gap-2">{Icons.printer("h-5 w-5")} Print Sticker</h3>
             <p className="text-xs text-stone-400 mt-0.5">{lot.lot_number} · {lot.crop_type}</p>
           </div>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600 text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-600">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div className="p-6 space-y-5">

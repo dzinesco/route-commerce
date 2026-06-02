@@ -4,6 +4,7 @@ import React, { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { publishStop } from "@/actions/stops";
+import { AdminSearchInput, AdminFilterTabs, AdminButton, AdminIconButton } from "@/components/admin/design-system";
 
 type Stop = {
   id: string;
@@ -45,6 +46,20 @@ export default function StopTableClient({ stops }: Props) {
     return matchesSearch && matchesStatus;
   });
 
+  const statusCounts = {
+    all: stops.length,
+    active: stops.filter(s => s.active && s.status !== "draft").length,
+    inactive: stops.filter(s => !s.active && s.status !== "draft").length,
+    draft: stops.filter(s => s.status === "draft").length,
+  };
+
+  const tabs = [
+    { value: "all", label: "All", count: statusCounts.all },
+    { value: "active", label: "Active", count: statusCounts.active },
+    { value: "inactive", label: "Inactive", count: statusCounts.inactive },
+    { value: "draft", label: "Draft", count: statusCounts.draft },
+  ];
+
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginatedStops = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -58,48 +73,53 @@ export default function StopTableClient({ stops }: Props) {
   return (
     <>
       {/* Filter bar */}
-      <div className="border-b border-stone-200 px-5 py-3 flex gap-3 flex-wrap items-center">
-        <input
-          type="search"
+      <div className="border-b border-[var(--admin-border)] px-5 py-3 flex gap-4 flex-wrap items-center">
+        <AdminSearchInput
           placeholder="Search stops..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          className="flex-1 min-w-40 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 outline-none focus:border-emerald-500 placeholder:text-stone-400 transition-colors"
+          onClear={() => { setSearch(""); setPage(0); }}
+          showClear={true}
+          className="flex-1 min-w-48 max-w-64"
         />
-        <div className="flex gap-1 rounded-lg border border-stone-200 bg-white p-1">
-          {(["all", "active", "inactive", "draft"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => { setStatusFilter(f); setPage(0); }}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                statusFilter === f
-                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                  : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
-              }`}
-            >
-              {f === "all" ? "All" : f === "active" ? "Active" : f === "inactive" ? "Inactive" : "Draft"}
-            </button>
-          ))}
-        </div>
-        <span className="text-xs text-stone-500">{filtered.length} stops</span>
+        <AdminFilterTabs
+          activeTab={statusFilter}
+          onTabChange={(value) => { setStatusFilter(value as typeof statusFilter); setPage(0); }}
+          tabs={tabs}
+          size="sm"
+          showCounts={true}
+        />
+        <span className="text-xs text-[var(--admin-text-muted)] ml-auto">{filtered.length} stops</span>
         {totalPages > 1 && (
-          <div className="flex items-center gap-1 ml-auto">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-              className="flex h-7 w-7 items-center justify-center rounded border border-stone-200 text-stone-500 hover:text-stone-700 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+          <div className="flex items-center gap-1">
+            <AdminIconButton
+              variant="secondary"
+              size="sm"
+              label="Previous page"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="!rounded-lg border border-[var(--admin-border)]"
+            >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <span className="text-xs text-stone-500 px-1">{page + 1}/{totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-              className="flex h-7 w-7 items-center justify-center rounded border border-stone-200 text-stone-500 hover:text-stone-700 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            </AdminIconButton>
+            <span className="text-xs text-[var(--admin-text-muted)] px-1">{page + 1}/{totalPages}</span>
+            <AdminIconButton
+              variant="secondary"
+              size="sm"
+              label="Next page"
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="!rounded-lg border border-[var(--admin-border)]"
+            >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-            </button>
+            </AdminIconButton>
           </div>
         )}
       </div>
 
       {/* Delete error */}
       {deleteError && (
-        <div className="mx-5 my-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mx-5 my-3 rounded-lg border border-[var(--admin-danger)]/30 bg-[var(--admin-danger)]/10 px-4 py-3 text-sm text-[var(--admin-danger)]">
           {deleteError}{" "}
           <button onClick={() => setDeleteError(null)} className="underline hover:no-underline">
             Dismiss
@@ -109,7 +129,7 @@ export default function StopTableClient({ stops }: Props) {
 
       {/* Table */}
       <table className="w-full text-left text-sm">
-        <thead className="bg-stone-50 text-stone-500">
+        <thead className="bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)]">
           <tr>
             <th className="px-5 py-4 font-semibold">City</th>
             <th className="px-5 py-4 font-semibold">Location</th>
@@ -120,10 +140,10 @@ export default function StopTableClient({ stops }: Props) {
             <th className="px-5 py-4 font-semibold" />
           </tr>
         </thead>
-        <tbody className="divide-y divide-stone-100">
+        <tbody className="divide-y divide-[var(--admin-border)]">
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-5 py-10 text-center text-sm text-stone-500">
+              <td colSpan={7} className="px-5 py-10 text-center text-sm text-[var(--admin-text-muted)]">
                 {search || statusFilter !== "all"
                   ? "No stops match your search."
                   : "No stops found. Create one to get started."}
@@ -196,23 +216,23 @@ function StopRowBase({
   }
 
   return (
-    <tr className="hover:bg-stone-50 transition-colors relative">
+    <tr className="hover:bg-[var(--admin-bg-subtle)] transition-colors relative">
       <td className="px-5 py-4">
         <Link
           href={`/admin/stops/${stop.id}`}
-          className="font-medium text-stone-900 hover:text-emerald-600 transition-colors"
+          className="font-medium text-[var(--admin-text-primary)] hover:text-[var(--admin-accent)] transition-colors"
         >
           {stop.city}, {stop.state}
         </Link>
       </td>
 
-      <td className="px-5 py-4 text-stone-600">{stop.location}</td>
+      <td className="px-5 py-4 text-[var(--admin-text-secondary)]">{stop.location}</td>
 
-      <td className="px-5 py-4 font-mono text-stone-500 text-xs">{stop.date}</td>
+      <td className="px-5 py-4 font-mono text-[var(--admin-text-muted)] text-xs">{stop.date}</td>
 
-      <td className="px-5 py-4 font-mono text-stone-500 text-xs">{stop.time}</td>
+      <td className="px-5 py-4 font-mono text-[var(--admin-text-muted)] text-xs">{stop.time}</td>
 
-      <td className="px-5 py-4 text-stone-600">
+      <td className="px-5 py-4 text-[var(--admin-text-secondary)]">
         {Array.isArray(stop.brands)
           ? stop.brands[0]?.name
           : stop.brands?.name}
@@ -224,8 +244,8 @@ function StopRowBase({
             stop.status === "draft"
               ? "bg-amber-100 text-amber-700 border border-amber-200"
               : stop.active
-              ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-              : "bg-stone-100 text-stone-600 border border-stone-200"
+              ? "bg-[var(--admin-accent-light)] text-[var(--admin-accent-text)] border border-[var(--admin-accent)]"
+              : "bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)] border border-[var(--admin-border)]"
           }`}
         >
           {stop.status === "draft" ? "Draft" : stop.active ? "Active" : "Inactive"}
@@ -236,19 +256,23 @@ function StopRowBase({
         <div className="relative inline-flex items-center justify-end gap-2">
           <Link
             href={`/admin/stops/${stop.id}`}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+            className="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--admin-text-secondary)] hover:text-[var(--admin-text-primary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
           >
             Edit
           </Link>
-          <button
+          <AdminIconButton
+            variant="ghost"
+            size="sm"
+            label="More options"
             onClick={(e) => {
               e.preventDefault();
               setOpenMenu(openMenu === stop.id ? null : stop.id);
             }}
-            className="rounded-lg px-2 py-1.5 text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
           >
-            ⋮
-          </button>
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/>
+            </svg>
+          </AdminIconButton>
 
           {openMenu === stop.id && (
             <>
@@ -256,28 +280,34 @@ function StopRowBase({
                 className="fixed inset-0 z-10"
                 onClick={() => { setOpenMenu(null); setConfirmDelete(null); }}
               />
-              <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl bg-white border border-stone-200 shadow-xl overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl bg-white border border-[var(--admin-border)] shadow-xl overflow-hidden">
                 {stop.status === "draft" && (
-                  <button
+                  <AdminButton
+                    variant="ghost"
+                    size="sm"
+                    fullWidth
                     onClick={() => handlePublish(stop.id)}
                     disabled={publishingId === stop.id}
-                    className="w-full text-left px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+                    className="!justify-start !text-[var(--admin-accent)] hover:!bg-[var(--admin-accent-light)]"
                   >
                     {publishingId === stop.id ? "Publishing..." : "Publish"}
-                  </button>
+                  </AdminButton>
                 )}
                 <a
                   href={`/admin/stops/new?duplicate=${stop.id}`}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
                 >
                   Duplicate
                 </a>
-                <button
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
+                  fullWidth
                   onClick={() => { setOpenMenu(null); setConfirmDelete(stop.id); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  className="!justify-start !text-[var(--admin-danger)] hover:!bg-[var(--admin-danger)]/10"
                 >
                   Delete
-                </button>
+                </AdminButton>
               </div>
             </>
           )}
@@ -288,27 +318,30 @@ function StopRowBase({
                 className="fixed inset-0 z-30"
                 onClick={() => { setConfirmDelete(null); setOpenMenu(null); }}
               />
-              <div className="absolute right-0 top-full mt-1 z-40 w-72 rounded-xl bg-white border border-stone-200 shadow-xl p-4">
-                <p className="text-sm font-semibold text-stone-900">
+              <div className="absolute right-0 top-full mt-1 z-40 w-72 rounded-xl bg-white border border-[var(--admin-border)] shadow-xl p-4">
+                <p className="text-sm font-semibold text-[var(--admin-text-primary)]">
                   Delete &quot;{stop.city}, {stop.state}&quot;?
                 </p>
-                <p className="mt-1.5 text-xs text-stone-500">
+                <p className="mt-1.5 text-xs text-[var(--admin-text-muted)]">
                   This will remove the stop. If it has active orders, you must resolve those first.
                 </p>
                 <div className="mt-4 flex gap-2">
-                  <button
+                  <AdminButton
+                    variant="secondary"
+                    size="sm"
                     onClick={() => { setConfirmDelete(null); setOpenMenu(null); }}
-                    className="flex-1 rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-colors"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton
+                    variant="danger"
+                    size="sm"
                     onClick={() => handleDelete(stop.id)}
                     disabled={deletingId === stop.id}
-                    className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50 transition-colors shadow-sm"
+                    isLoading={deletingId === stop.id}
                   >
                     {deletingId === stop.id ? "..." : "Delete"}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             </>

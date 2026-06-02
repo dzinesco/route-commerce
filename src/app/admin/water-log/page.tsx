@@ -2,6 +2,7 @@ import WaterLogAdminPanel from "@/components/admin/WaterLogAdminPanel";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getWaterIrrigators, getWaterHeadgatesAdmin, getWaterEntries } from "@/actions/water-log/admin";
 import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/admin/design-system";
 
 const TUXEDO_BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
 
@@ -29,12 +30,21 @@ export default async function AdminWaterLogPage() {
   ]);
 
   return (
-    <WaterLogAdminPanel
-      initialUsers={users}
-      initialHeadgates={headgates}
-      initialEntries={entries}
-      brandId={brandId}
-      canManage={isAuthorized}
-    />
+    <div className="min-h-screen bg-[var(--admin-bg)]">
+      <PageHeader
+        title="Water Log"
+        subtitle="PIN-based access · Tuxedo only · separate from site admin"
+        className="px-6 pt-6"
+      />
+      <div className="px-6 pb-8">
+        <WaterLogAdminPanel
+          initialUsers={users}
+          initialHeadgates={headgates}
+          initialEntries={entries}
+          brandId={brandId}
+          canManage={isAuthorized}
+        />
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AdminButton } from "@/components/admin/design-system";
 
 // Icon components
 const Icons = {
@@ -50,7 +51,7 @@ export default function SegmentEditModal({ initialName = "", initialDescription 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--admin-border)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--admin-accent)]">
               {Icons.layers("h-5 w-5 text-white")}
             </div>
             <div>
@@ -80,7 +81,7 @@ export default function SegmentEditModal({ initialName = "", initialDescription 
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSave()}
               placeholder="e.g. Fort Pierce Regulars"
-              className="w-full border border-[var(--admin-border)] rounded-lg px-3 py-2.5 text-sm bg-white text-[var(--admin-text-primary)] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+              className="w-full border border-[var(--admin-border)] rounded-lg px-3 py-2.5 text-sm bg-white text-[var(--admin-text-primary)] focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)] outline-none"
               autoFocus
             />
           </div>
@@ -93,26 +94,28 @@ export default function SegmentEditModal({ initialName = "", initialDescription 
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Customers who pick up at the Fort Pierce stop regularly"
               rows={3}
-              className="w-full border border-[var(--admin-border)] rounded-lg px-3 py-2.5 text-sm bg-white text-[var(--admin-text-primary)] resize-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+              className="w-full border border-[var(--admin-border)] rounded-lg px-3 py-2.5 text-sm bg-white text-[var(--admin-text-primary)] resize-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)] outline-none"
             />
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex gap-3 px-6 py-4 border-t border-[var(--admin-border)]">
-          <button
+          <AdminButton
+            variant="secondary"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-[var(--admin-border)] text-sm font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)] transition-colors"
+            fullWidth
           >
             Cancel
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
             onClick={handleSave}
             disabled={!name.trim() || saving}
-            className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            isLoading={saving}
+            fullWidth
           >
             {saving ? "Saving…" : "Save Segment"}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

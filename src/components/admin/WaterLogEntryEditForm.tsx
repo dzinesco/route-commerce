@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateWaterEntry, deleteWaterEntry } from "@/actions/water-log/admin";
+import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect, AdminButton } from "./design-system";
 
 type WaterEntry = {
   id: string;
@@ -63,53 +64,45 @@ export default function WaterLogEntryEditForm({ entry, backHref = "/admin/water-
   return (
     <form onSubmit={handleSave} className="space-y-4">
       {error && (
-        <div className="rounded-lg bg-red-900/30 border border-red-200 p-3 text-sm text-red-400">
+        <div className="rounded-lg bg-red-100 border border-red-200 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Headgate</label>
-          <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">{entry.headgate_name}</p>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Headgate</label>
+          <p className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg-subtle)] px-3 py-2 text-sm text-[var(--admin-text-secondary)]">{entry.headgate_name}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">User</label>
-          <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">{entry.user_name}</p>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">User</label>
+          <p className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg-subtle)] px-3 py-2 text-sm text-[var(--admin-text-secondary)]">{entry.user_name}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Measurement</label>
-          <input
+        <AdminInput label="Measurement" required>
+          <AdminTextInput
             type="number"
             step="any"
             value={measurement}
             onChange={(e) => setMeasurement(parseFloat(e.target.value) || 0)}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900"
-            required
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Unit</label>
-          <select
+        </AdminInput>
+        <AdminInput label="Unit">
+          <AdminSelect
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm"
-          >
-            {UNIT_OPTIONS.map((u) => (
-              <option key={u} value={u}>{u}</option>
-            ))}
-          </select>
+            options={UNIT_OPTIONS.map((u) => ({ value: u, label: u }))}
+          />
+        </AdminInput>
+        <div>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Submitted Via</label>
+          <p className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg-subtle)] px-3 py-2 text-sm text-[var(--admin-text-secondary)]">{entry.submitted_via}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Submitted Via</label>
-          <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">{entry.submitted_via}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Logged</label>
-          <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Logged</label>
+          <p className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg-subtle)] px-3 py-2 text-sm text-[var(--admin-text-secondary)]">
             {new Date(entry.logged_at).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
@@ -120,33 +113,32 @@ export default function WaterLogEntryEditForm({ entry, backHref = "/admin/water-
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-400 mb-1">Notes</label>
-        <textarea
+      <AdminInput label="Notes" className="col-span-2">
+        <AdminTextarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900 resize-none"
           placeholder="Optional notes..."
         />
-      </div>
+      </AdminInput>
 
       <div className="flex items-center justify-between pt-2">
-        <button
+        <AdminButton
           type="button"
+          variant="danger"
           onClick={handleDelete}
           disabled={deleting}
-          className="rounded-lg border border-red-200 bg-zinc-900 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-900/30 disabled:opacity-50"
+          isLoading={deleting}
         >
-          {deleting ? "..." : "Delete Entry"}
-        </button>
-        <button
+          Delete Entry
+        </AdminButton>
+        <AdminButton
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          isLoading={saving}
         >
-          {saving ? "..." : "Save Changes"}
-        </button>
+          Save Changes
+        </AdminButton>
       </div>
     </form>
   );

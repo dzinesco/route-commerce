@@ -3,7 +3,15 @@ import StopsHeaderActions from "@/components/admin/StopsHeaderActions";
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
+import { PageHeader } from "@/components/admin/design-system";
 import { redirect } from "next/navigation";
+
+const StopIcon = () => (
+  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+    <circle cx="12" cy="10" r="3"/>
+  </svg>
+);
 
 export default async function AdminStopsPage() {
   const adminUser = await getAdminUser();
@@ -67,32 +75,17 @@ export default async function AdminStopsPage() {
 
   return (
     <main className="min-h-screen bg-[var(--admin-bg)]">
-      {/* Header */}
       <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-emerald-600">
-              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                <circle cx="12" cy="10" r="3"/>
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-[var(--admin-text-primary)] tracking-tight">Stops & Routes</h1>
-              <p className="text-xs sm:text-sm text-[var(--admin-text-muted)]">
-                {adminUser?.brand_id ? "Managing stops for your brand." : "Manage routes, pickup locations, dates, and cutoff times."}
-              </p>
-            </div>
-          </div>
-          <StopsHeaderActions brandId={adminUser?.brand_id ?? ""} />
-        </div>
-
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mt-4 text-xs sm:text-sm">
-          <a href="/admin" className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]">Admin</a>
-          <span className="text-[var(--admin-text-muted)]">/</span>
-          <span className="text-[var(--admin-text-primary)] font-medium">Stops & Routes</span>
-        </div>
+        <PageHeader
+          breadcrumb={[
+            { label: "Admin", href: "/admin" },
+            { label: "Stops & Routes" }
+          ]}
+          icon={<StopIcon />}
+          title="Stops & Routes"
+          subtitle={adminUser?.brand_id ? "Managing stops for your brand." : "Manage routes, pickup locations, dates, and cutoff times."}
+          actions={<StopsHeaderActions brandId={adminUser?.brand_id ?? ""} />}
+        />
       </div>
 
       {/* Content */}

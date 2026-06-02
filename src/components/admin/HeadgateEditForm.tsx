@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateWaterHeadgate, deleteWaterHeadgate } from "@/actions/water-log/admin";
+import { AdminInput, AdminTextInput, AdminSelect } from "./design-system";
+import { AdminButton } from "./design-system";
 
 type Headgate = {
   id: string;
@@ -56,64 +58,58 @@ export default function HeadgateEditForm({ headgate, backHref = "/admin/water-lo
   return (
     <form onSubmit={handleSave} className="space-y-4">
       {error && (
-        <div className="rounded-lg bg-red-900/30 border border-red-200 p-3 text-sm text-red-400">
+        <div className="rounded-lg bg-red-100 border border-red-200 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900"
-            required
-          />
+          <AdminInput label="Name" required>
+            <AdminTextInput
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Headgate name"
+            />
+          </AdminInput>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Default Unit</label>
-          <select
+        <AdminInput label="Default Unit">
+          <AdminSelect
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm"
-          >
-            {UNIT_OPTIONS.map((u) => (
-              <option key={u} value={u}>{u}</option>
-            ))}
-          </select>
-        </div>
+            options={UNIT_OPTIONS.map((u) => ({ value: u, label: u }))}
+          />
+        </AdminInput>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-400 mb-1">Status</label>
-        <select
+      <AdminInput label="Status">
+        <AdminSelect
           value={active ? "1" : "0"}
           onChange={(e) => setActive(e.target.value === "1")}
-          className="rounded-lg border border-zinc-600 px-3 py-2 text-sm"
-        >
-          <option value="1">Active</option>
-          <option value="0">Inactive</option>
-        </select>
-      </div>
+          options={[
+            { value: "1", label: "Active" },
+            { value: "0", label: "Inactive" },
+          ]}
+        />
+      </AdminInput>
 
       <div className="flex items-center justify-between pt-2">
-        <button
+        <AdminButton
           type="button"
+          variant="danger"
           onClick={handleDelete}
           disabled={deleting}
-          className="rounded-lg border border-red-200 bg-zinc-900 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-900/30 disabled:opacity-50"
+          isLoading={deleting}
         >
-          {deleting ? "..." : "Delete Headgate"}
-        </button>
-        <button
+          Delete Headgate
+        </AdminButton>
+        <AdminButton
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          isLoading={saving}
         >
-          {saving ? "..." : "Save Changes"}
-        </button>
+          Save Changes
+        </AdminButton>
       </div>
     </form>
   );

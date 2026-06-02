@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getMessageLogs, type MessageLogEntry } from "@/actions/communications/send";
 import { formatDate } from "@/lib/format-date";
+import AdminBadge from "./design-system/AdminBadge";
 
 // Icon components
 const Icons = {
@@ -61,22 +62,30 @@ const Icons = {
   ),
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  queued: "bg-stone-100 text-stone-600",
-  sent: "bg-blue-100 text-blue-700",
-  delivered: "bg-emerald-100 text-emerald-700",
-  opened: "bg-violet-100 text-violet-700",
-  clicked: "bg-amber-100 text-amber-700",
-  bounced: "bg-red-100 text-red-700",
-  failed: "bg-red-100 text-red-700",
-  unsubscribed: "bg-orange-100 text-orange-700",
+// Status to badge variant mapping
+const getStatusBadgeProps = (status: string): { variant: "default" | "success" | "warning" | "danger" | "info"; dot: boolean } => {
+  const map: Record<string, { variant: "default" | "success" | "warning" | "danger" | "info"; dot: boolean }> = {
+    queued: { variant: "default", dot: true },
+    sent: { variant: "info", dot: true },
+    delivered: { variant: "success", dot: true },
+    opened: { variant: "info", dot: true },
+    clicked: { variant: "warning", dot: true },
+    bounced: { variant: "danger", dot: true },
+    failed: { variant: "danger", dot: true },
+    unsubscribed: { variant: "warning", dot: true },
+  };
+  return map[status] ?? { variant: "default", dot: true };
 };
 
-const METHOD_COLORS: Record<string, string> = {
-  email: "bg-blue-100 text-blue-700",
-  sms: "bg-emerald-100 text-emerald-700",
-  push: "bg-purple-100 text-purple-700",
-  internal: "bg-stone-100 text-stone-600",
+// Method to badge variant mapping
+const getMethodBadgeProps = (method: string): { variant: "default" | "success" | "warning" | "danger" | "info"; dot: boolean } => {
+  const map: Record<string, { variant: "default" | "success" | "warning" | "danger" | "info"; dot: boolean }> = {
+    email: { variant: "info", dot: true },
+    sms: { variant: "success", dot: true },
+    push: { variant: "warning", dot: true },
+    internal: { variant: "default", dot: true },
+  };
+  return map[method] ?? { variant: "default", dot: true };
 };
 
 const PAGE_SIZE = 20;
@@ -252,17 +261,19 @@ export default function MessageLogPanel({ brandId }: { brandId?: string }) {
                       {log.customer_email ?? "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${METHOD_COLORS[log.delivery_method] ?? "bg-stone-100 text-stone-600"}`}>
-                        {log.delivery_method}
-                      </span>
+                      {(() => {
+                        const props = getMethodBadgeProps(log.delivery_method);
+                        return <AdminBadge variant={props.variant} dot>{log.delivery_method}</AdminBadge>;
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-[var(--admin-text-primary)] text-xs truncate max-w-[160px]" title={log.subject ?? undefined}>
                       {log.subject ?? "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[log.status] ?? "bg-stone-100 text-stone-600"}`}>
-                        {log.status}
-                      </span>
+                      {(() => {
+                        const props = getStatusBadgeProps(log.status);
+                        return <AdminBadge variant={props.variant} dot>{log.status}</AdminBadge>;
+                      })()}
                       {log.error_message && (
                         <p className="text-[10px] text-red-600 mt-0.5 truncate max-w-[100px]" title={log.error_message}>
                           {log.error_message}
@@ -272,24 +283,16 @@ export default function MessageLogPanel({ brandId }: { brandId?: string }) {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {log.delivered_at && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 text-[10px] font-medium">
-                            {Icons.check("h-3 w-3")} Delivered
-                          </span>
+                          <AdminBadge variant="success" dot>Delivered</AdminBadge>
                         )}
                         {log.opened_at && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 px-1.5 py-0.5 text-[10px] font-medium">
-                            {Icons.eye("h-3 w-3")} Opened
-                          </span>
+                          <AdminBadge variant="info" dot>Opened</AdminBadge>
                         )}
                         {log.clicked_at && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">
-                            {Icons.mousePointer("h-3 w-3")} Clicked
-                          </span>
+                          <AdminBadge variant="warning" dot>Clicked</AdminBadge>
                         )}
                         {log.bounced_at && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 text-red-700 px-1.5 py-0.5 text-[10px] font-medium">
-                            {Icons.x("h-3 w-3")} Bounced
-                          </span>
+                          <AdminBadge variant="danger" dot>Bounced</AdminBadge>
                         )}
                       </div>
                     </td>
@@ -308,38 +311,32 @@ export default function MessageLogPanel({ brandId }: { brandId?: string }) {
                     <div className="text-sm font-semibold text-[var(--admin-text-primary)]">{log.customer_email ?? "—"}</div>
                     <div className="text-xs text-[var(--admin-text-muted)] mt-0.5">{log.subject ?? "—"}</div>
                   </div>
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${STATUS_COLORS[log.status] ?? "bg-stone-100 text-stone-600"}`}>
-                    {log.status}
-                  </span>
+                  {(() => {
+                    const props = getStatusBadgeProps(log.status);
+                    return <AdminBadge variant={props.variant} dot>{log.status}</AdminBadge>;
+                  })()}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${METHOD_COLORS[log.delivery_method] ?? "bg-stone-100 text-stone-600"}`}>
-                    {log.delivery_method}
-                  </span>
+                  {(() => {
+                    const props = getMethodBadgeProps(log.delivery_method);
+                    return <AdminBadge variant={props.variant} dot>{log.delivery_method}</AdminBadge>;
+                  })()}
                   <span className="text-xs text-[var(--admin-text-muted)]">
                     {log.sent_at ? formatDate(log.sent_at) : "—"}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {log.delivered_at && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 text-[10px] font-medium">
-                      {Icons.check("h-3 w-3")} Delivered
-                    </span>
+                    <AdminBadge variant="success" dot>Delivered</AdminBadge>
                   )}
                   {log.opened_at && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 px-1.5 py-0.5 text-[10px] font-medium">
-                      {Icons.eye("h-3 w-3")} Opened
-                    </span>
+                    <AdminBadge variant="info" dot>Opened</AdminBadge>
                   )}
                   {log.clicked_at && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">
-                      {Icons.mousePointer("h-3 w-3")} Clicked
-                    </span>
+                    <AdminBadge variant="warning" dot>Clicked</AdminBadge>
                   )}
                   {log.bounced_at && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 text-red-700 px-1.5 py-0.5 text-[10px] font-medium">
-                      {Icons.x("h-3 w-3")} Bounced
-                    </span>
+                    <AdminBadge variant="danger" dot>Bounced</AdminBadge>
                   )}
                 </div>
               </div>

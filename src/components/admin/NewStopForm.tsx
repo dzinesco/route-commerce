@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createStop } from "@/actions/stops/create-stop";
+import { AdminInput, AdminTextInput, AdminSelect } from "./design-system";
 
 type Stop = {
   city: string;
@@ -28,19 +29,22 @@ export default function NewStopForm({ duplicateFrom }: Props) {
 
   const defaultBrand = duplicateFrom?.brand_id ?? "64294306-5f42-463d-a5e8-2ad6c81a96de";
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // Form state
+  const [city, setCity] = useState(duplicateFrom?.city ?? "");
+  const [state, setState] = useState(duplicateFrom?.state ?? "");
+  const [location, setLocation] = useState(duplicateFrom?.location ?? "");
+  const [date, setDate] = useState(duplicateFrom?.date ?? "");
+  const [time, setTime] = useState(duplicateFrom?.time ?? "");
+  const [brandId, setBrandId] = useState(defaultBrand);
+  const [active, setActive] = useState("true");
+  const [address, setAddress] = useState(duplicateFrom?.address ?? "");
+  const [zip, setZip] = useState(duplicateFrom?.zip ?? "");
+  const [cutoffTime, setCutoffTime] = useState(duplicateFrom?.cutoff_time ?? "");
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    const formData = new FormData(e.currentTarget);
-    const city = formData.get("city") as string;
-    const state = formData.get("state") as string;
-    const location = formData.get("location") as string;
-    const date = formData.get("date") as string;
-    const time = formData.get("time") as string;
-    const brandId = formData.get("brand_id") as string;
-    const active = formData.get("active") === "true";
 
     const result = await createStop(brandId, {
       city,
@@ -48,10 +52,10 @@ export default function NewStopForm({ duplicateFrom }: Props) {
       location,
       date,
       time,
-      active,
-      address: (formData.get("address") as string) || null,
-      zip: (formData.get("zip") as string) || null,
-      cutoff_time: (formData.get("cutoff_time") as string) || null,
+      active: active === "true",
+      address: address || null,
+      zip: zip || null,
+      cutoff_time: cutoffTime || null,
     });
 
     if (!result.success) {
@@ -77,127 +81,97 @@ export default function NewStopForm({ duplicateFrom }: Props) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">City</label>
-          <input
-            name="city"
-            required
-            defaultValue={duplicateFrom?.city}
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+        <AdminInput label="City" required>
+          <AdminTextInput
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
             placeholder="e.g. Denver"
           />
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">State</label>
-          <input
-            name="state"
-            required
-            maxLength={2}
-            defaultValue={duplicateFrom?.state}
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+        <AdminInput label="State" required>
+          <AdminTextInput
+            value={state}
+            onChange={(e) => setState(e.target.value)}
             placeholder="e.g. CO"
           />
-        </div>
+        </AdminInput>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">Location Name</label>
-        <input
-          name="location"
-          required
-          defaultValue={duplicateFrom?.location}
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+      <AdminInput label="Location Name" required>
+        <AdminTextInput
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           placeholder="e.g. Southwest Plaza Parking Lot"
         />
-      </div>
+      </AdminInput>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">Date</label>
-          <input
-            name="date"
-            required
+        <AdminInput label="Date" required>
+          <AdminTextInput
             type="date"
-            defaultValue={duplicateFrom?.date}
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
           />
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">Time</label>
-          <input
-            name="time"
-            required
-            type="text"
-            defaultValue={duplicateFrom?.time}
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+        <AdminInput label="Time" required>
+          <AdminTextInput
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
             placeholder="e.g. 8:00 AM – 2:00 PM"
           />
-        </div>
+        </AdminInput>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">Brand</label>
-        <select
-          name="brand_id"
-          required
-          defaultValue={defaultBrand}
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-        >
-          <option value="">Select brand...</option>
-          <option value="64294306-5f42-463d-a5e8-2ad6c81a96de">Tuxedo Corn</option>
-          <option value="b1cb7a96-d82b-40b1-80b1-d6dd26c56e28">Indian River Direct</option>
-        </select>
-      </div>
+      <AdminInput label="Brand" required>
+        <AdminSelect
+          value={brandId}
+          onChange={(e) => setBrandId(e.target.value)}
+          options={[
+            { value: "", label: "Select brand..." },
+            { value: "64294306-5f42-463d-a5e8-2ad6c81a96de", label: "Tuxedo Corn" },
+            { value: "b1cb7a96-d82b-40b1-80b1-d6dd26c56e28", label: "Indian River Direct" },
+          ]}
+        />
+      </AdminInput>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">Active</label>
-        <select
-          name="active"
-          defaultValue="true"
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-        >
-          <option value="true">Yes — show on storefront</option>
-          <option value="false">No — hide from storefront</option>
-        </select>
-      </div>
+      <AdminInput label="Active">
+        <AdminSelect
+          value={active}
+          onChange={(e) => setActive(e.target.value)}
+          options={[
+            { value: "true", label: "Yes — show on storefront" },
+            { value: "false", label: "No — hide from storefront" },
+          ]}
+        />
+      </AdminInput>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">Street Address</label>
-          <input
-            name="address"
-            defaultValue={duplicateFrom?.address ?? ""}
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+        <AdminInput label="Street Address">
+          <AdminTextInput
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
             placeholder="123 Main St"
           />
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">ZIP Code</label>
-          <input
-            name="zip"
-            maxLength={10}
-            defaultValue={duplicateFrom?.zip ?? ""}
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+        <AdminInput label="ZIP Code">
+          <AdminTextInput
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
             placeholder="80102"
           />
-        </div>
+        </AdminInput>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">Order Cutoff</label>
-        <input
-          name="cutoff_time"
+      <AdminInput label="Order Cutoff" helpText="Customers must order before this time to be included at this stop.">
+        <AdminTextInput
           type="datetime-local"
-          defaultValue={duplicateFrom?.cutoff_time ?? ""}
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+          value={cutoffTime}
+          onChange={(e) => setCutoffTime(e.target.value)}
         />
-        <p className="mt-1 text-xs text-slate-400">
-          Customers must order before this time to be included at this stop.
-        </p>
-      </div>
+      </AdminInput>
 
       <div className="flex gap-3">
         <button

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { type Campaign, type CampaignType } from "@/actions/harvest-reach/campaigns";
 import { type Template } from "@/actions/communications/templates";
 import type { Segment, SegmentRuleV2 } from "@/actions/harvest-reach/segments";
+import { AdminButton } from "@/components/admin/design-system";
 
 type Props = {
   brandId: string;
@@ -124,12 +125,9 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
             ? "Your campaign has been sent to all matching customers."
             : `It will be sent on ${new Date(scheduledAt).toLocaleString()}.`}
         </p>
-        <button
-          onClick={() => window.location.href = "/admin/communications"}
-          className="px-6 py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800"
-        >
+        <AdminButton onClick={() => window.location.href = "/admin/communications"}>
           Back to Campaigns
-        </button>
+        </AdminButton>
       </div>
     );
   }
@@ -145,13 +143,13 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
             <div key={label} className="flex items-center">
               <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                 step === n
-                  ? "bg-stone-900 text-white"
+                  ? "bg-[var(--admin-text-primary)] text-white"
                   : done
-                  ? "bg-stone-200 text-stone-700"
+                  ? "bg-[var(--admin-border)] text-[var(--admin-text-secondary)]"
                   : "bg-zinc-950 text-slate-400"
               }`}>
                 <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs border ${
-                  step === n ? "border-white" : done ? "border-stone-400" : "border-zinc-600"
+                  step === n ? "border-white" : done ? "border-[var(--admin-text-muted)]" : "border-zinc-600"
                 }`}>
                   {done ? (
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +160,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                 <span className="hidden sm:inline">{label}</span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`h-0.5 w-6 ${done ? "bg-stone-300" : "bg-slate-200"} mx-1`} />
+                <div className={`h-0.5 w-6 ${done ? "bg-[var(--admin-border)]" : "bg-slate-200"} mx-1`} />
               )}
             </div>
           );
@@ -189,23 +187,20 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     placeholder="Subject line"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-slate-900"
+                    className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--admin-accent)]"
                   />
                   <textarea
                     placeholder="Email body text…"
                     value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
                     rows={5}
-                    className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm resize-none outline-none focus:border-slate-900"
+                    className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm resize-none outline-none focus:border-[var(--admin-accent)]"
                   />
                 </div>
                 <div className="flex justify-end">
-                  <button
-                    onClick={() => setStep(2)}
-                    className="px-5 py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800"
-                  >
+                  <AdminButton onClick={() => setStep(2)}>
                     Continue
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             ) : (
@@ -213,7 +208,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                 {/* Start from scratch */}
                 <button
                   onClick={() => setStep(2)}
-                  className="rounded-xl border-2 border-dashed border-zinc-600 p-5 text-left hover:border-stone-400 hover:bg-zinc-950 transition-all group"
+                  className="rounded-xl border-2 border-dashed border-zinc-600 p-5 text-left hover:border-[var(--admin-border)] hover:bg-zinc-950 transition-all group"
                 >
                   <span className="text-2xl block mb-2">+</span>
                   <p className="text-sm font-medium text-zinc-300 group-hover:text-zinc-100">Start from scratch</p>
@@ -227,8 +222,8 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     onClick={() => handleTemplateSelect(t)}
                     className={`rounded-xl border p-4 text-left transition-all ${
                       selectedTemplateId === t.id
-                        ? "border-stone-900 bg-zinc-950"
-                        : "border-zinc-800 hover:border-slate-400 hover:bg-zinc-800"
+                        ? "border-[var(--admin-text-primary)] bg-zinc-950"
+                        : "border-zinc-800 hover:border-[var(--admin-border)] hover:bg-zinc-800"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -263,7 +258,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. May Sweet Corn Promotion"
-                  className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-slate-900"
+                  className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--admin-accent)]"
                 />
               </div>
 
@@ -275,7 +270,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     onChange={(e) => {
                       setSelectedSegmentId(e.target.value);
                     }}
-                    className="flex-1 border border-zinc-600 rounded-lg px-3 py-2.5 text-sm bg-zinc-900 outline-none focus:border-slate-900"
+                    className="flex-1 border border-zinc-600 rounded-lg px-3 py-2.5 text-sm bg-zinc-900 outline-none focus:border-[var(--admin-accent)]"
                   >
                     <option value="">— Choose a saved segment —</option>
                     {segments.map((s) => (
@@ -283,12 +278,9 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     ))}
                   </select>
                   {selectedSegmentId && (
-                    <button
-                      onClick={() => setSelectedSegmentId("")}
-                      className="px-3 text-xs text-slate-400 hover:text-red-500 border border-zinc-800 rounded-lg hover:border-red-200"
-                    >
+                    <AdminButton variant="secondary" size="sm" onClick={() => setSelectedSegmentId("")}>
                       Clear
-                    </button>
+                    </AdminButton>
                   )}
                 </div>
               </div>
@@ -297,20 +289,13 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
             {error && <p className="text-sm text-red-400">{error}</p>}
 
             <div className="flex justify-between pt-2">
-              <button
-                onClick={() => setStep(1)}
-                className="px-4 py-2.5 text-sm text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
-              >
+              <AdminButton variant="ghost" onClick={() => setStep(1)}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
-              </button>
-              <button
-                onClick={() => setStep(3)}
-                disabled={!name}
-                className="px-5 py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 disabled:opacity-40"
-              >
+              </AdminButton>
+              <AdminButton onClick={() => setStep(3)} disabled={!name}>
                 Continue to Preview
-              </button>
+              </AdminButton>
             </div>
           </div>
         )}
@@ -326,7 +311,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
             {/* Mock email frame */}
             <div className="rounded-xl border border-zinc-800 bg-slate-50 overflow-hidden">
               <div className="px-4 py-3 bg-zinc-900 border-b border-zinc-800 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-stone-300" />
+                <div className="w-8 h-8 rounded-full bg-[var(--admin-border)]" />
                 <div>
                   <p className="text-xs font-medium text-zinc-300">Your Brand</p>
                   <p className="text-xs text-slate-400">To: {"{{customer_name}}"}</p>
@@ -345,24 +330,18 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-slate-900"
+                className="w-full border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--admin-accent)]"
               />
             </div>
 
             <div className="flex justify-between pt-2">
-              <button
-                onClick={() => setStep(2)}
-                className="px-4 py-2.5 text-sm text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
-              >
+              <AdminButton variant="ghost" onClick={() => setStep(2)}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
-              </button>
-              <button
-                onClick={() => setStep(4)}
-                className="px-5 py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800"
-              >
+              </AdminButton>
+              <AdminButton onClick={() => setStep(4)}>
                 Continue to Schedule
-              </button>
+              </AdminButton>
             </div>
           </div>
         )}
@@ -385,12 +364,12 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     onClick={() => setCampaignType(ct.value)}
                     className={`rounded-xl border py-3 px-4 text-left transition-all ${
                       campaignType === ct.value
-                        ? "border-stone-900 bg-stone-900 text-white"
-                        : "border-zinc-800 hover:border-slate-400 hover:bg-zinc-800"
+                        ? "border-[var(--admin-text-primary)] bg-[var(--admin-text-primary)] text-white"
+                        : "border-zinc-800 hover:border-[var(--admin-border)] hover:bg-zinc-800"
                     }`}
                   >
                     <p className={`text-sm font-medium ${campaignType === ct.value ? "text-white" : "text-zinc-300"}`}>{ct.label}</p>
-                    <p className={`text-xs mt-0.5 ${campaignType === ct.value ? "text-stone-300" : "text-slate-400"}`}>{ct.desc}</p>
+                    <p className={`text-xs mt-0.5 ${campaignType === ct.value ? "text-[var(--admin-border)]" : "text-slate-400"}`}>{ct.desc}</p>
                   </button>
                 ))}
               </div>
@@ -405,7 +384,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     type="radio"
                     checked={sendNow}
                     onChange={() => setSendNow(true)}
-                    className="accent-stone-900 w-4 h-4"
+                    className="accent-[var(--admin-accent)] w-4 h-4"
                   />
                   <span className="text-sm font-medium text-zinc-300">Send now</span>
                 </label>
@@ -414,7 +393,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     type="radio"
                     checked={!sendNow}
                     onChange={() => setSendNow(false)}
-                    className="accent-stone-900 w-4 h-4"
+                    className="accent-[var(--admin-accent)] w-4 h-4"
                   />
                   <span className="text-sm font-medium text-zinc-300">Schedule for later</span>
                 </label>
@@ -428,7 +407,7 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                   type="datetime-local"
                   value={scheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
-                  className="border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-slate-900"
+                  className="border border-zinc-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--admin-accent)]"
                   min={new Date().toISOString().slice(0, 16)}
                 />
               </div>
@@ -452,20 +431,17 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
             {error && <p className="text-sm text-red-400">{error}</p>}
 
             <div className="flex justify-between pt-2">
-              <button
-                onClick={() => setStep(3)}
-                className="px-4 py-2.5 text-sm text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
-              >
+              <AdminButton variant="ghost" onClick={() => setStep(3)}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton
                 onClick={handleCreateOrSchedule}
-                disabled={saving || (!sendNow && !scheduledAt)}
-                className="px-5 py-2.5 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50"
+                isLoading={saving}
+                disabled={(!sendNow && !scheduledAt)}
               >
                 {saving ? "Processing…" : sendNow ? "Send Campaign" : "Schedule Campaign"}
-              </button>
+              </AdminButton>
             </div>
           </div>
         )}

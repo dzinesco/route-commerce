@@ -19,6 +19,7 @@ import {
   type TimeTrackingSettings,
   type NotificationLogEntry,
 } from "@/actions/time-tracking";
+import { AdminButton } from "@/components/admin/design-system";
 
 // One-color outline icons
 const Icons = {
@@ -306,107 +307,87 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
     daily_reached:        { en: "Daily OT Reached",        color: "bg-red-100 text-red-700" },
     weekly_approaching:   { en: "Weekly OT Approaching",  color: "bg-amber-100 text-amber-700" },
     weekly_reached:       { en: "Weekly OT Reached",       color: "bg-red-100 text-red-700" },
-    end_of_period_summary:{ en: "Period Summary",          color: "bg-emerald-100 text-emerald-700" },
+    end_of_period_summary:{ en: "Period Summary",          color: "bg-green-100 text-green-700" },
   };
 
-  if (loading) return <div className="text-center py-16 text-stone-500 text-sm">Loading...</div>;
+  if (loading) return <div className="text-center py-16 text-[var(--admin-text-muted)] text-sm">Loading...</div>;
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-stone-900">Time Tracking</h2>
-          <p className="text-sm text-stone-500 mt-0.5">
-            {tab === "dashboard" ? "Summary, exports & recent activity" : "Workers, tasks & overtime rules"}
-          </p>
-        </div>
-      </div>
-
-      {/* Two-tab nav */}
-      <div className="flex gap-1 border-b border-stone-200">
-        <button onClick={() => setTab("dashboard")} className={`px-4 py-2 text-sm font-semibold transition-all border-b-2 -mb-px ${tab === "dashboard" ? "text-stone-900 border-stone-900" : "text-stone-500 border-transparent hover:text-stone-700"}`}>
-          Dashboard
-        </button>
-        <button onClick={() => setTab("settings")} className={`px-4 py-2 text-sm font-semibold transition-all border-b-2 -mb-px ${tab === "settings" ? "text-stone-900 border-stone-900" : "text-stone-500 border-transparent hover:text-stone-700"}`}>
-          Settings
-        </button>
-      </div>
-
       {/* Dashboard tab */}
       {tab === "dashboard" && (
         <div className="space-y-6">
           {/* Stat row */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white border border-stone-200 rounded-xl p-5 text-center shadow-sm">
-              <p className="text-3xl font-bold text-stone-900">{workers.length}</p>
-              <p className="text-xs text-stone-500 uppercase tracking-widest mt-1">Workers</p>
+            <div className="bg-white border border-[var(--admin-border)] rounded-xl p-5 text-center">
+              <p className="text-3xl font-bold text-[var(--admin-text-primary)]">{workers.length}</p>
+              <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-widest mt-1">Workers</p>
             </div>
-            <div className="bg-white border border-stone-200 rounded-xl p-5 text-center shadow-sm">
-              <p className="text-3xl font-bold text-stone-900">{tasks.length}</p>
-              <p className="text-xs text-stone-500 uppercase tracking-widest mt-1">Tasks</p>
+            <div className="bg-white border border-[var(--admin-border)] rounded-xl p-5 text-center">
+              <p className="text-3xl font-bold text-[var(--admin-text-primary)]">{tasks.length}</p>
+              <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-widest mt-1">Tasks</p>
             </div>
-            <div className="bg-white border border-stone-200 rounded-xl p-5 text-center shadow-sm">
+            <div className="bg-white border border-[var(--admin-border)] rounded-xl p-5 text-center">
               <p className="text-3xl font-bold text-amber-600">{notificationLog.filter(n => n.email_sent || n.sms_sent).length}</p>
-              <p className="text-xs text-stone-500 uppercase tracking-widest mt-1">Alerts Sent</p>
+              <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-widest mt-1">Alerts Sent</p>
             </div>
           </div>
 
           {/* Quick export section */}
-          <div className="bg-white border border-stone-200 rounded-xl p-6 space-y-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-stone-800">Export Data</h3>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Export Data</h3>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => triggerDownload(buildExportUrl("quickbooks"))}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-emerald-500 transition-all text-left">
-                <span className="text-stone-400">{Icons.clock("h-5 w-5")}</span>
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--admin-bg-subtle)] border border-[var(--admin-border)] hover:border-[var(--admin-accent)] transition-all text-left">
+                <span className="text-[var(--admin-text-muted)]">{Icons.clock("h-5 w-5")}</span>
                 <div>
-                  <p className="text-sm font-semibold text-stone-800">QuickBooks</p>
-                  <p className="text-xs text-stone-500">Time import CSV</p>
+                  <p className="text-sm font-semibold text-[var(--admin-text-primary)]">QuickBooks</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Time import CSV</p>
                 </div>
               </button>
               <button onClick={() => triggerDownload(buildExportUrl("payroll"))}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-blue-500 transition-all text-left">
-                <span className="text-stone-400">{Icons.dollarSign("h-5 w-5")}</span>
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--admin-bg-subtle)] border border-[var(--admin-border)] hover:border-blue-500 transition-all text-left">
+                <span className="text-[var(--admin-text-muted)]">{Icons.dollarSign("h-5 w-5")}</span>
                 <div>
-                  <p className="text-sm font-semibold text-stone-800">Payroll</p>
-                  <p className="text-xs text-stone-500">ADP / Gusto / Generic</p>
+                  <p className="text-sm font-semibold text-[var(--admin-text-primary)]">Payroll</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">ADP / Gusto / Generic</p>
                 </div>
               </button>
               <button onClick={() => triggerDownload(buildExportUrl("detailed"))}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-violet-500 transition-all text-left">
-                <span className="text-stone-400">{Icons.clipboard("h-5 w-5")}</span>
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--admin-bg-subtle)] border border-[var(--admin-border)] hover:border-violet-500 transition-all text-left">
+                <span className="text-[var(--admin-text-muted)]">{Icons.clipboard("h-5 w-5")}</span>
                 <div>
-                  <p className="text-sm font-semibold text-stone-800">Detailed Log</p>
-                  <p className="text-xs text-stone-500">Full audit report</p>
+                  <p className="text-sm font-semibold text-[var(--admin-text-primary)]">Detailed Log</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Full audit report</p>
                 </div>
               </button>
               <button onClick={() => triggerDownload(buildExportUrl("summary"))}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 hover:border-amber-500 transition-all text-left">
-                <span className="text-stone-400">{Icons.chart("h-5 w-5")}</span>
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--admin-bg-subtle)] border border-[var(--admin-border)] hover:border-amber-500 transition-all text-left">
+                <span className="text-[var(--admin-text-muted)]">{Icons.chart("h-5 w-5")}</span>
                 <div>
-                  <p className="text-sm font-semibold text-stone-800">Period Summary</p>
-                  <p className="text-xs text-stone-500">Per-worker totals</p>
+                  <p className="text-sm font-semibold text-[var(--admin-text-primary)]">Period Summary</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Per-worker totals</p>
                 </div>
               </button>
             </div>
-            <div className="flex items-center gap-4 text-xs text-stone-500">
+            <div className="flex items-center gap-4 text-xs text-[var(--admin-text-muted)]">
               <span>From:</span>
               <input type="date" value={exportStart} onChange={e => setExportStart(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-700 focus:outline-none focus:border-emerald-500" />
+                className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)]" />
               <span>To:</span>
               <input type="date" value={exportEnd} onChange={e => setExportEnd(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-700 focus:outline-none focus:border-emerald-500" />
+                className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)]" />
             </div>
           </div>
 
           {/* Notification log */}
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-stone-800">Recent Alerts</h3>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Recent Alerts</h3>
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-stone-500 uppercase tracking-widest border-b border-stone-100">
+                <tr className="text-xs text-[var(--admin-text-muted)] uppercase tracking-widest border-b border-[var(--admin-border)]">
                   <th className="text-left px-5 py-3 font-medium">Time</th>
                   <th className="text-left px-5 py-3 font-medium">Worker</th>
                   <th className="text-left px-5 py-3 font-medium">Alert</th>
@@ -416,21 +397,21 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </thead>
               <tbody>
                 {notificationLog.length === 0 ? (
-                  <tr><td colSpan={5} className="px-5 py-8 text-center text-stone-400">No alerts sent yet</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-8 text-center text-[var(--admin-text-muted)]">No alerts sent yet</td></tr>
                 ) : notificationLog.slice(0, 20).map(entry => {
                   const meta = triggerLabel[entry.trigger_type] ?? { en: entry.trigger_type, color: "bg-stone-100 text-stone-500" };
                   return (
-                    <tr key={entry.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-                      <td className="px-5 py-3.5 text-stone-500 text-xs">{new Date(entry.created_at).toLocaleString()}</td>
-                      <td className="px-5 py-3.5 text-stone-800 font-medium">{entry.worker_name ?? "—"}</td>
+                    <tr key={entry.id} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-bg-subtle)] transition-colors">
+                      <td className="px-5 py-3.5 text-[var(--admin-text-muted)] text-xs">{new Date(entry.created_at).toLocaleString()}</td>
+                      <td className="px-5 py-3.5 text-[var(--admin-text-primary)] font-medium">{entry.worker_name ?? "—"}</td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${meta.color}`}>{meta.en}</span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className="text-emerald-600">{Icons.check("h-4 w-4")}</span>
+                        <span className="text-[var(--admin-accent)]">{Icons.check("h-4 w-4")}</span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className="text-stone-300">{entry.sms_sent ? Icons.check("h-4 w-4 text-emerald-600") : "—"}</span>
+                        <span className="text-[var(--admin-text-muted)]">{entry.sms_sent ? Icons.check("h-4 w-4 text-[var(--admin-accent)]") : "—"}</span>
                       </td>
                     </tr>
                   );
@@ -445,15 +426,16 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
       {tab === "settings" && (
         <div className="space-y-6">
           {/* Workers section */}
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-stone-800">Workers & PINs</h3>
-              <button onClick={() => { setEditingWorker(null); setWorkerName(""); setWorkerRole("worker"); setWorkerLang("en"); setWorkerActive(true); setShowWorkerModal(true); setWorkerError(null); setResetPinResult(null); }}
-                className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-semibold transition-all">+ Add Worker</button>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Workers & PINs</h3>
+              <AdminButton onClick={openAddWorker} size="sm">
+                + Add Worker
+              </AdminButton>
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-stone-500 uppercase tracking-widest border-b border-stone-100">
+                <tr className="text-xs text-[var(--admin-text-muted)] uppercase tracking-widest border-b border-[var(--admin-border)]">
                   <th className="text-left px-5 py-3 font-medium">Name</th>
                   <th className="text-left px-5 py-3 font-medium">Role</th>
                   <th className="text-left px-5 py-3 font-medium">Lang</th>
@@ -464,23 +446,23 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </thead>
               <tbody>
                 {workers.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-12 text-center text-stone-400">No workers yet</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-12 text-center text-[var(--admin-text-muted)]">No workers yet</td></tr>
                 ) : workers.map(w => (
-                  <tr key={w.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-                    <td className="px-5 py-3.5 text-stone-800 font-medium">{w.name}</td>
-                    <td className="px-5 py-3.5 text-stone-500 capitalize">{w.role}</td>
-                    <td className="px-5 py-3.5 text-stone-400 uppercase text-xs font-mono">{w.lang}</td>
+                  <tr key={w.id} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-bg-subtle)] transition-colors">
+                    <td className="px-5 py-3.5 text-[var(--admin-text-primary)] font-medium">{w.name}</td>
+                    <td className="px-5 py-3.5 text-[var(--admin-text-muted)] capitalize">{w.role}</td>
+                    <td className="px-5 py-3.5 text-[var(--admin-text-muted)] uppercase text-xs font-mono">{w.lang}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${w.active ? "bg-emerald-100 text-emerald-700" : "bg-stone-100 text-stone-500"}`}>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${w.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                         {w.active ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-stone-400 text-xs">{w.last_used_at ? new Date(w.last_used_at).toLocaleDateString() : "—"}</td>
+                    <td className="px-5 py-3.5 text-[var(--admin-text-muted)] text-xs">{w.last_used_at ? new Date(w.last_used_at).toLocaleDateString() : "—"}</td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => openEditWorker(w)} className="text-xs text-stone-500 hover:text-stone-800 px-2 py-1 rounded-lg hover:bg-stone-100 transition-all">Edit</button>
-                        <button onClick={() => handleResetPin(w.id)} className="text-xs text-amber-600 hover:text-amber-800 px-2 py-1 rounded-lg hover:bg-amber-50 transition-all">Reset PIN</button>
-                        <button onClick={() => handleDeleteWorker(w.id)} className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-all">Delete</button>
+                        <AdminButton variant="ghost" size="sm" onClick={() => openEditWorker(w)}>Edit</AdminButton>
+                        <AdminButton variant="ghost" size="sm" onClick={() => handleResetPin(w.id)}>Reset PIN</AdminButton>
+                        <AdminButton variant="danger" size="sm" onClick={() => handleDeleteWorker(w.id)}>Delete</AdminButton>
                       </div>
                     </td>
                   </tr>
@@ -490,15 +472,16 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
           </div>
 
           {/* Tasks section */}
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-stone-800">Tasks</h3>
-              <button onClick={() => { setEditingTask(null); setTaskName(""); setTaskNameEs(""); setTaskUnit("hours"); setTaskSortOrder(0); setTaskActive(true); setShowTaskModal(true); setTaskError(null); }}
-                className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-semibold transition-all">+ Add Task</button>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Tasks</h3>
+              <AdminButton onClick={openAddTask} size="sm">
+                + Add Task
+              </AdminButton>
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-stone-500 uppercase tracking-widest border-b border-stone-100">
+                <tr className="text-xs text-[var(--admin-text-muted)] uppercase tracking-widest border-b border-[var(--admin-border)]">
                   <th className="text-left px-5 py-3 font-medium">Name</th>
                   <th className="text-left px-5 py-3 font-medium">Name (ES)</th>
                   <th className="text-left px-5 py-3 font-medium">Unit</th>
@@ -509,22 +492,22 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </thead>
               <tbody>
                 {tasks.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-12 text-center text-stone-400">No tasks yet</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-12 text-center text-[var(--admin-text-muted)]">No tasks yet</td></tr>
                 ) : tasks.map(t => (
-                  <tr key={t.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-                    <td className="px-5 py-3.5 text-stone-800 font-medium">{t.name}</td>
-                    <td className="px-5 py-3.5 text-stone-500">{t.name_es ?? "—"}</td>
-                    <td className="px-5 py-3.5 text-stone-400 text-xs font-mono">{t.unit}</td>
-                    <td className="px-5 py-3.5 text-stone-400 text-xs">{t.sort_order}</td>
+                  <tr key={t.id} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-bg-subtle)] transition-colors">
+                    <td className="px-5 py-3.5 text-[var(--admin-text-primary)] font-medium">{t.name}</td>
+                    <td className="px-5 py-3.5 text-[var(--admin-text-muted)]">{t.name_es ?? "—"}</td>
+                    <td className="px-5 py-3.5 text-[var(--admin-text-muted)] text-xs font-mono">{t.unit}</td>
+                    <td className="px-5 py-3.5 text-[var(--admin-text-muted)] text-xs">{t.sort_order}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${t.active ? "bg-emerald-100 text-emerald-700" : "bg-stone-100 text-stone-500"}`}>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${t.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                         {t.active ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => openEditTask(t)} className="text-xs text-stone-500 hover:text-stone-800 px-2 py-1 rounded-lg hover:bg-stone-100 transition-all">Edit</button>
-                        <button onClick={() => handleDeleteTask(t.id)} className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-all">Delete</button>
+                        <AdminButton variant="ghost" size="sm" onClick={() => openEditTask(t)}>Edit</AdminButton>
+                        <AdminButton variant="danger" size="sm" onClick={() => handleDeleteTask(t.id)}>Delete</AdminButton>
                       </div>
                     </td>
                   </tr>
@@ -534,41 +517,41 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
           </div>
 
           {/* Pay Period & Overtime section */}
-          <div className="bg-white border border-stone-200 rounded-xl p-6 space-y-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-stone-800">Pay Period & Overtime</h3>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl p-6 space-y-5">
+            <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Pay Period & Overtime</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-2">Work week starts on</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-2">Work week starts on</label>
                 <select value={payPeriodStartDay} onChange={e => setPayPeriodStartDay(Number(e.target.value))}
-                  className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors">
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors">
                   {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-2">Pay period length</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-2">Pay period length</label>
                 <div className="flex items-center gap-3">
                   <input type="number" min={1} max={31} value={payPeriodLength}
                     onChange={e => setPayPeriodLength(Number(e.target.value))}
-                    className="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors" />
-                  <span className="text-sm text-stone-500">days</span>
+                    className="flex-1 px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors" />
+                  <span className="text-sm text-[var(--admin-text-muted)]">days</span>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-2">Daily overtime threshold</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-2">Daily overtime threshold</label>
                 <div className="flex items-center gap-3">
                   <input type="number" min={1} max={24} value={dailyOvertimeThreshold}
                     onChange={e => setDailyOvertimeThreshold(Number(e.target.value))}
-                    className="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors" />
-                  <span className="text-sm text-stone-500">hrs</span>
+                    className="flex-1 px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors" />
+                  <span className="text-sm text-[var(--admin-text-muted)]">hrs</span>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-2">Weekly overtime threshold</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-2">Weekly overtime threshold</label>
                 <div className="flex items-center gap-3">
                   <input type="number" min={1} max={80} value={weeklyOvertimeThreshold}
                     onChange={e => setWeeklyOvertimeThreshold(Number(e.target.value))}
-                    className="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors" />
-                  <span className="text-sm text-stone-500">hrs</span>
+                    className="flex-1 px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors" />
+                  <span className="text-sm text-[var(--admin-text-muted)]">hrs</span>
                 </div>
               </div>
             </div>
@@ -586,36 +569,36 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
           </div>
 
           {/* Alert Settings */}
-          <div className="bg-white border border-stone-200 rounded-xl p-6 space-y-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-stone-800">Alert Settings</h3>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl p-6 space-y-5">
+            <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Alert Settings</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-stone-700 font-medium">Daily overtime alerts</p>
-                  <p className="text-xs text-stone-500">Send notification when worker hits daily threshold</p>
+                  <p className="text-sm text-[var(--admin-text-secondary)] font-medium">Daily overtime alerts</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Send notification when worker hits daily threshold</p>
                 </div>
                 <button onClick={() => setEnableDailyAlerts(!enableDailyAlerts)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enableDailyAlerts ? "bg-emerald-600" : "bg-stone-300"}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enableDailyAlerts ? "bg-[var(--admin-accent)]" : "bg-stone-300"}`}>
                   <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${enableDailyAlerts ? "translate-x-4" : "translate-x-1"}`} />
                 </button>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-stone-700 font-medium">Weekly overtime alerts</p>
-                  <p className="text-xs text-stone-500">Send notification when worker hits weekly threshold</p>
+                  <p className="text-sm text-[var(--admin-text-secondary)] font-medium">Weekly overtime alerts</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Send notification when worker hits weekly threshold</p>
                 </div>
                 <button onClick={() => setEnableWeeklyAlerts(!enableWeeklyAlerts)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enableWeeklyAlerts ? "bg-emerald-600" : "bg-stone-300"}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enableWeeklyAlerts ? "bg-[var(--admin-accent)]" : "bg-stone-300"}`}>
                   <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${enableWeeklyAlerts ? "translate-x-4" : "translate-x-1"}`} />
                 </button>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-stone-700 font-medium">Show overtime warning on employee screen</p>
-                  <p className="text-xs text-stone-500">Display alert when worker approaches thresholds</p>
+                  <p className="text-sm text-[var(--admin-text-secondary)] font-medium">Show overtime warning on employee screen</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Display alert when worker approaches thresholds</p>
                 </div>
                 <button onClick={() => setOvertimeNotifications(!overtimeNotifications)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${overtimeNotifications ? "bg-emerald-600" : "bg-stone-300"}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${overtimeNotifications ? "bg-[var(--admin-accent)]" : "bg-stone-300"}`}>
                   <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${overtimeNotifications ? "translate-x-4" : "translate-x-1"}`} />
                 </button>
               </div>
@@ -623,42 +606,42 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
           </div>
 
           {/* Notification Recipients */}
-          <div className="bg-white border border-stone-200 rounded-xl p-6 space-y-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-stone-800">Notification Recipients</h3>
+          <div className="bg-white border border-[var(--admin-border)] rounded-xl p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Notification Recipients</h3>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-2">Email addresses</label>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-2">Email addresses</label>
               <div className="flex gap-2">
                 <input value={newEmail}
                   onChange={e => setNewEmail(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && (addEmail(), e.preventDefault())}
-                  className="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors"
                   placeholder="manager@farm.com" />
-                <button onClick={addEmail} className="px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-all">Add</button>
+                <AdminButton onClick={addEmail}>Add</AdminButton>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 {notificationEmails.map(e => (
-                  <span key={e} className="inline-flex items-center gap-1 bg-stone-100 text-stone-700 text-xs px-2 py-1 rounded-lg">
+                  <span key={e} className="inline-flex items-center gap-1 bg-[var(--admin-bg-subtle)] text-[var(--admin-text-secondary)] text-xs px-2 py-1 rounded-lg">
                     {e}
-                    <button onClick={() => removeEmail(e)} className="text-stone-400 hover:text-red-500 ml-1">&times;</button>
+                    <button onClick={() => removeEmail(e)} className="text-[var(--admin-text-muted)] hover:text-red-500 ml-1">&times;</button>
                   </span>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-2">SMS numbers</label>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-2">SMS numbers</label>
               <div className="flex gap-2">
                 <input value={newSms}
                   onChange={e => setNewSms(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && (addSms(), e.preventDefault())}
-                  className="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors"
                   placeholder="+1234567890" />
-                <button onClick={addSms} className="px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-all">Add</button>
+                <AdminButton onClick={addSms}>Add</AdminButton>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 {notificationSmsNumbers.map(n => (
-                  <span key={n} className="inline-flex items-center gap-1 bg-stone-100 text-stone-700 text-xs px-2 py-1 rounded-lg">
+                  <span key={n} className="inline-flex items-center gap-1 bg-[var(--admin-bg-subtle)] text-[var(--admin-text-secondary)] text-xs px-2 py-1 rounded-lg">
                     {n}
-                    <button onClick={() => removeSms(n)} className="text-stone-400 hover:text-red-500 ml-1">&times;</button>
+                    <button onClick={() => removeSms(n)} className="text-[var(--admin-text-muted)] hover:text-red-500 ml-1">&times;</button>
                   </span>
                 ))}
               </div>
@@ -669,51 +652,50 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
             <div className="bg-red-50 border border-red-200 rounded-xl py-3 px-4 text-red-700 text-sm">{settingsError}</div>
           )}
           {settingsSaved && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-3 px-4 text-emerald-700 text-sm">Settings saved successfully.</div>
+            <div className="bg-green-50 border border-green-200 rounded-xl py-3 px-4 text-green-700 text-sm">Settings saved successfully.</div>
           )}
-          <button onClick={handleSaveNotifications} disabled={settingsSaving}
-            className="px-6 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 font-semibold text-sm text-white transition-all">
-            {settingsSaving ? "Saving..." : "Save Settings"}
-          </button>
+          <AdminButton onClick={handleSaveNotifications} isLoading={settingsSaving}>
+            Save Settings
+          </AdminButton>
         </div>
       )}
 
       {/* Worker Modal */}
       {showWorkerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-md shadow-xl">
-            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-stone-900">{editingWorker ? "Edit Worker" : "Add Worker"}</h3>
-              <button onClick={() => setShowWorkerModal(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">&times;</button>
+          <div className="bg-white border border-[var(--admin-border)] rounded-2xl w-full max-w-md shadow-xl">
+            <div className="px-6 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[var(--admin-text-primary)]">{editingWorker ? "Edit Worker" : "Add Worker"}</h3>
+              <button onClick={() => setShowWorkerModal(false)} className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] text-xl leading-none">&times;</button>
             </div>
             <div className="p-6 space-y-4">
               {workerError && <div className="bg-red-50 border border-red-200 rounded-xl py-3 px-4 text-red-700 text-sm">{workerError}</div>}
               {resetPinResult && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-3 px-4">
-                  <p className="text-emerald-700 text-sm font-semibold mb-1">New PIN:</p>
-                  <p className="text-2xl font-mono font-bold text-stone-900">{resetPinResult}</p>
-                  <p className="text-stone-500 text-xs mt-1">Show this to the worker — it will not be shown again.</p>
+                <div className="bg-green-50 border border-green-200 rounded-xl py-3 px-4">
+                  <p className="text-green-700 text-sm font-semibold mb-1">New PIN:</p>
+                  <p className="text-2xl font-mono font-bold text-[var(--admin-text-primary)]">{resetPinResult}</p>
+                  <p className="text-[var(--admin-text-muted)] text-xs mt-1">Show this to the worker — it will not be shown again.</p>
                 </div>
               )}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Name *</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Name *</label>
                 <input value={workerName} onChange={e => setWorkerName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors"
                   placeholder="Worker name" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Role</label>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Role</label>
                   <select value={workerRole} onChange={e => setWorkerRole(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors">
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors">
                     <option value="worker">Worker</option>
                     <option value="time_admin">Time Admin</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Lang</label>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Lang</label>
                   <select value={workerLang} onChange={e => setWorkerLang(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors">
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors">
                     <option value="en">English</option>
                     <option value="es">Español</option>
                   </select>
@@ -721,25 +703,23 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="workerActive" checked={workerActive} onChange={e => setWorkerActive(e.target.checked)}
-                  className="w-4 h-4 rounded border-stone-300 bg-white text-emerald-600" />
-                <label htmlFor="workerActive" className="text-sm text-stone-700">Active</label>
+                  className="w-4 h-4 rounded border-[var(--admin-border)] bg-white text-[var(--admin-accent)]" />
+                <label htmlFor="workerActive" className="text-sm text-[var(--admin-text-secondary)]">Active</label>
               </div>
               {editingWorker && (
-                <div className="pt-2 border-t border-stone-100">
-                  <button onClick={() => handleResetPin(editingWorker.id)} className="text-xs text-amber-600 hover:text-amber-800 font-semibold underline underline-offset-2">
+                <div className="pt-2 border-t border-[var(--admin-border)]">
+                  <AdminButton variant="secondary" size="sm" onClick={() => handleResetPin(editingWorker.id)}>
                     Reset PIN for this worker
-                  </button>
+                  </AdminButton>
                 </div>
               )}
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowWorkerModal(false)}
-                  className="flex-1 py-3 rounded-xl font-semibold text-sm text-stone-500 hover:text-stone-700 border border-stone-200 hover:border-stone-300 transition-all">
+                <AdminButton type="button" variant="secondary" onClick={() => setShowWorkerModal(false)} fullWidth>
                   Cancel
-                </button>
-                <button onClick={handleSaveWorker} disabled={submitting}
-                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white transition-all">
+                </AdminButton>
+                <AdminButton type="button" onClick={handleSaveWorker} isLoading={submitting} fullWidth>
                   {submitting ? "..." : editingWorker ? "Save" : "Add Worker"}
-                </button>
+                </AdminButton>
               </div>
             </div>
           </div>
@@ -749,55 +729,53 @@ export default function TimeTrackingSettingsClient({ brandId }: TimeTrackingSett
       {/* Task Modal */}
       {showTaskModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-md shadow-xl">
-            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-stone-900">{editingTask ? "Edit Task" : "Add Task"}</h3>
-              <button onClick={() => setShowTaskModal(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">&times;</button>
+          <div className="bg-white border border-[var(--admin-border)] rounded-2xl w-full max-w-md shadow-xl">
+            <div className="px-6 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[var(--admin-text-primary)]">{editingTask ? "Edit Task" : "Add Task"}</h3>
+              <button onClick={() => setShowTaskModal(false)} className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] text-xl leading-none">&times;</button>
             </div>
             <div className="p-6 space-y-4">
               {taskError && <div className="bg-red-50 border border-red-200 rounded-xl py-3 px-4 text-red-700 text-sm">{taskError}</div>}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Name (EN) *</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Name (EN) *</label>
                 <input value={taskName} onChange={e => setTaskName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors"
                   placeholder="e.g. Harvesting" />
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Name (ES)</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Name (ES)</label>
                 <input value={taskNameEs} onChange={e => setTaskNameEs(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors"
                   placeholder="e.g. Cosecha" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Unit</label>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Unit</label>
                   <select value={taskUnit} onChange={e => setTaskUnit(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors">
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors">
                     <option value="hours">Hours</option>
                     <option value="pieces">Pieces</option>
                     <option value="units">Units</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-stone-500 mb-1.5">Sort Order</label>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-[var(--admin-text-muted)] mb-1.5">Sort Order</label>
                   <input type="number" value={taskSortOrder} onChange={e => setTaskSortOrder(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:border-emerald-500 transition-colors" />
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] focus:outline-none focus:border-[var(--admin-accent)] transition-colors" />
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="taskActive" checked={taskActive} onChange={e => setTaskActive(e.target.checked)}
-                  className="w-4 h-4 rounded border-stone-300 bg-white text-emerald-600" />
-                <label htmlFor="taskActive" className="text-sm text-stone-700">Active</label>
+                  className="w-4 h-4 rounded border-[var(--admin-border)] bg-white text-[var(--admin-accent)]" />
+                <label htmlFor="taskActive" className="text-sm text-[var(--admin-text-secondary)]">Active</label>
               </div>
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowTaskModal(false)}
-                  className="flex-1 py-3 rounded-xl font-semibold text-sm text-stone-500 hover:text-stone-700 border border-stone-200 hover:border-stone-300 transition-all">
+                <AdminButton type="button" variant="secondary" onClick={() => setShowTaskModal(false)} fullWidth>
                   Cancel
-                </button>
-                <button onClick={handleSaveTask} disabled={submitting}
-                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white transition-all">
+                </AdminButton>
+                <AdminButton type="button" onClick={handleSaveTask} isLoading={submitting} fullWidth>
                   {submitting ? "..." : editingTask ? "Save" : "Add Task"}
-                </button>
+                </AdminButton>
               </div>
             </div>
           </div>

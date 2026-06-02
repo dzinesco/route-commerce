@@ -37,6 +37,7 @@ import { getPendingWholesaleRegistrations, approveWholesaleRegistration, getWhol
 import { getCurrentAdminUser } from "@/actions/admin-user";
 import { type AdminUser } from "@/lib/admin-permissions";
 import { formatDate } from "@/lib/format-date";
+import { PageHeader, AdminButton, AdminSearchInput, AdminFilterTabs, AdminBadge } from "@/components/admin/design-system";
 
 type Tab = "dashboard" | "customers" | "products" | "orders" | "settings";
 
@@ -94,46 +95,47 @@ export default function WholesaleClient({ brandId }: { brandId: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <p className="text-stone-500">Loading wholesale data...</p>
+      <div className="min-h-screen bg-[var(--admin-bg)] flex items-center justify-center">
+        <p className="text-[var(--admin-text-muted)]">Loading wholesale data...</p>
       </div>
     );
   }
 
+  // SVG Icon for Wholesale
+  const WholesaleIcon = () => (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+    </svg>
+  );
+
+  const tabs = [
+    { value: "dashboard", label: "Dashboard", count: undefined },
+    { value: "customers", label: "Customers", count: customers.filter(c => c.account_status !== "pending_approval" && c.account_status !== "rejected").length },
+    { value: "products", label: "Products", count: products.length },
+    { value: "orders", label: "Orders", count: orders.length },
+    { value: "settings", label: "Settings" },
+  ];
+
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-200 px-6 py-5">
-        <div className="mx-auto max-w-7xl flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-stone-950 tracking-tight">Wholesale Portal</h1>
-            <p className="mt-0.5 text-sm text-stone-500">Manage wholesale orders, customers, and products</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[var(--admin-bg)]">
+      <PageHeader
+        icon={<WholesaleIcon />}
+        title="Wholesale Portal"
+        subtitle="Manage wholesale orders, customers, and products"
+        className="mb-0"
+      />
 
       {/* Tab nav */}
-      <div className="bg-white border-b border-stone-200 px-6">
-        <div className="mx-auto max-w-7xl">
-          <nav className="flex gap-1 -mb-px">
-            {(["dashboard", "customers", "products", "orders", "settings"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  tab === t
-                    ? "border-emerald-500 text-emerald-700"
-                    : "border-transparent text-stone-500 hover:text-stone-700"
-                }`}
-              >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </nav>
-        </div>
+      <div className="px-6 pb-0">
+        <AdminFilterTabs
+          activeTab={tab}
+          onTabChange={(value) => setTab(value as Tab)}
+          tabs={tabs}
+          size="md"
+        />
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="px-6 py-6">
         {msg && (
           <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
             msg.kind === "success"
@@ -223,30 +225,30 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Open Orders", value: stats.open_orders, color: "bg-white border-stone-200" },
-          { label: "Pickup Today", value: stats.pickup_today, color: "bg-white border-stone-200" },
-          { label: "Past Due", value: stats.past_due, color: "bg-red-50 border-red-200" },
-          { label: "Total Unpaid", value: `$${stats.total_unpaid.toFixed(2)}`, color: "bg-white border-stone-200" },
-          { label: "Awaiting Deposit", value: stats.awaiting_deposit, color: "bg-amber-50 border-amber-200" },
-          { label: "Fulfilled Today", value: stats.fulfilled_today, color: "bg-emerald-50 border-emerald-200" },
+          { label: "Open Orders", value: stats.open_orders, variant: "default" },
+          { label: "Pickup Today", value: stats.pickup_today, variant: "default" },
+          { label: "Past Due", value: stats.past_due, variant: "danger" },
+          { label: "Total Unpaid", value: `$${stats.total_unpaid.toFixed(2)}`, variant: "default" },
+          { label: "Awaiting Deposit", value: stats.awaiting_deposit, variant: "warning" },
+          { label: "Fulfilled Today", value: stats.fulfilled_today, variant: "success" },
         ].map((card) => (
-          <div key={card.label} className={`rounded-xl border p-4 shadow-sm ${card.color}`}>
-            <p className="text-xs text-stone-500">{card.label}</p>
-            <p className="mt-1 text-2xl font-bold text-stone-950">{card.value}</p>
+          <div key={card.label} className={`rounded-xl border shadow-sm ${card.variant === "danger" ? "bg-[var(--admin-danger-light)] border-[var(--admin-danger)]" : card.variant === "warning" ? "bg-[var(--admin-warning-light)] border-[var(--admin-warning)]" : card.variant === "success" ? "bg-[var(--admin-accent-light)] border-[var(--admin-accent)]" : "bg-white border-[var(--admin-border)]"}`}>
+            <p className={`text-xs ${card.variant === "danger" ? "text-[var(--admin-danger)]" : card.variant === "warning" ? "text-[var(--admin-warning)]" : card.variant === "success" ? "text-[var(--admin-accent-text)]" : "text-[var(--admin-text-muted)]"}`}>{card.label}</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--admin-text-primary)]">{card.value}</p>
           </div>
         ))}
       </div>
 
       {/* Recent orders */}
-      <div className="rounded-2xl bg-white border border-stone-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-stone-950 mb-4">Recent Orders</h2>
+      <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-[var(--admin-text-primary)] mb-4">Recent Orders</h2>
         {recentOrders.length === 0 ? (
-          <p className="text-sm text-stone-400 py-8 text-center">No wholesale orders yet.</p>
+          <p className="text-sm text-[var(--admin-text-muted)] py-8 text-center">No wholesale orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-stone-500 border-b">
+                <tr className="text-left text-[var(--admin-text-muted)] border-b">
                   <th className="pb-3 font-medium">Invoice</th>
                   <th className="pb-3 font-medium">Customer</th>
                   <th className="pb-3 font-medium">Pickup Date</th>
@@ -255,19 +257,19 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
                   <th className="pb-3 font-medium">Payment</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-[var(--admin-border-light)]">
                 {recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-stone-50">
-                    <td className="py-3 font-mono text-xs text-stone-500">{order.invoice_number ?? "—"}</td>
-                    <td className="py-3 font-medium text-stone-900">{order.company_name}</td>
-                    <td className="py-3 text-stone-600">{order.anticipated_pickup_date ?? "—"}</td>
-                    <td className="py-3 text-right font-semibold text-stone-950">${Number(order.subtotal).toFixed(2)}</td>
+                  <tr key={order.id} className="hover:bg-[var(--admin-bg-subtle)]">
+                    <td className="py-3 font-mono text-xs text-[var(--admin-text-muted)]">{order.invoice_number ?? "—"}</td>
+                    <td className="py-3 font-medium text-[var(--admin-text-primary)]">{order.company_name}</td>
+                    <td className="py-3 text-[var(--admin-text-secondary)]">{order.anticipated_pickup_date ?? "—"}</td>
+                    <td className="py-3 text-right font-semibold text-[var(--admin-text-primary)]">${Number(order.subtotal).toFixed(2)}</td>
                     <td className="py-3">
                       <StatusBadge status={order.status} />
                     </td>
                     <td className="py-3">
                       <span className={`text-xs font-medium ${
-                        order.payment_status === "paid" ? "text-emerald-600" : "text-amber-600"
+                        order.payment_status === "paid" ? "text-[var(--admin-accent)]" : "text-[var(--admin-warning)]"
                       }`}>
                         {order.payment_status === "paid" ? "Paid" : order.balance_due > 0 ? `$${Number(order.balance_due).toFixed(2)} due` : "Partial"}
                       </span>
@@ -282,12 +284,12 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
 
       {/* Recent webhook activity */}
       {webhookActivity.length > 0 && (
-        <div className="rounded-2xl bg-white border border-stone-200 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-stone-950 mb-4">Recent Webhook Activity</h2>
+        <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-[var(--admin-text-primary)] mb-4">Recent Webhook Activity</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-zinc-500 border-b">
+                <tr className="text-left text-[var(--admin-text-muted)] border-b">
                   <th className="pb-3 font-medium">Event</th>
                   <th className="pb-3 font-medium">Order</th>
                   <th className="pb-3 font-medium">Status</th>
@@ -295,25 +297,25 @@ function DashboardTab({ stats, recentOrders, brandId, onMsg, webhookActivity }: 
                   <th className="pb-3 font-medium">Sent At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--admin-border-light)]">
                 {webhookActivity.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-zinc-800">
+                  <tr key={entry.id} className="hover:bg-[var(--admin-bg-subtle)]">
                     <td className="py-3">
-                      <span className="font-mono text-xs bg-zinc-950 px-2 py-0.5 rounded">{entry.event_type}</span>
+                      <span className="font-mono text-xs bg-[var(--admin-accent)] text-white px-2 py-0.5 rounded">{entry.event_type}</span>
                     </td>
-                    <td className="py-3 font-mono text-xs text-slate-400">{entry.order_id ? entry.order_id.slice(0, 8) : "—"}</td>
+                    <td className="py-3 font-mono text-xs text-[var(--admin-text-muted)]">{entry.order_id ? entry.order_id.slice(0, 8) : "—"}</td>
                     <td className="py-3">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        entry.status === "sent" ? "bg-green-100 text-green-400" :
-                        entry.status === "failed" ? "bg-red-100 text-red-400" :
-                        entry.status === "retrying" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-zinc-950 text-zinc-400"
+                        entry.status === "sent" ? "bg-[var(--admin-accent-light)] text-[var(--admin-accent-text)]" :
+                        entry.status === "failed" ? "bg-[var(--admin-danger-light)] text-[var(--admin-danger)]" :
+                        entry.status === "retrying" ? "bg-[var(--admin-warning-light)] text-[var(--admin-warning)]" :
+                        "bg-[var(--admin-border)] text-[var(--admin-text-secondary)]"
                       }`}>
                         {entry.status}
                       </span>
                     </td>
-                    <td className="py-3 text-zinc-500">{entry.attempts}</td>
-                    <td className="py-3 text-zinc-500">{new Date(entry.created_at).toLocaleString()}</td>
+                    <td className="py-3 text-[var(--admin-text-muted)]">{entry.attempts}</td>
+                    <td className="py-3 text-[var(--admin-text-muted)]">{new Date(entry.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -519,31 +521,41 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
     <div className="space-y-4">
       {/* Sub-tab nav */}
       <div className="flex items-center gap-4">
-        <button onClick={() => setSubTab("customers")}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg ${subTab === "customers" ? "bg-green-100 text-green-400" : "bg-zinc-950 text-zinc-400"}`}>
+        <AdminButton
+          variant={subTab === "customers" ? "primary" : "secondary"}
+          size="sm"
+          onClick={() => setSubTab("customers")}
+        >
           Customers ({customers.filter(c => c.account_status !== "pending_approval" && c.account_status !== "rejected").length})
-        </button>
-        <button onClick={() => setSubTab("registrations")}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg ${subTab === "registrations" ? "bg-green-100 text-green-400" : "bg-zinc-950 text-zinc-400"}`}>
+        </AdminButton>
+        <AdminButton
+          variant={subTab === "registrations" ? "primary" : "secondary"}
+          size="sm"
+          onClick={() => setSubTab("registrations")}
+        >
           Registrations ({registrations.filter(r => r.account_status === "pending_approval").length})
-        </button>
+        </AdminButton>
         {subTab === "customers" && (
-          <button onClick={openNew}
-            className="ml-auto rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+          <AdminButton
+            variant="primary"
+            size="sm"
+            onClick={openNew}
+            className="ml-auto"
+          >
             + Add Customer
-          </button>
+          </AdminButton>
         )}
       </div>
 
       {subTab === "registrations" && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-300">Pending Registrations</h3>
+          <h3 className="text-sm font-semibold text-[var(--admin-text-secondary)]">Pending Registrations</h3>
           {registrations.filter(r => r.account_status === "pending_approval").length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">No pending registrations.</p>
+            <p className="text-sm text-[var(--admin-text-muted)] py-4 text-center">No pending registrations.</p>
           ) : (
-            <div className="rounded-2xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 overflow-hidden">
+            <div className="rounded-2xl bg-white border border-[var(--admin-border)] shadow-sm overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-zinc-400">
+                <thead className="bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)]">
                   <tr>
                     <th className="px-5 py-3 font-semibold text-left">Company</th>
                     <th className="px-5 py-3 font-semibold text-left">Contact</th>
@@ -552,27 +564,34 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
                     <th className="px-5 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[var(--admin-border-light)]">
                   {registrations.filter(r => r.account_status === "pending_approval").map(r => (
-                    <tr key={r.id} className="hover:bg-zinc-800">
-                      <td className="px-5 py-3 font-medium text-zinc-100">{r.company_name ?? "—"}</td>
-                      <td className="px-5 py-3 text-zinc-400">{r.contact_name ?? "—"}<br/><span className="text-xs text-slate-400">{r.email}</span></td>
+                    <tr key={r.id} className="hover:bg-[var(--admin-bg-subtle)]">
+                      <td className="px-5 py-3 font-medium text-[var(--admin-text-primary)]">{r.company_name ?? "—"}</td>
+                      <td className="px-5 py-3 text-[var(--admin-text-secondary)]">{r.contact_name ?? "—"}<br/><span className="text-xs text-[var(--admin-text-muted)]">{r.email}</span></td>
                       <td className="px-5 py-3">
-                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">Pending</span>
+                        <AdminBadge variant="warning">Pending</AdminBadge>
                       </td>
-                      <td className="px-5 py-3 text-slate-400 text-xs">{formatDate(new Date(r.created_at))}</td>
+                      <td className="px-5 py-3 text-[var(--admin-text-muted)] text-xs">{formatDate(new Date(r.created_at))}</td>
                       <td className="px-5 py-3">
                         <div className="flex gap-2">
-                          <button onClick={() => handleApproveReject(r.id, "approve")}
+                          <AdminButton
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleApproveReject(r.id, "approve")}
                             disabled={processingReg === r.id}
-                            className="rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+                            isLoading={processingReg === r.id}
+                          >
                             {processingReg === r.id ? "..." : "Approve"}
-                          </button>
-                          <button onClick={() => handleApproveReject(r.id, "reject")}
+                          </AdminButton>
+                          <AdminButton
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleApproveReject(r.id, "reject")}
                             disabled={processingReg === r.id}
-                            className="rounded-lg bg-red-900/300 px-3 py-1 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50">
+                          >
                             Reject
-                          </button>
+                          </AdminButton>
                         </div>
                       </td>
                     </tr>
@@ -587,33 +606,33 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
       {subTab === "customers" && (
         <>
       {showForm && (
-        <div className="rounded-2xl bg-zinc-900 p-6 shadow-black/20 ring-1 ring-zinc-700">
-          <h3 className="font-semibold text-zinc-100 mb-4">{editing ? "Edit Customer" : "New Customer"}</h3>
+        <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-6 shadow-sm">
+          <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">{editing ? "Edit Customer" : "New Customer"}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Company Name</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Company Name</label>
               <input value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Contact Name</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Contact Name</label>
               <input value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Email</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Email</label>
               <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Phone</label>
               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Status</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Status</label>
               <select value={form.accountStatus} onChange={e => setForm(f => ({ ...f, accountStatus: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900">
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                 <option value="active">Active</option>
                 <option value="on_hold">On Hold</option>
                 <option value="disabled">Disabled</option>
@@ -621,55 +640,53 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Credit Limit ($)</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Credit Limit ($)</label>
               <input type="number" value={form.creditLimit} onChange={e => setForm(f => ({ ...f, creditLimit: Number(e.target.value) }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" placeholder="0 = unlimited" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="0 = unlimited" />
             </div>
           </div>
 
-          <div className="mt-4 p-4 rounded-xl bg-slate-50 space-y-3">
-            <p className="text-sm font-semibold text-zinc-300">Deposit Rules</p>
+          <div className="mt-4 p-4 rounded-xl bg-[var(--admin-bg-subtle)] space-y-3">
+            <p className="text-sm font-semibold text-[var(--admin-text-secondary)]">Deposit Rules</p>
             <div className="flex items-center gap-3">
               <input type="checkbox" checked={form.depositsEnabled}
                 onChange={e => setForm(f => ({ ...f, depositsEnabled: e.target.checked }))}
                 className="rounded" id="dep-enabled" />
-              <label htmlFor="dep-enabled" className="text-sm text-zinc-300">Enable deposit requirement</label>
+              <label htmlFor="dep-enabled" className="text-sm text-[var(--admin-text-secondary)]">Enable deposit requirement</label>
             </div>
             {form.depositsEnabled && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Threshold ($ order total to trigger)</label>
+                  <label className="block text-xs text-[var(--admin-text-muted)] mb-1">Threshold ($ order total to trigger)</label>
                   <input type="number" value={form.depositThreshold} onChange={e => setForm(f => ({ ...f, depositThreshold: e.target.value }))}
-                    className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" placeholder="0" />
+                    className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Deposit %</label>
+                  <label className="block text-xs text-[var(--admin-text-muted)] mb-1">Deposit %</label>
                   <input type="number" value={form.depositPercentage} onChange={e => setForm(f => ({ ...f, depositPercentage: e.target.value }))}
-                    className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" placeholder="20" min="1" max="100" />
+                    className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="20" min="1" max="100" />
                 </div>
               </div>
             )}
           </div>
 
           <div className="mt-4 flex gap-3">
-            <button onClick={handleSave} disabled={saving}
-              className="rounded-xl bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+            <AdminButton onClick={handleSave} disabled={saving} isLoading={saving} variant="primary">
               {saving ? "Saving..." : "Save Customer"}
-            </button>
-            <button onClick={() => setShowForm(false)}
-              className="rounded-xl border border-zinc-600 px-5 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800">
+            </AdminButton>
+            <AdminButton onClick={() => setShowForm(false)} variant="secondary">
               Cancel
-            </button>
+            </AdminButton>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 overflow-hidden">
+      <div className="rounded-2xl bg-white border border-[var(--admin-border)] shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-zinc-400">
+          <thead className="bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)]">
             <tr>
               <th className="px-5 py-3 font-semibold text-left">
-                <input type="checkbox" className="rounded border-slate-400"
+                <input type="checkbox" className="rounded border-[var(--admin-border)]"
                   checked={selectedCustomers.size === customers.length && customers.length > 0}
                   onChange={toggleAllCustomers}
                 />
@@ -683,38 +700,37 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
               <th className="px-5 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-[var(--admin-border-light)]">
             {customers.length === 0 ? (
-              <tr><td colSpan={7} className="py-8 text-center text-slate-400">No customers yet.</td></tr>
+              <tr><td colSpan={8} className="py-8 text-center text-[var(--admin-text-muted)]">No customers yet.</td></tr>
             ) : customers.map(c => (
-              <tr key={c.id} className="hover:bg-zinc-800">
+              <tr key={c.id} className="hover:bg-[var(--admin-bg-subtle)]">
                 <td className="px-5 py-3">
-                  <input type="checkbox" className="rounded border-slate-400"
+                  <input type="checkbox" className="rounded border-[var(--admin-border)]"
                     checked={selectedCustomers.has(c.id)}
                     onChange={() => toggleSelectCustomer(c.id)}
                   />
                 </td>
-                <td className="px-5 py-3 font-medium text-zinc-100">{c.company_name ?? "—"}</td>
-                <td className="px-5 py-3 text-zinc-400">{c.contact_name ?? "—"}<br/><span className="text-xs text-slate-400">{c.email}</span></td>
+                <td className="px-5 py-3 font-medium text-[var(--admin-text-primary)]">{c.company_name ?? "—"}</td>
+                <td className="px-5 py-3 text-[var(--admin-text-secondary)]">{c.contact_name ?? "—"}<br/><span className="text-xs text-[var(--admin-text-muted)]">{c.email}</span></td>
                 <td className="px-5 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    c.account_status === "active" ? "bg-green-100 text-green-400" :
-                    c.account_status === "on_hold" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-400"
-                  }`}>{c.account_status}</span>
+                  <AdminBadge variant={c.account_status === "active" ? "success" : c.account_status === "on_hold" ? "warning" : "danger"}>
+                    {c.account_status}
+                  </AdminBadge>
                 </td>
-                <td className="px-5 py-3 text-zinc-400">
+                <td className="px-5 py-3 text-[var(--admin-text-secondary)]">
                   {c.credit_limit <= 0 ? "Unlimited" : `$${Number(c.credit_limit).toFixed(2)}`}
                 </td>
-                <td className="px-5 py-3 text-zinc-400">
+                <td className="px-5 py-3 text-[var(--admin-text-secondary)]">
                   {c.deposits_enabled ? `${c.deposit_percentage}%` : "—"}
                 </td>
-                <td className="px-5 py-3 text-slate-400 text-xs">{formatDate(new Date(c.created_at))}</td>
+                <td className="px-5 py-3 text-[var(--admin-text-muted)] text-xs">{formatDate(new Date(c.created_at))}</td>
                 <td className="px-5 py-4 customer-actions-cell relative">
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => openPriceSheetModal([c.id])}
                       title="Send price sheet"
-                      className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
+                      className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-[var(--admin-accent)] hover:text-[var(--admin-accent-text)] hover:bg-[var(--admin-accent-light)] transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     </button>
@@ -722,45 +738,45 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
                       <button
                         onClick={(e) => toggleCustomerActions(c.id, e)}
                         title="More actions"
-                        className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-slate-400 hover:text-zinc-300 hover:bg-zinc-950 transition-colors"
+                        className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
                       </button>
                       {openCustomerActions === c.id && (
                         <div
-                          className="absolute bottom-full right-0 mb-1 z-30 w-52 rounded-xl bg-zinc-900 shadow-xl ring-1 ring-zinc-700 py-1 text-sm"
+                          className="absolute bottom-full right-0 mb-1 z-30 w-52 rounded-xl bg-white shadow-xl ring-1 ring-[var(--admin-border)] py-1 text-sm"
                           onClick={e => e.stopPropagation()}
                         >
                           <button
                             onClick={() => { setOpenCustomerActions(null); openEdit(c); }}
-                            className="w-full text-left px-4 py-3 text-green-400 hover:bg-green-900/30 flex items-center gap-3 font-medium"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-accent)] hover:bg-[var(--admin-accent-light)] flex items-center gap-3 font-medium"
                           >
-                            <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             Edit Customer
                           </button>
                           <button
                             onClick={() => { setOpenCustomerActions(null); setPricingCustomer(c); }}
-                            className="w-full text-left px-4 py-3 text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] flex items-center gap-3"
                           >
-                            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Pricing
                           </button>
                           <a
                             href={`/wholesale/portal?preview_customer_id=${c.id}&_admin_preview=1`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full text-left px-4 py-3 text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] flex items-center gap-3"
                           >
-                            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             View Portal As
                           </a>
-                          <div className="my-1 border-t border-slate-100" />
+                          <div className="my-1 border-t border-[var(--admin-border)]" />
                           <button
                             onClick={() => { setOpenCustomerActions(null); handleDeleteCustomer(c.id); }}
                             disabled={deletingCustomer === c.id}
-                            className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-900/30 flex items-center gap-3 disabled:opacity-50"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-danger)] hover:bg-[var(--admin-danger-light)] flex items-center gap-3 disabled:opacity-50"
                           >
-                            <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             {deletingCustomer === c.id ? "Deleting..." : "Delete Customer"}
                           </button>
                         </div>
@@ -772,14 +788,19 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
             ))}
           </tbody>
           {selectedCustomers.size > 0 && (
-            <tfoot className="bg-blue-50 border-t border-blue-200">
+            <tfoot className="bg-[var(--admin-accent-light)] border-t border-[var(--admin-accent)]">
               <tr>
                 <td colSpan={8} className="px-5 py-3 flex items-center gap-4">
-                  <span className="text-sm text-blue-700 font-medium">{selectedCustomers.size} selected</span>
-                  <button onClick={() => openPriceSheetModal(Array.from(selectedCustomers))} disabled={sendingPriceSheet}
-                    className="rounded-lg bg-blue-600 text-white px-4 py-1.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                  <span className="text-sm text-[var(--admin-accent-text)] font-medium">{selectedCustomers.size} selected</span>
+                  <AdminButton
+                    onClick={() => openPriceSheetModal(Array.from(selectedCustomers))}
+                    disabled={sendingPriceSheet}
+                    variant="primary"
+                    size="sm"
+                    isLoading={sendingPriceSheet}
+                  >
                     {sendingPriceSheet ? "Sending..." : `Send Price Sheet to ${selectedCustomers.size} Customer(s)`}
-                  </button>
+                  </AdminButton>
                 </td>
               </tr>
             </tfoot>
@@ -789,7 +810,7 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
         </>
       )}
 
-      {/* Customer Pricing Overrides Panel */}
+      {/* Customer Pricing Overlays Panel */}
       {pricingCustomer && (
         <CustomerPricingPanel
           customer={pricingCustomer}
@@ -848,13 +869,13 @@ function CustomerPricingPanel({ customer, products, onClose, onMsg }: {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-zinc-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-[var(--admin-border)]">
+        <div className="px-6 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-zinc-100">Pricing Overrides</h2>
-            <p className="text-sm text-zinc-500">{customer.company_name}</p>
+            <h2 className="text-lg font-bold text-[var(--admin-text-primary)]">Pricing Overrides</h2>
+            <p className="text-sm text-[var(--admin-text-muted)]">{customer.company_name}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-zinc-400">
+          <button onClick={onClose} className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -862,30 +883,30 @@ function CustomerPricingPanel({ customer, products, onClose, onMsg }: {
         </div>
         <div className="overflow-y-auto flex-1 px-6 py-4">
           {loading ? (
-            <p className="text-zinc-500 text-sm">Loading...</p>
+            <p className="text-[var(--admin-text-muted)] text-sm">Loading...</p>
           ) : products.length === 0 ? (
-            <p className="text-slate-400 text-sm">No products available.</p>
+            <p className="text-[var(--admin-text-muted)] text-sm">No products available.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-zinc-500 border-b">
+                <tr className="text-left text-[var(--admin-text-muted)] border-b">
                   <th className="pb-2 font-medium">Product</th>
                   <th className="pb-2 font-medium">Standard Price</th>
                   <th className="pb-2 font-medium">Override Price</th>
                   <th className="pb-2"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--admin-border-light)]">
                 {products.map(p => {
                   const standardPrice = p.price_tiers?.[0]?.price ?? 0;
                   const overridePrice = overrides[p.id] ?? "";
                   return (
                     <tr key={p.id}>
-                      <td className="py-2.5 font-medium text-zinc-100">{p.name}</td>
-                      <td className="py-2.5 text-zinc-500">${standardPrice.toFixed(2)}</td>
+                      <td className="py-2.5 font-medium text-[var(--admin-text-primary)]">{p.name}</td>
+                      <td className="py-2.5 text-[var(--admin-text-muted)]">${standardPrice.toFixed(2)}</td>
                       <td className="py-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-400">$</span>
+                          <span className="text-xs text-[var(--admin-text-muted)]">$</span>
                           <input
                             type="number"
                             step="0.01"
@@ -893,21 +914,22 @@ function CustomerPricingPanel({ customer, products, onClose, onMsg }: {
                             value={overridePrice}
                             onChange={e => setOverrides(prev => ({ ...prev, [p.id]: e.target.value }))}
                             placeholder={standardPrice.toFixed(2)}
-                            className="w-24 rounded-lg border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-green-600"
+                            className="w-24 rounded-lg border border-[var(--admin-border)] px-2 py-1 text-sm outline-none focus:border-[var(--admin-accent)]"
                           />
                           {overridePrice && overridePrice !== standardPrice.toFixed(2) && (
-                            <span className="text-xs text-green-600 font-medium">Custom</span>
+                            <span className="text-xs text-[var(--admin-accent)] font-medium">Custom</span>
                           )}
                         </div>
                       </td>
                       <td className="py-2.5">
-                        <button
+                        <AdminButton
+                          variant="primary"
+                          size="sm"
                           onClick={() => handleSave(p.id, overrides[p.id] ?? "")}
                           disabled={saving}
-                          className="rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
                         >
                           Save
-                        </button>
+                        </AdminButton>
                       </td>
                     </tr>
                   );
@@ -915,7 +937,7 @@ function CustomerPricingPanel({ customer, products, onClose, onMsg }: {
               </tbody>
             </table>
           )}
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-[var(--admin-text-muted)]">
             Leave override price blank to remove custom pricing and use standard price tiers.
           </p>
         </div>
@@ -950,15 +972,15 @@ function PriceSheetModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={onClose}>
-      <div className="bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-[var(--admin-border)]" onClick={e => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-[var(--admin-border)] flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-zinc-100">Send Price Sheet</h2>
-            <p className="text-sm text-zinc-500">
+            <h2 className="text-lg font-bold text-[var(--admin-text-primary)]">Send Price Sheet</h2>
+            <p className="text-sm text-[var(--admin-text-muted)]">
               {customerCount === 1 ? "1 customer" : `${customerCount} customers`}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-zinc-400">
+          <button onClick={onClose} className="text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -966,44 +988,42 @@ function PriceSheetModal({
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Subject</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1.5">Subject</label>
               <input
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-green-600"
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-                Add a Note <span className="text-slate-400 font-normal">(optional)</span>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1.5">
+                Add a Note <span className="text-[var(--admin-text-muted)] font-normal">(optional)</span>
               </label>
               <textarea
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 rows={4}
                 placeholder="e.g. 'Check out our new seasonal items on page 2. Place your order by Friday for weekend pickup.'"
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-green-600 resize-none"
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)] resize-none"
               />
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-[var(--admin-text-muted)]">
                 This note will appear at the top of the email, above the product table.
               </p>
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between bg-slate-50 rounded-b-2xl">
-            <div className="text-sm text-zinc-500">
+          <div className="px-6 py-4 border-t border-[var(--admin-border)] flex items-center justify-between bg-[var(--admin-bg-subtle)] rounded-b-2xl">
+            <div className="text-sm text-[var(--admin-text-muted)]">
               {customerCount === 1 ? "1 customer" : `${customerCount} customers`} will receive this email.
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={onClose}
-                className="rounded-xl border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-950">
+              <AdminButton type="button" variant="secondary" onClick={onClose}>
                 Cancel
-              </button>
-              <button type="submit" disabled={sending || !subject.trim()}
-                className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+              </AdminButton>
+              <AdminButton type="submit" variant="primary" disabled={sending || !subject.trim()} isLoading={sending}>
                 {sending ? "Sending..." : `Send to ${customerCount === 1 ? "1 Customer" : `${customerCount} Customers`}`}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </form>
@@ -1116,79 +1136,77 @@ function ProductsTab({ products, brandId, onMsg, onRefresh }: {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-100">Wholesale Products ({products.length})</h2>
-        <button onClick={openNew} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+        <h2 className="text-lg font-semibold text-[var(--admin-text-primary)]">Wholesale Products ({products.length})</h2>
+        <AdminButton variant="primary" size="sm" onClick={openNew}>
           + Add Product
-        </button>
+        </AdminButton>
       </div>
 
       {showForm && (
-        <div className="rounded-2xl bg-zinc-900 p-6 shadow-black/20 ring-1 ring-zinc-700">
-          <h3 className="font-semibold text-zinc-100 mb-4">{editing ? "Edit Product" : "New Product"}</h3>
+        <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-6 shadow-sm">
+          <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">{editing ? "Edit Product" : "New Product"}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Product Name</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Product Name</label>
               <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Description</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Description</label>
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" rows={2} />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" rows={2} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Unit Type</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Unit Type</label>
               <select value={form.unitType} onChange={e => setForm(f => ({ ...f, unitType: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900">
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                 {["each", "48-count box", "bag", "pallet", "bin", "load", "custom"].map(u => (
                   <option key={u} value={u}>{u}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Availability</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Availability</label>
               <select value={form.availability} onChange={e => setForm(f => ({ ...f, availability: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900">
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                 <option value="available">Available</option>
                 <option value="unavailable">Unavailable</option>
                 <option value="coming_soon">Coming Soon</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Qty Available</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Qty Available</label>
               <input type="number" value={form.qtyAvailable} onChange={e => setForm(f => ({ ...f, qtyAvailable: Number(e.target.value) }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">HP SKU</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">HP SKU</label>
               <input value={form.hpSku} onChange={e => setForm(f => ({ ...f, hpSku: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">
                 Price Tiers (JSON array of {"{\"min_qty\":1,\"max_qty\":24,\"price\":20}"})
               </label>
               <input value={form.priceTiers} onChange={e => setForm(f => ({ ...f, priceTiers: e.target.value }))}
                 placeholder='[{"min_qty":1,"max_qty":24,"price":20},{"min_qty":25,"max_qty":0,"price":18}]'
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm font-mono outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm font-mono outline-none focus:border-[var(--admin-accent)]" />
             </div>
           </div>
           <div className="mt-4 flex gap-3">
-            <button onClick={handleSave} disabled={saving}
-              className="rounded-xl bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+            <AdminButton onClick={handleSave} disabled={saving} variant="primary" isLoading={saving}>
               {saving ? "Saving..." : "Save Product"}
-            </button>
-            <button onClick={() => setShowForm(false)}
-              className="rounded-xl border border-zinc-600 px-5 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800">
+            </AdminButton>
+            <AdminButton onClick={() => setShowForm(false)} variant="secondary">
               Cancel
-            </button>
+            </AdminButton>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 overflow-hidden">
+      <div className="rounded-2xl bg-white border border-[var(--admin-border)] shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-zinc-400">
+          <thead className="bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)]">
             <tr>
               <th className="px-5 py-3 font-semibold text-left">Product</th>
               <th className="px-5 py-3 font-semibold text-left">Unit</th>
@@ -1198,50 +1216,49 @@ function ProductsTab({ products, brandId, onMsg, onRefresh }: {
               <th className="px-5 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-[var(--admin-border-light)]">
             {products.length === 0 ? (
-              <tr><td colSpan={6} className="py-8 text-center text-slate-400">No products yet.</td></tr>
+              <tr><td colSpan={6} className="py-8 text-center text-[var(--admin-text-muted)]">No products yet.</td></tr>
             ) : products.map(p => (
-              <tr key={p.id} className="hover:bg-zinc-800">
-                <td className="px-5 py-3 font-medium text-zinc-100">{p.name}</td>
-                <td className="px-5 py-3 text-zinc-400">{p.unit_type}</td>
+              <tr key={p.id} className="hover:bg-[var(--admin-bg-subtle)]">
+                <td className="px-5 py-3 font-medium text-[var(--admin-text-primary)]">{p.name}</td>
+                <td className="px-5 py-3 text-[var(--admin-text-secondary)]">{p.unit_type}</td>
                 <td className="px-5 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    p.availability === "available" ? "bg-green-100 text-green-400" :
-                    p.availability === "coming_soon" ? "bg-yellow-100 text-yellow-700" : "bg-zinc-950 text-zinc-500"
-                  }`}>{p.availability.replace("_", " ")}</span>
+                  <AdminBadge variant={p.availability === "available" ? "success" : p.availability === "coming_soon" ? "warning" : "default"}>
+                    {p.availability.replace("_", " ")}
+                  </AdminBadge>
                 </td>
-                <td className="px-5 py-3 text-zinc-400">{p.qty_available}</td>
-                <td className="px-5 py-4 font-mono text-xs text-slate-400">{p.hp_sku ?? "—"}</td>
+                <td className="px-5 py-3 text-[var(--admin-text-secondary)]">{p.qty_available}</td>
+                <td className="px-5 py-4 font-mono text-xs text-[var(--admin-text-muted)]">{p.hp_sku ?? "—"}</td>
                 <td className="px-5 py-4 product-actions-cell relative">
                   <div className="flex items-center gap-1.5">
                     <div className="relative">
                       <button
                         onClick={(e) => toggleProductActions(p.id, e)}
                         title="More actions"
-                        className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-slate-400 hover:text-zinc-300 hover:bg-zinc-950 transition-colors"
+                        className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
                       </button>
                       {openProductActions === p.id && (
                         <div
-                          className="absolute bottom-full right-0 mb-1 z-30 w-48 rounded-xl bg-zinc-900 shadow-xl ring-1 ring-zinc-700 py-1 text-sm"
+                          className="absolute bottom-full right-0 mb-1 z-30 w-48 rounded-xl bg-white shadow-xl ring-1 ring-[var(--admin-border)] py-1 text-sm"
                           onClick={e => e.stopPropagation()}
                         >
                           <button
                             onClick={() => { setOpenProductActions(null); openEdit(p); }}
-                            className="w-full text-left px-4 py-3 text-green-400 hover:bg-green-900/30 flex items-center gap-3 font-medium"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-accent)] hover:bg-[var(--admin-accent-light)] flex items-center gap-3 font-medium"
                           >
-                            <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             Edit Product
                           </button>
-                          <div className="my-1 border-t border-slate-100" />
+                          <div className="my-1 border-t border-[var(--admin-border)]" />
                           <button
                             onClick={() => { setOpenProductActions(null); handleDeleteProduct(p.id); }}
                             disabled={deletingProduct === p.id}
-                            className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-900/30 flex items-center gap-3 disabled:opacity-50"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-danger)] hover:bg-[var(--admin-danger-light)] flex items-center gap-3 disabled:opacity-50"
                           >
-                            <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             {deletingProduct === p.id ? "Deleting..." : "Delete Product"}
                           </button>
                         </div>
@@ -1447,14 +1464,14 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-zinc-100">Wholesale Orders ({orders.length})</h2>
+      <h2 className="text-lg font-semibold text-[var(--admin-text-primary)]">Wholesale Orders ({orders.length})</h2>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-white border border-[var(--admin-border)] p-4 shadow-sm">
         <div>
-          <label className="block text-xs font-medium text-zinc-500 mb-1">Status</label>
+          <label className="block text-xs font-medium text-[var(--admin-text-muted)] mb-1">Status</label>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm outline-none focus:border-green-600">
+            className="rounded-lg border border-[var(--admin-border)] px-3 py-1.5 text-sm outline-none focus:border-[var(--admin-accent)]">
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="awaiting_deposit">Awaiting Deposit</option>
@@ -1463,51 +1480,54 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-zinc-500 mb-1">Pickup From</label>
+          <label className="block text-xs font-medium text-[var(--admin-text-muted)] mb-1">Pickup From</label>
           <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm outline-none focus:border-green-600" />
+            className="rounded-lg border border-[var(--admin-border)] px-3 py-1.5 text-sm outline-none focus:border-[var(--admin-accent)]" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-zinc-500 mb-1">Pickup To</label>
+          <label className="block text-xs font-medium text-[var(--admin-text-muted)] mb-1">Pickup To</label>
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm outline-none focus:border-green-600" />
+            className="rounded-lg border border-[var(--admin-border)] px-3 py-1.5 text-sm outline-none focus:border-[var(--admin-accent)]" />
         </div>
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs font-medium text-zinc-500 mb-1">Search</label>
-          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <label className="block text-xs font-medium text-[var(--admin-text-muted)] mb-1">Search</label>
+          <AdminSearchInput
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onClear={() => setSearchQuery("")}
             placeholder="Invoice, customer, email..."
-            className="w-full rounded-lg border border-zinc-600 px-3 py-1.5 text-sm outline-none focus:border-green-600" />
+          />
         </div>
         {filtered.length !== orders.length && (
           <div className="self-end pb-1">
-            <span className="text-xs text-zinc-500">{filtered.length} of {orders.length}</span>
+            <span className="text-xs text-[var(--admin-text-muted)]">{filtered.length} of {orders.length}</span>
           </div>
         )}
       </div>
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl bg-green-900/30 border border-green-200 px-4 py-3">
-          <span className="text-sm font-medium text-green-800">{selected.size} selected</span>
-          <button onClick={handleBulkFulfill} disabled={bulkLoading}
-            className="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+        <div className="flex items-center gap-3 rounded-2xl bg-[var(--admin-accent-light)] border border-[var(--admin-accent)] px-4 py-3">
+          <span className="text-sm font-medium text-[var(--admin-accent-text)]">{selected.size} selected</span>
+          <AdminButton variant="primary" size="sm" onClick={handleBulkFulfill} disabled={bulkLoading} isLoading={bulkLoading}>
             {bulkLoading ? "..." : "Bulk Fulfill"}
-          </button>
-          <button onClick={() => setShowBulkDep(true)}
-            className="rounded-lg border border-green-300 bg-zinc-900 px-4 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-100">
+          </AdminButton>
+          <AdminButton variant="secondary" size="sm" onClick={() => setShowBulkDep(true)}>
             Bulk Record Deposit
-          </button>
-          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-zinc-500 hover:text-zinc-300">Clear selection</button>
+          </AdminButton>
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]">Clear selection</button>
         </div>
       )}
 
       {/* Manifest section */}
-      <div className="rounded-2xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 p-4 flex items-center gap-4">
+      <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-4 flex items-center gap-4 shadow-sm">
         <div>
-          <p className="text-sm font-medium text-zinc-300">Load Manifest</p>
-          <p className="text-xs text-zinc-500">Generate a printable manifest for pending/active orders.</p>
+          <p className="text-sm font-medium text-[var(--admin-text-secondary)]">Load Manifest</p>
+          <p className="text-xs text-[var(--admin-text-muted)]">Generate a printable manifest for pending/active orders.</p>
         </div>
-        <button
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={async () => {
             setManifestLoading(true);
             const pending = filtered.filter(o => o.fulfillment_status !== "fulfilled");
@@ -1522,15 +1542,15 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
             setManifestLoading(false);
           }}
           disabled={manifestLoading}
-          className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+          isLoading={manifestLoading}
         >
           {manifestLoading ? "Generating..." : "Generate Manifest"}
-        </button>
+        </AdminButton>
       </div>
 
-      <div className="rounded-2xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 overflow-hidden">
+      <div className="rounded-2xl bg-white border border-[var(--admin-border)] shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-zinc-400">
+          <thead className="bg-[var(--admin-bg-subtle)] text-[var(--admin-text-muted)]">
             <tr>
               <th className="px-5 py-3 font-semibold text-left w-10">
                 <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="rounded" />
@@ -1546,27 +1566,27 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
               <th className="px-5 py-3 font-semibold text-left">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-[var(--admin-border-light)]">
             {filtered.length === 0 ? (
-              <tr><td colSpan={10} className="py-8 text-center text-slate-400">No orders match the current filters.</td></tr>
+              <tr><td colSpan={10} className="py-8 text-center text-[var(--admin-text-muted)]">No orders match the current filters.</td></tr>
             ) : filtered.map(o => (
-              <tr key={o.id} className={`hover:bg-zinc-800 ${selected.has(o.id) ? "bg-green-900/30" : ""}`}>
+              <tr key={o.id} className={`hover:bg-[var(--admin-bg-subtle)] ${selected.has(o.id) ? "bg-[var(--admin-accent-light)]" : ""}`}>
                 <td className="px-5 py-3">
                   <input type="checkbox" checked={selected.has(o.id)} onChange={() => toggleSelect(o.id)} className="rounded" />
                 </td>
-                <td className="px-5 py-3 font-mono text-xs text-slate-400">{o.invoice_number ?? "—"}</td>
-                <td className="px-5 py-3 font-medium text-zinc-100">{o.company_name}</td>
-                <td className="px-5 py-3 text-zinc-400">{o.anticipated_pickup_date ?? "—"}</td>
-                <td className="px-5 py-3 text-right font-semibold text-zinc-100">${Number(o.subtotal).toFixed(2)}</td>
-                <td className="px-5 py-3 text-right text-zinc-400">${Number(o.deposit_paid).toFixed(2)} / ${Number(o.deposit_required).toFixed(2)}</td>
+                <td className="px-5 py-3 font-mono text-xs text-[var(--admin-text-muted)]">{o.invoice_number ?? "—"}</td>
+                <td className="px-5 py-3 font-medium text-[var(--admin-text-primary)]">{o.company_name}</td>
+                <td className="px-5 py-3 text-[var(--admin-text-secondary)]">{o.anticipated_pickup_date ?? "—"}</td>
+                <td className="px-5 py-3 text-right font-semibold text-[var(--admin-text-primary)]">${Number(o.subtotal).toFixed(2)}</td>
+                <td className="px-5 py-3 text-right text-[var(--admin-text-secondary)]">${Number(o.deposit_paid).toFixed(2)} / ${Number(o.deposit_required).toFixed(2)}</td>
                 <td className="px-5 py-3 text-right">
-                  <span className={Number(o.balance_due) > 0 ? "text-orange-600 font-medium" : "text-green-600"}>
+                  <span className={Number(o.balance_due) > 0 ? "text-[var(--admin-warning)] font-medium" : "text-[var(--admin-accent)]"}>
                     ${Number(o.balance_due).toFixed(2)}
                   </span>
                 </td>
                 <td className="px-5 py-3"><StatusBadge status={o.status} /></td>
                 <td className="px-5 py-3">
-                  <span className={`text-xs font-medium ${o.payment_status === "paid" ? "text-green-600" : "text-orange-600"}`}>
+                  <span className={`text-xs font-medium ${o.payment_status === "paid" ? "text-[var(--admin-accent)]" : "text-[var(--admin-warning)]"}`}>
                     {o.payment_status}
                   </span>
                 </td>
@@ -1574,27 +1594,28 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
                   <div className="flex items-center gap-2">
                     {/* Primary: Mark Fulfilled — only when order is not yet fulfilled */}
                     {o.fulfillment_status !== "fulfilled" && (
-                      <button
+                      <AdminButton
+                        variant="primary"
+                        size="sm"
                         onClick={() => !fulfilling && handleFulfill(o.id)}
                         disabled={fulfilling === o.id}
-                        title="Mark as fulfilled"
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-2 text-xs font-bold text-white shadow-black/20 hover:bg-green-700 disabled:opacity-40 transition-colors"
+                        isLoading={fulfilling === o.id}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         {fulfilling === o.id ? "..." : "Fulfill"}
-                      </button>
+                      </AdminButton>
                     )}
 
                     {/* Primary: Record Deposit — when there's a balance due */}
                     {Number(o.balance_due) > 0 && o.fulfillment_status !== "fulfilled" && (
-                      <button
+                      <AdminButton
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setShowDepForm(o.id)}
-                        title="Record deposit payment"
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-2 text-xs font-bold text-white shadow-black/20 hover:bg-purple-700 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-9-9h18" /></svg>
                         Deposit
-                      </button>
+                      </AdminButton>
                     )}
 
                     {/* Invoice download — always visible as icon button */}
@@ -1603,7 +1624,7 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Download Invoice"
-                      className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-zinc-500 hover:text-slate-800 hover:bg-zinc-950 transition-colors"
+                      className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-[var(--admin-text-muted)] hover:text-[var(--admin-accent)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
                     >
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h9m-9-6h6m-3 12a9 9 0 110 12H15M6 2h9l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/></svg>
                     </a>
@@ -1613,21 +1634,21 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
                       <button
                         onClick={(e) => toggleActions(o.id, e)}
                         title="More actions"
-                        className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-slate-400 hover:text-zinc-300 hover:bg-zinc-950 transition-colors"
+                        className="inline-flex items-center justify-center rounded-xl w-9 h-9 text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
                       </button>
 
                       {openActions === o.id && (
                         <div
-                          className="absolute bottom-full right-0 mb-1 z-30 w-56 rounded-xl bg-zinc-900 shadow-xl ring-1 ring-zinc-700 py-1 text-sm"
+                          className="absolute bottom-full right-0 mb-1 z-30 w-56 rounded-xl bg-white shadow-xl ring-1 ring-[var(--admin-border)] py-1 text-sm"
                           onClick={e => e.stopPropagation()}
                         >
                           <button
                             onClick={() => { setOpenActions(null); setShowViewOrder(o); }}
-                            className="w-full text-left px-4 py-3 text-green-400 hover:bg-green-900/30 flex items-center gap-3 font-medium"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-accent)] hover:bg-[var(--admin-accent-light)] flex items-center gap-3 font-medium"
                           >
-                            <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             View / Edit Order
                           </button>
 
@@ -1643,9 +1664,9 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
                                 }).then(r => r.text()).then(html => { w.document.write(html); w.document.close(); });
                               }
                             }}
-                            className="w-full text-left px-4 py-3 text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] flex items-center gap-3"
                           >
-                            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h9m-9-6h6m-3 12a9 9 0 01-18 0 9 9 0 0118 0z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h9m-9-6h6m-3 12a9 9 0 01-18 0 9 9 0 0118 0z"/></svg>
                             Generate Manifest
                           </button>
 
@@ -1658,20 +1679,20 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
                                 body: JSON.stringify({ customerIds: [o.customer_id], brandId }),
                               }).then(r => r.json()).then(d => onMsg("success", `Price sheet sent to customer.`)).catch(() => onMsg("error", "Failed to send price sheet."));
                             }}
-                            className="w-full text-left px-4 py-3 text-zinc-300 hover:bg-zinc-800 flex items-center gap-3"
+                            className="w-full text-left px-4 py-3 text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] flex items-center gap-3"
                           >
-                            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <svg className="w-4 h-4 text-[var(--admin-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                             Send Price Sheet
                           </button>
 
-                          <div className="my-1 border-t border-slate-100" />
+                          <div className="my-1 border-t border-[var(--admin-border)]" />
 
                           {o.status !== "cancelled" && o.fulfillment_status !== "fulfilled" && (
                             <button
                               onClick={() => { setOpenActions(null); handleCancelOrder(o.id); }}
-                              className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-900/30 flex items-center gap-3"
+                              className="w-full text-left px-4 py-3 text-[var(--admin-danger)] hover:bg-[var(--admin-danger-light)] flex items-center gap-3"
                             >
-                              <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                              <svg className="w-4 h-4 text-[var(--admin-danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                               Cancel Order
                             </button>
                           )}
@@ -1679,9 +1700,9 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
                           {o.fulfillment_status !== "fulfilled" && (
                             <button
                               onClick={() => { setOpenActions(null); handleDeleteOrder(o.id); }}
-                              className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-900/30 flex items-center gap-3"
+                              className="w-full text-left px-4 py-3 text-[var(--admin-danger)] hover:bg-[var(--admin-danger-light)] flex items-center gap-3"
                             >
-                              <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                              <svg className="w-4 h-4 text-[var(--admin-danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                               Delete Order
                             </button>
                           )}
@@ -1699,18 +1720,18 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
       {/* Deposit modal */}
       {showDepForm && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 rounded-2xl p-6 w-96 shadow-xl">
-            <h3 className="font-semibold text-zinc-100 mb-4">Record Deposit</h3>
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-xl border border-[var(--admin-border)]">
+            <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">Record Deposit</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Amount ($)</label>
+                <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Amount ($)</label>
                 <input type="number" value={depAmount} onChange={e => setDepAmount(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" step="0.01" />
+                  className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" step="0.01" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Method</label>
+                <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Method</label>
                 <select value={depMethod} onChange={e => setDepMethod(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900">
+                  className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                   <option value="cash">Cash</option>
                   <option value="check">Check</option>
                   <option value="wire">Wire</option>
@@ -1719,14 +1740,12 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
               </div>
             </div>
             <div className="mt-4 flex gap-3">
-              <button onClick={() => handleRecordDeposit(showDepForm)}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+              <AdminButton onClick={() => handleRecordDeposit(showDepForm)} variant="primary">
                 Record Deposit
-              </button>
-              <button onClick={() => setShowDepForm(null)}
-                className="rounded-xl border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800">
+              </AdminButton>
+              <AdminButton onClick={() => setShowDepForm(null)} variant="secondary">
                 Cancel
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -1735,18 +1754,18 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
       {/* Bulk Deposit modal */}
       {showBulkDep && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 rounded-2xl p-6 w-96 shadow-xl">
-            <h3 className="font-semibold text-zinc-100 mb-4">Bulk Record Deposit ({selected.size} orders)</h3>
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-xl border border-[var(--admin-border)]">
+            <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">Bulk Record Deposit ({selected.size} orders)</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Amount per order ($)</label>
+                <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Amount per order ($)</label>
                 <input type="number" value={bulkDepAmount} onChange={e => setBulkDepAmount(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" step="0.01" placeholder="0.00" />
+                  className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" step="0.01" placeholder="0.00" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Method</label>
+                <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Method</label>
                 <select value={bulkDepMethod} onChange={e => setBulkDepMethod(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900">
+                  className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                   <option value="cash">Cash</option>
                   <option value="check">Check</option>
                   <option value="wire">Wire</option>
@@ -1755,15 +1774,12 @@ function OrdersTab({ orders, customers, brandId, onMsg, onRefresh }: {
               </div>
             </div>
             <div className="mt-4 flex gap-3">
-              <button onClick={handleBulkDeposit}
-                disabled={!bulkDepAmount || bulkLoading}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+              <AdminButton onClick={handleBulkDeposit} variant="primary" disabled={!bulkDepAmount || bulkLoading} isLoading={bulkLoading}>
                 {bulkLoading ? "Recording..." : "Record on All"}
-              </button>
-              <button onClick={() => setShowBulkDep(false)}
-                className="rounded-xl border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800">
+              </AdminButton>
+              <AdminButton onClick={() => setShowBulkDep(false)} variant="secondary">
                 Cancel
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -1882,46 +1898,46 @@ function SettingsTab({ settings, brandId, onMsg, onRefresh, canManageSettings }:
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-zinc-100">Wholesale Settings</h2>
+      <h2 className="text-lg font-semibold text-[var(--admin-text-primary)]">Wholesale Settings</h2>
 
-      <div className="rounded-2xl bg-zinc-900 p-6 shadow-black/20 ring-1 ring-zinc-700">
+      <div className="rounded-2xl bg-white border border-[var(--admin-border)] p-6 shadow-sm">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-zinc-100">Require Approval</p>
-              <p className="text-sm text-zinc-500">New registrations must be manually approved.</p>
+              <p className="font-medium text-[var(--admin-text-primary)]">Require Approval</p>
+              <p className="text-sm text-[var(--admin-text-muted)]">New registrations must be manually approved.</p>
             </div>
             <button
               onClick={() => setForm(f => ({ ...f, requireApproval: !f.requireApproval }))}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${form.requireApproval ? "bg-green-600" : "bg-slate-300"}`}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${form.requireApproval ? "bg-[var(--admin-accent)]" : "bg-[var(--admin-border)]"}`}
             >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-zinc-900 shadow transition-transform ${form.requireApproval ? "translate-x-6" : "translate-x-1"}`} />
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.requireApproval ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-zinc-100">Wholesale Portal</p>
-              <p className="text-sm text-zinc-500">Show the Wholesale Portal card on this brand's storefront page.</p>
+              <p className="font-medium text-[var(--admin-text-primary)]">Wholesale Portal</p>
+              <p className="text-sm text-[var(--admin-text-muted)]">Show the Wholesale Portal card on this brand's storefront page.</p>
             </div>
             <button
               onClick={() => setForm(f => ({ ...f, wholesaleEnabled: !f.wholesaleEnabled }))}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${form.wholesaleEnabled ? "bg-green-600" : "bg-slate-300"}`}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${form.wholesaleEnabled ? "bg-[var(--admin-accent)]" : "bg-[var(--admin-border)]"}`}
             >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-zinc-900 shadow transition-transform ${form.wholesaleEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.wholesaleEnabled ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg-subtle)] px-4 py-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-                <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-accent-light)]">
+                <svg className="h-4 w-4 text-[var(--admin-accent)]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-zinc-100">Square Sync for Wholesale</p>
-                <p className="text-xs text-zinc-500">
+                <p className="font-medium text-[var(--admin-text-primary)]">Square Sync for Wholesale</p>
+                <p className="text-xs text-[var(--admin-text-muted)]">
                   When enabled, wholesale product changes are automatically pushed to Square.
                   {form.squareSyncEnabled
                     ? " Auto-sync is active."
@@ -1931,63 +1947,63 @@ function SettingsTab({ settings, brandId, onMsg, onRefresh, canManageSettings }:
             </div>
             <button
               onClick={() => setForm(f => ({ ...f, squareSyncEnabled: !f.squareSyncEnabled }))}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${form.squareSyncEnabled ? "bg-green-600" : "bg-slate-300"}`}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${form.squareSyncEnabled ? "bg-[var(--admin-accent)]" : "bg-[var(--admin-border)]"}`}
             >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-zinc-900 shadow transition-transform ${form.squareSyncEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.squareSyncEnabled ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Minimum Order Amount ($)</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Minimum Order Amount ($)</label>
               <input type="number" value={form.minOrderAmount} onChange={e => setForm(f => ({ ...f, minOrderAmount: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" step="0.01" placeholder="No minimum" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" step="0.01" placeholder="No minimum" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">From Email</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">From Email</label>
               <input type="email" value={form.fromEmail} onChange={e => setForm(f => ({ ...f, fromEmail: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Pickup Location</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Pickup Location</label>
               <textarea value={form.pickupLocation} onChange={e => setForm(f => ({ ...f, pickupLocation: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900 font-mono" rows={3} />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)] font-mono" rows={3} />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">FOB Location</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">FOB Location</label>
               <input value={form.fobLocation} onChange={e => setForm(f => ({ ...f, fobLocation: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Invoice Business Name</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Invoice Business Name</label>
               <input value={form.invoiceBusinessName} onChange={e => setForm(f => ({ ...f, invoiceBusinessName: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Invoice Business Address</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Invoice Business Address</label>
               <textarea value={form.invoiceBusinessAddress} onChange={e => setForm(f => ({ ...f, invoiceBusinessAddress: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" rows={2} />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" rows={2} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Invoice Business Phone</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Invoice Business Phone</label>
               <input value={form.invoiceBusinessPhone} onChange={e => setForm(f => ({ ...f, invoiceBusinessPhone: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Invoice Business Email</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Invoice Business Email</label>
               <input type="email" value={form.invoiceBusinessEmail} onChange={e => setForm(f => ({ ...f, invoiceBusinessEmail: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Invoice Business Website</label>
+              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Invoice Business Website</label>
               <input value={form.invoiceBusinessWebsite} onChange={e => setForm(f => ({ ...f, invoiceBusinessWebsite: e.target.value }))}
-                className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" placeholder="https://" />
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="https://" />
             </div>
 
             {/* Team Notification Recipients */}
-            <div className="col-span-2 rounded-2xl bg-blue-50 p-5 ring-1 ring-blue-200">
-              <label className="block text-sm font-semibold text-slate-800 mb-1">Team Notification Recipients</label>
-              <p className="text-xs text-blue-600 mb-4 leading-relaxed">
+            <div className="col-span-2 rounded-2xl bg-[var(--admin-bg-subtle)] p-5 ring-1 ring-[var(--admin-border)]">
+              <label className="block text-sm font-semibold text-[var(--admin-text-primary)] mb-1">Team Notification Recipients</label>
+              <p className="text-xs text-[var(--admin-text-muted)] mb-4 leading-relaxed">
                 These team members receive all wholesale notifications for this brand — new orders,
                 deposits, fulfillments, price sheets, and pickup reminders. If no recipients are
                 active, the system falls back to any configured notification email on file.
@@ -1995,34 +2011,38 @@ function SettingsTab({ settings, brandId, onMsg, onRefresh, canManageSettings }:
 
               {/* Empty state */}
               {form.notificationRecipients.length === 0 && (
-                <div className="text-center py-6 mb-4 rounded-xl bg-zinc-900 ring-1 ring-zinc-700">
-                  <p className="text-sm text-slate-400 mb-1">No recipients added yet.</p>
-                  <p className="text-xs text-slate-400">Add an email address below to get started.</p>
+                <div className="text-center py-6 mb-4 rounded-xl bg-white ring-1 ring-[var(--admin-border)]">
+                  <p className="text-sm text-[var(--admin-text-muted)] mb-1">No recipients added yet.</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">Add an email address below to get started.</p>
                 </div>
               )}
 
               {/* Recipients list */}
               <div className="space-y-2 mb-4">
                 {form.notificationRecipients.map((r: NotificationRecipient, idx: number) => (
-                  <div key={idx} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 bg-zinc-900 ring-1 ${r.active ? "ring-zinc-700" : "ring-slate-300 opacity-70"}`}>
+                  <div key={idx} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 bg-white ring-1 ${r.active ? "ring-[var(--admin-border)]" : "ring-[var(--admin-border-light)] opacity-70"}`}>
                     <input
                       type="checkbox" checked={r.active} onChange={() => toggleRecipient(idx)}
-                      className="rounded border-slate-400 mt-0.5" title={r.active ? "Active — receives notifications" : "Inactive"} />
+                      className="rounded border-[var(--admin-border)] mt-0.5" title={r.active ? "Active — receives notifications" : "Inactive"} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${r.active ? "text-zinc-100" : "text-slate-400"}`}>{r.email}</p>
-                      {r.name && <p className="text-xs text-slate-400 truncate">{r.name}</p>}
+                      <p className={`text-sm font-medium ${r.active ? "text-[var(--admin-text-primary)]" : "text-[var(--admin-text-muted)]"}`}>{r.email}</p>
+                      {r.name && <p className="text-xs text-[var(--admin-text-muted)] truncate">{r.name}</p>}
                       {r.notification_types && r.notification_types.length > 0 && (
-                        <p className="text-xs text-slate-300 mt-0.5" title="Per-type filtering coming soon">Types: {r.notification_types.join(", ")}</p>
+                        <p className="text-xs text-[var(--admin-text-secondary)] mt-0.5" title="Per-type filtering coming soon">Types: {r.notification_types.join(", ")}</p>
                       )}
                     </div>
                     <input
                       type="text" placeholder="Name (optional)"
                       value={r.name ?? ""}
                       onChange={e => updateRecipientName(idx, e.target.value)}
-                      className="rounded-xl border border-zinc-600 px-2.5 py-1.5 text-xs w-36 outline-none focus:border-slate-900" />
+                      className="rounded-xl border border-[var(--admin-border)] px-2.5 py-1.5 text-xs w-36 outline-none focus:border-[var(--admin-accent)]" />
                     <button onClick={() => removeRecipient(idx)}
-                      className="text-red-400 hover:text-red-400 text-xs font-medium px-2 py-1 rounded-lg hover:bg-red-900/30 transition-colors"
-                      title="Remove recipient">✕</button>
+                      className="text-[var(--admin-danger)] hover:text-[var(--admin-danger)] text-xs font-medium px-2 py-1 rounded-lg hover:bg-[var(--admin-danger-light)] transition-colors"
+                      title="Remove recipient">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -2031,9 +2051,9 @@ function SettingsTab({ settings, brandId, onMsg, onRefresh, canManageSettings }:
               <AddRecipientForm onAdd={addRecipient} />
             </div>
             {/* Webhook Settings */}
-            <div className="col-span-2 rounded-2xl bg-purple-50 p-5 ring-1 ring-purple-200">
-              <label className="block text-sm font-semibold text-slate-800 mb-1">Webhook Integration</label>
-              <p className="text-xs text-purple-600 mb-4 leading-relaxed">
+            <div className="col-span-2 rounded-2xl bg-[var(--admin-bg-subtle)] p-5 ring-1 ring-[var(--admin-border)]">
+              <label className="block text-sm font-semibold text-[var(--admin-text-primary)] mb-1">Webhook Integration</label>
+              <p className="text-xs text-[var(--admin-text-muted)] mb-4 leading-relaxed">
                 Send order events to external systems (Harvest Point, ERPs, etc.). Payload is signed
                 with HMAC-SHA256. Enable and configure the URL and secret below.
               </p>
@@ -2042,10 +2062,9 @@ function SettingsTab({ settings, brandId, onMsg, onRefresh, canManageSettings }:
 
           </div>
 
-          <button onClick={handleSave} disabled={saving}
-            className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50">
+          <AdminButton onClick={handleSave} disabled={saving} variant="primary" isLoading={saving}>
             {saving ? "Saving..." : "Save Settings"}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>
@@ -2146,30 +2165,30 @@ function WebhookSettingsSection({ brandId, onMsg }: {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-300">Webhook Enabled</p>
-          <p className="text-xs text-zinc-500">When disabled, no events are queued or sent.</p>
+          <p className="text-sm font-medium text-[var(--admin-text-secondary)]">Webhook Enabled</p>
+          <p className="text-xs text-[var(--admin-text-muted)]">When disabled, no events are queued or sent.</p>
         </div>
         <button
           onClick={() => setSettings(s => ({ ...s, enabled: !s.enabled }))}
-          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${settings.enabled ? "bg-purple-600" : "bg-slate-300"}`}
+          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${settings.enabled ? "bg-[var(--admin-accent)]" : "bg-[var(--admin-border)]"}`}
         >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-zinc-900 shadow transition-transform ${settings.enabled ? "translate-x-6" : "translate-x-1"}`} />
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${settings.enabled ? "translate-x-6" : "translate-x-1"}`} />
         </button>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Webhook URL</label>
+        <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Webhook URL</label>
         <input
           type="url"
           value={settings.url}
           onChange={e => setSettings(s => ({ ...s, url: e.target.value }))}
           placeholder="https://your-system.com/webhooks/wholesale"
-          className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-purple-600"
+          className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">
+        <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">
           Signing Secret (HMAC-SHA256)
         </label>
         <input
@@ -2177,29 +2196,33 @@ function WebhookSettingsSection({ brandId, onMsg }: {
           value={settings.secret}
           onChange={e => setSettings(s => ({ ...s, secret: e.target.value }))}
           placeholder="Leave blank to keep current secret"
-          className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-purple-600 font-mono"
+          className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)] font-mono"
         />
-        <p className="mt-1 text-xs text-slate-400">
-          The receiver should verify the <code className="bg-zinc-950 px-1">X-Webhook-Signature</code> header using this secret.
+        <p className="mt-1 text-xs text-[var(--admin-text-muted)]">
+          The receiver should verify the <code className="bg-[var(--admin-bg-subtle)] px-1">X-Webhook-Signature</code> header using this secret.
         </p>
       </div>
 
       <div className="flex items-center gap-3 pt-1">
-        <button
+        <AdminButton
           onClick={handleSave}
           disabled={saving}
-          className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+          variant="primary"
+          size="sm"
+          isLoading={saving}
         >
           {saving ? "Saving..." : "Save Webhook Settings"}
-        </button>
+        </AdminButton>
         {settings.enabled && settings.url && (
-          <button
+          <AdminButton
             onClick={handleTestDispatch}
             disabled={testing}
-            className="rounded-xl border border-purple-300 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 disabled:opacity-50"
+            variant="secondary"
+            size="sm"
+            isLoading={testing}
           >
             {testing ? "Dispatching..." : "Send Test Webhook"}
-          </button>
+          </AdminButton>
         )}
       </div>
     </div>
@@ -2235,20 +2258,23 @@ function AddRecipientForm({ onAdd }: { onAdd: (email: string, name: string) => v
           type="email" placeholder="Email address"
           value={email} onChange={e => { setEmail(e.target.value); setError(""); }}
           onKeyDown={e => e.key === "Enter" && handleAdd()}
-          className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+          className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
       </div>
       <div className="w-36">
         <input
           type="text" placeholder="Name (optional)"
           value={name} onChange={e => setName(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleAdd()}
-          className="w-full rounded-xl border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900" />
+          className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
       </div>
-      <button onClick={handleAdd}
-        className="rounded-xl bg-green-600 text-white px-3 py-2 text-sm font-medium hover:bg-green-700 whitespace-nowrap">
+      <AdminButton
+        variant="primary"
+        size="sm"
+        onClick={handleAdd}
+      >
         Add
-      </button>
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      </AdminButton>
+      {error && <p className="text-xs text-[var(--admin-danger)] mt-1">{error}</p>}
     </div>
   );
 }
@@ -2256,11 +2282,11 @@ function AddRecipientForm({ onAdd }: { onAdd: (email: string, name: string) => v
 // ── Shared Components ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-700",
-    awaiting_deposit: "bg-purple-100 text-purple-700",
-    confirmed: "bg-blue-100 text-blue-700",
-    fulfilled: "bg-green-100 text-green-400",
+  const map: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
+    pending: "warning",
+    awaiting_deposit: "info",
+    confirmed: "info",
+    fulfilled: "success",
   };
   const label: Record<string, string> = {
     pending: "Pending",
@@ -2269,8 +2295,8 @@ function StatusBadge({ status }: { status: string }) {
     fulfilled: "Fulfilled",
   };
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${map[status] ?? "bg-zinc-950 text-zinc-400"}`}>
+    <AdminBadge variant={map[status] ?? "default"}>
       {label[status] ?? status}
-    </span>
+    </AdminBadge>
   );
 }

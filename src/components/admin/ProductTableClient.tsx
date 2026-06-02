@@ -224,7 +224,9 @@ function ProductRowBase({
             }}
             className="rounded-lg px-2 py-1.5 text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
           >
-            ⋮
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/>
+            </svg>
           </button>
 
           {openMenu === product.id && (

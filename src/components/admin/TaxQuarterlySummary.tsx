@@ -58,9 +58,9 @@ export default function TaxQuarterlySummary({ brandId }: { brandId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-2">
-        <div className="h-4 w-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-        <span className="text-xs text-amber-700">Loading tax summary...</span>
+      <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-4 py-3 flex items-center gap-2">
+        <div className="h-4 w-4 rounded-full border-2 border-[var(--admin-accent)] border-t-transparent animate-spin" />
+        <span className="text-xs text-[var(--admin-text-secondary)]">Loading tax summary...</span>
       </div>
     );
   }
@@ -72,25 +72,25 @@ export default function TaxQuarterlySummary({ brandId }: { brandId: string }) {
     : 0;
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-text-secondary)]">
             {quarterLabel()} Tax Collected
           </span>
         </div>
         <Link
           href="/admin/taxes"
-          className="text-xs text-amber-600 hover:text-amber-800 font-medium"
+          className="text-xs text-[var(--admin-accent-text)] hover:text-[var(--admin-accent)] font-medium transition-colors"
         >
           View Details →
         </Link>
       </div>
       <div className="mt-2 flex items-baseline gap-4">
-        <span className="text-xl font-bold text-amber-800">
+        <span className="text-xl font-bold text-[var(--admin-text-primary)]">
           ${data.total_tax_collected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </span>
-        <span className="text-xs text-amber-600">
+        <span className="text-xs text-[var(--admin-text-muted)]">
           on ${data.total_gross_sales.toLocaleString(undefined, { minimumFractionDigits: 2 })} gross sales · {effectiveRate.toFixed(3)}% rate · {data.order_count} orders
         </span>
       </div>

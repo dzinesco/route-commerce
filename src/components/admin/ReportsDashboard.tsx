@@ -26,6 +26,7 @@ import {
   type CampaignActivityRow,
 } from "@/lib/reports-export";
 import { formatDate, formatDateRange } from "@/lib/date-utils";
+import { AdminButton, AdminFilterTabs } from "@/components/admin/design-system";
 
 type DatePreset = "week" | "month" | "quarter" | "this_year" | "custom";
 
@@ -105,12 +106,13 @@ function ExportBtn({
   onClick: () => void;
 }) {
   return (
-    <button
+    <AdminButton
       onClick={onClick}
-      className="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-800"
+      variant="secondary"
+      size="sm"
     >
       Export CSV
-    </button>
+    </AdminButton>
   );
 }
 
@@ -122,13 +124,14 @@ function ExplainBtn({
   loading: boolean;
 }) {
   return (
-    <button
+    <AdminButton
       onClick={onClick}
       disabled={loading}
-      className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+      variant="secondary"
+      size="sm"
     >
       {loading ? "Analyzing..." : "🤖 Explain this Report"}
-    </button>
+    </AdminButton>
   );
 }
 
@@ -169,19 +172,14 @@ function ReportTable({ headers, rows, renderRow }: {
 
 // ── Tab definitions ─────────────────────────────────────────────────────────
 
-type Tab = {
-  id: string;
-  label: string;
-};
-
-const TABS: Tab[] = [
-  { id: "overview", label: "Overview" },
-  { id: "orders-by-stop", label: "Orders by Stop" },
-  { id: "sales-by-product", label: "Sales by Product" },
-  { id: "fulfillment", label: "Fulfillment" },
-  { id: "pickup-status", label: "Pickup Status" },
-  { id: "contact-growth", label: "Contact Growth" },
-  { id: "campaigns", label: "Campaigns" },
+const TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "orders-by-stop", label: "Orders by Stop" },
+  { value: "sales-by-product", label: "Sales by Product" },
+  { value: "fulfillment", label: "Fulfillment" },
+  { value: "pickup-status", label: "Pickup Status" },
+  { value: "contact-growth", label: "Contact Growth" },
+  { value: "campaigns", label: "Campaigns" },
 ];
 
 // ── Main component ──────────────────────────────────────────────────────────
@@ -325,21 +323,18 @@ export default function ReportsDashboard({
       )}
 
       {/* ── Filters ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-zinc-900 border border-zinc-800 px-5 py-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-5 py-4">
         {/* Date preset */}
         <div className="flex gap-1.5">
           {(["week", "month", "quarter", "this_year", "custom"] as DatePreset[]).map((p) => (
-            <button
+            <AdminButton
               key={p}
               onClick={() => setPreset(p)}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
-                preset === p
-                  ? "bg-blue-600 text-white shadow-black/20"
-                  : "bg-zinc-950 text-zinc-400 hover:bg-slate-200"
-              }`}
+              variant={preset === p ? "primary" : "secondary"}
+              size="sm"
             >
               {p === "week" ? "This Week" : p === "month" ? "This Month" : p === "quarter" ? "This Quarter" : p === "this_year" ? "This Year" : "Custom"}
-            </button>
+            </AdminButton>
           ))}
         </div>
 
@@ -376,13 +371,15 @@ export default function ReportsDashboard({
           </select>
         )}
 
-        <button
+        <AdminButton
           onClick={handleFetch}
           disabled={loading}
-          className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          variant="primary"
+          size="sm"
+          isLoading={loading}
         >
-          {loading ? "Loading..." : "Refresh"}
-        </button>
+          Refresh
+        </AdminButton>
 
         <span className="ml-auto text-sm font-medium text-zinc-500">
           {preset === "quarter" ? quarterLabel(range.start) :
@@ -394,21 +391,13 @@ export default function ReportsDashboard({
       </div>
 
       {/* ── Tab bar ────────────────────────────────────────────────────────── */}
-      <div className="flex gap-1 border-b border-zinc-800">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-              activeTab === tab.id
-                ? "border-blue-600 text-blue-400"
-                : "border-transparent text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <AdminFilterTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={TABS}
+        size="md"
+        showCounts={false}
+      />
 
       {/* ── Tab content ──────────────────────────────────────────────────────── */}
 

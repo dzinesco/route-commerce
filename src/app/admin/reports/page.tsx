@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import ReportsDashboard from "@/components/admin/ReportsDashboard";
+import { PageHeader } from "@/components/admin/design-system";
 import { redirect } from "next/navigation";
 
 export default async function ReportsPage() {
@@ -23,12 +24,10 @@ export default async function ReportsPage() {
   return (
     <main className="min-h-screen bg-stone-100 px-6 py-10">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-stone-950">Reports</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Operational visibility across orders, fulfillment, contacts, and campaigns.
-          </p>
-        </div>
+        <PageHeader
+          title="Reports"
+          subtitle="Operational visibility across orders, fulfillment, contacts, and campaigns."
+        />
 
         <ReportsDashboard
           brands={brands ?? []}

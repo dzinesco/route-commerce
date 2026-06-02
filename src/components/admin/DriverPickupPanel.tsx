@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { markPickupComplete } from "@/actions/pickup";
+import AdminBadge from "./design-system/AdminBadge";
 
 type OrderItem = {
   id: string;
@@ -213,9 +214,14 @@ export default function DriverPickupPanel({
         {hasAnyPickedUp && (
           <button
             onClick={() => setShowPickedUp((v) => !v)}
-            className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+            className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-2"
           >
-            {showPickedUp ? "▼ Hide" : "▶ Show"} {pickedUpOrders.length} picked up
+            {showPickedUp ? (
+              <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7"/></svg> Hide</>
+            ) : (
+              <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg> Show</>
+            )}
+            {pickedUpOrders.length} picked up
           </button>
         )}
 
@@ -275,13 +281,9 @@ function OrderCard({ order, canManagePickup, onMarkPickup, pickingUp, shortId }:
           <p className="mt-1 font-mono text-xs text-stone-400 uppercase">{shortId}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-            Pending
-          </span>
+          <AdminBadge variant="warning">Pending</AdminBadge>
           {isMixed && (
-            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
-              Mixed
-            </span>
+            <AdminBadge variant="info">Mixed</AdminBadge>
           )}
         </div>
       </div>
@@ -417,9 +419,7 @@ function PickedUpCard({ order, shortId }: PickedUpCardProps) {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-            Picked Up
-          </span>
+          <AdminBadge variant="success">Picked Up</AdminBadge>
           {order.pickup_completed_at && (
             <p className="text-xs text-stone-400">{formatPickupTime(order.pickup_completed_at)}</p>
           )}

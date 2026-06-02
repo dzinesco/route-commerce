@@ -4,6 +4,7 @@ import { getAdminUser } from "@/lib/admin-permissions";
 import { supabase } from "@/lib/supabase";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import TaxDashboard from "@/components/admin/TaxDashboard";
+import { PageHeader } from "@/components/admin/design-system";
 
 type Props = {
   params: Promise<{ brandId?: string }>;
@@ -55,12 +56,10 @@ export default async function TaxesPage({ params }: Props) {
   return (
     <main className="min-h-screen bg-stone-100">
       <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-stone-950">Tax Dashboard</h1>
-          <p className="mt-1 text-stone-500">
-            Sales tax collected on orders shipped to nexus states.
-          </p>
-        </div>
+        <PageHeader
+          title="Tax Dashboard"
+          subtitle="Sales tax collected on orders shipped to nexus states."
+        />
 
         <TaxDashboard
           brands={allBrands}

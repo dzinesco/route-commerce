@@ -83,49 +83,36 @@ export default function AdvancedSettingsClient({ brandId, brands, stripeConnect 
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--admin-bg)]">
-      {/* Header */}
-      <div className="px-4 sm:px-6 md:px-8 pt-4 sm:pt-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-violet-600">
-            {Icons.sparkles("h-5 w-5 sm:h-6 sm:w-6 text-white")}
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-[var(--admin-text-primary)] tracking-tight">Advanced</h1>
-            <p className="text-xs text-[var(--admin-text-muted)]">Developer settings, APIs, and integrations</p>
-          </div>
-        </div>
-
-        {/* Tab navigation */}
-        <nav className="grid grid-cols-6 gap-1 p-1.5 rounded-xl bg-white border border-stone-200">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-lg px-1 sm:px-3 py-2 text-[9px] sm:text-xs font-semibold transition-colors ${
-                activeTab === tab.id
-                  ? "bg-violet-600 text-white"
-                  : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
-              }`}
-            >
-              {tab.icon === "plug" && Icons.plug("h-4 w-4")}
-              {tab.icon === "sparkles" && Icons.sparkles("h-4 w-4")}
-              {tab.icon === "square" && Icons.square("h-4 w-4")}
-              {tab.icon === "truck" && Icons.truck("h-4 w-4")}
-              {tab.icon === "webhook" && Icons.webhook("h-4 w-4")}
-              {tab.icon === "credit-card" && Icons["credit-card"]("h-4 w-4")}
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.substring(0, 3)}</span>
-              {activeTab === tab.id && (
-                <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-0.5 w-6 sm:w-8 bg-white rounded-full" />
-              )}
-            </button>
-          ))}
-        </nav>
-      </div>
+    <div>
+      {/* Tab navigation */}
+      <nav className="grid grid-cols-6 gap-1 p-1.5 rounded-xl bg-white border border-[var(--admin-border)]">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`relative flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-lg px-1 sm:px-3 py-2 text-[9px] sm:text-xs font-semibold transition-colors ${
+              activeTab === tab.id
+                ? "bg-[var(--admin-accent)] text-white"
+                : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg)]"
+            }`}
+          >
+            {tab.icon === "plug" && Icons.plug("h-4 w-4")}
+            {tab.icon === "sparkles" && Icons.sparkles("h-4 w-4")}
+            {tab.icon === "square" && Icons.square("h-4 w-4")}
+            {tab.icon === "truck" && Icons.truck("h-4 w-4")}
+            {tab.icon === "webhook" && Icons.webhook("h-4 w-4")}
+            {tab.icon === "credit-card" && Icons["credit-card"]("h-4 w-4")}
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.label.substring(0, 3)}</span>
+            {activeTab === tab.id && (
+              <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-0.5 w-6 sm:w-8 bg-white rounded-full" />
+            )}
+          </button>
+        ))}
+      </nav>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+      <div className="py-4 sm:py-6">
         {activeTab === "integrations" && (
           <AdvancedIntegrations brandId={brandId} brands={brands} />
         )}
@@ -147,8 +134,8 @@ export default function AdvancedSettingsClient({ brandId, brands, stripeConnect 
             {/* Page Header */}
             <div className="rounded-xl border border-[var(--admin-border)] bg-white p-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100">
-                  {Icons.webhook("h-6 w-6 text-stone-600")}
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-bg)]">
+                  {Icons.webhook("h-6 w-6 text-[var(--admin-text-muted)]")}
                 </div>
                 <div className="flex-1">
                   <h2 className="text-lg font-bold text-[var(--admin-text-primary)]">Webhooks</h2>
@@ -161,7 +148,7 @@ export default function AdvancedSettingsClient({ brandId, brands, stripeConnect 
 
             {/* Coming Soon Card */}
             <div className="rounded-xl border border-[var(--admin-border)] bg-white overflow-hidden">
-              <div className="bg-stone-50/50 px-6 py-4 border-b border-[var(--admin-border)]">
+              <div className="bg-[var(--admin-bg)]/50 px-6 py-4 border-b border-[var(--admin-border)]">
                 <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Available Webhook Events</h3>
               </div>
               <div className="p-6">
@@ -185,9 +172,9 @@ export default function AdvancedSettingsClient({ brandId, brands, stripeConnect 
                     { icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4", label: "Inventory Updates", desc: "Real-time stock changes" },
                     { icon: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1", label: "Custom Webhook URLs", desc: "Send events to your endpoint" },
                   ].map((event, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-stone-50/50 border border-stone-100">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white border border-stone-200">
-                        <svg className="h-4 w-4 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--admin-bg)]/50 border border-[var(--admin-border)]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white border border-[var(--admin-border)]">
+                        <svg className="h-4 w-4 text-[var(--admin-text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d={event.icon}/>
                         </svg>
                       </div>
@@ -199,23 +186,23 @@ export default function AdvancedSettingsClient({ brandId, brands, stripeConnect 
                   ))}
                 </div>
 
-                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-stone-50 to-stone-100/50 border border-stone-200">
+                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-[var(--admin-bg)] to-[var(--admin-bg)]/50 border border-[var(--admin-border)]">
                   <div className="flex items-center gap-2">
-                    <svg className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <span className="text-sm text-stone-600">Webhook configuration will allow you to receive events via HTTP POST to your custom endpoint.</span>
+                    <span className="text-sm text-[var(--admin-text-secondary)]">Webhook configuration will allow you to receive events via HTTP POST to your custom endpoint.</span>
                   </div>
                 </div>
 
-                <div className="mt-6 flex items-center justify-between pt-4 border-t border-stone-100">
+                <div className="mt-6 flex items-center justify-between pt-4 border-t border-[var(--admin-border)]">
                   <p className="text-xs text-[var(--admin-text-muted)]">
                     Need webhooks now?{" "}
-                    <button className="text-emerald-600 hover:text-emerald-700 font-medium">
+                    <button className="text-green-600 hover:text-green-700 font-medium">
                       Contact support
                     </button>
                   </p>
-                  <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
+                  <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors">
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                     </svg>
@@ -228,8 +215,8 @@ export default function AdvancedSettingsClient({ brandId, brands, stripeConnect 
             {/* Technical Info Card */}
             <div className="rounded-xl border border-[var(--admin-border)] bg-white p-6">
               <h4 className="text-sm font-semibold text-[var(--admin-text-primary)] mb-3">Webhook Payload Format</h4>
-              <div className="bg-stone-900 rounded-lg p-4 overflow-x-auto">
-                <pre className="text-xs text-stone-300 font-mono leading-relaxed">
+              <div className="bg-[var(--admin-text-primary)] rounded-lg p-4 overflow-x-auto">
+                <pre className="text-xs text-[var(--admin-bg)] font-mono leading-relaxed">
 {`{
   "event": "order.status_changed",
   "timestamp": "2024-01-15T10:30:00Z",

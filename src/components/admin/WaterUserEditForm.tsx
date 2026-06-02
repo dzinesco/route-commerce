@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateWaterIrrigator, resetWaterIrrigatorPin, deleteWaterUser } from "@/actions/water-log/admin";
+import { AdminButton } from "./design-system";
 
 type WaterUser = {
   id: string;
@@ -70,53 +71,53 @@ export default function WaterUserEditForm({ waterUser, backHref = "/admin/water-
   return (
     <form onSubmit={handleSave} className="space-y-4">
       {error && (
-        <div className="rounded-lg bg-red-900/30 border border-red-200 p-3 text-sm text-red-400">
+        <div className="rounded-lg bg-red-100 border border-red-200 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {newPin && (
-        <div className="rounded-xl bg-yellow-50 border border-yellow-200 p-4">
-          <p className="font-semibold text-yellow-800">New PIN for {name}:</p>
-          <p className="mt-1 text-2xl font-bold tracking-widest text-yellow-900">{newPin}</p>
-          <p className="mt-1 text-xs text-yellow-600">Write this down — it will not be shown again.</p>
-          <button onClick={() => setNewPin(null)} className="mt-2 text-xs text-yellow-700 underline">Dismiss</button>
+        <div className="rounded-xl bg-amber-100 border border-amber-200 p-4">
+          <p className="font-semibold text-amber-800">New PIN for {name}:</p>
+          <p className="mt-1 text-2xl font-bold tracking-widest text-amber-900">{newPin}</p>
+          <p className="mt-1 text-xs text-amber-600">Write this down — it will not be shown again.</p>
+          <button onClick={() => setNewPin(null)} className="mt-2 text-xs text-amber-700 underline">Dismiss</button>
         </div>
       )}
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Name</label>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Role</label>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Role</label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as "irrigator" | "water_admin")}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm"
           >
             <option value="irrigator">Irrigator</option>
             <option value="water_admin">Admin</option>
           </select>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[var(--admin-text-muted)] mt-0.5">
             {role === "water_admin"
               ? "Can manage headgates, users, and entries"
               : "Can only submit water log entries"}
           </p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Language</label>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Language</label>
           <select
             value={lang}
             onChange={(e) => setLang(e.target.value)}
-            className="w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm"
           >
             <option value="en">English</option>
             <option value="es">Español</option>
@@ -126,44 +127,46 @@ export default function WaterUserEditForm({ waterUser, backHref = "/admin/water-
 
       <div className="flex items-center gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Status</label>
+          <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">Status</label>
           <select
             value={active ? "1" : "0"}
             onChange={(e) => setActive(e.target.value === "1")}
-            className="rounded-lg border border-zinc-600 px-3 py-2 text-sm"
+            className="rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm"
           >
             <option value="1">Active</option>
             <option value="0">Inactive</option>
           </select>
         </div>
         <div className="pt-4">
-          <button
+          <AdminButton
             type="button"
+            variant="secondary"
             onClick={handleResetPin}
             disabled={resetting}
-            className="rounded-lg border border-zinc-600 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-900 disabled:opacity-50"
+            isLoading={resetting}
           >
-            {resetting ? "..." : "Reset PIN"}
-          </button>
+            Reset PIN
+          </AdminButton>
         </div>
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <button
+        <AdminButton
           type="button"
+          variant="danger"
           onClick={handleDelete}
           disabled={deleting}
-          className="rounded-lg border border-red-200 bg-zinc-900 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-900/30 disabled:opacity-50"
+          isLoading={deleting}
         >
-          {deleting ? "..." : "Delete User"}
-        </button>
-        <button
+          Delete User
+        </AdminButton>
+        <AdminButton
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          isLoading={saving}
         >
-          {saving ? "..." : "Save Changes"}
-        </button>
+          Save Changes
+        </AdminButton>
       </div>
     </form>
   );

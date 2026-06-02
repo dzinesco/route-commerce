@@ -7,6 +7,7 @@ import {
   type SegmentFilterType,
   type SegmentFilterParams,
 } from "@/actions/harvest-reach/segments";
+import { AdminButton, AdminSearchInput } from "@/components/admin/design-system";
 
 // Icon components
 const Icons = {
@@ -85,7 +86,7 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
                 onClick={() => setCombinator(c)}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                   rules.combinator === c
-                    ? "bg-emerald-600 text-white"
+                    ? "bg-[var(--admin-accent)] text-white"
                     : "text-[var(--admin-text-muted)] hover:bg-[var(--admin-card-hover)]"
                 }`}
               >
@@ -123,7 +124,7 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
           <button
             key={ft.value}
             onClick={() => addFilter(ft.value)}
-            className="px-3 py-1.5 text-xs font-medium rounded-full border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-full border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-accent-light)] hover:border-[var(--admin-accent)] hover:text-[var(--admin-accent)] transition-colors"
           >
             + {ft.label}
           </button>
@@ -132,13 +133,13 @@ export default function SegmentBuilderPanel({ brandId, rules, onChange, onSave, 
 
       {/* Save button */}
       <div className="pt-1 border-t border-[var(--admin-border)]">
-        <button
+        <AdminButton
           onClick={onSave}
           disabled={rules.filters.length === 0}
-          className="w-full py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          fullWidth
         >
           {hasActiveSegment ? "Update Segment" : "Save Segment"}
-        </button>
+        </AdminButton>
       </div>
     </div>
   );
@@ -187,7 +188,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
           onChange={(e) =>
             onChange({ type: e.target.value as SegmentFilterType, params: emptyFilter(e.target.value as SegmentFilterType).params })
           }
-          className="text-sm font-medium border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 bg-white text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          className="text-sm font-medium border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 bg-white text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
         >
           {FILTER_TYPES.map((ft) => (
             <option key={ft.value} value={ft.value}>{ft.label}</option>
@@ -210,7 +211,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
               value={filter.params.stop_id ?? ""}
               onChange={(e) => onChange({ params: { ...filter.params, stop_id: e.target.value } })}
               onMouseEnter={() => loadStops(filter.type === "stop")}
-              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white w-full outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white w-full outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
             >
               <option value="">Select {filter.type === "stop" ? "past" : "upcoming"} stop…</option>
               {stops.map((s) => (
@@ -222,13 +223,13 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 type="date"
                 value={filter.params.date_from ?? ""}
                 onChange={(e) => onChange({ params: { ...filter.params, date_from: e.target.value } })}
-                className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
               />
               <input
                 type="date"
                 value={filter.params.date_to ?? ""}
                 onChange={(e) => onChange({ params: { ...filter.params, date_to: e.target.value } })}
-                className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
               />
             </div>
           </>
@@ -244,7 +245,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 if (e.target.value) loadProducts();
               }}
               onMouseEnter={loadProducts}
-              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white w-full outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white w-full outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
             >
               <option value="">Select a product…</option>
               {products.map((p) => (
@@ -259,7 +260,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 max={365}
                 value={filter.params.days_back ?? 90}
                 onChange={(e) => onChange({ params: { ...filter.params, days_back: parseInt(e.target.value) } })}
-                className="border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 text-sm w-20 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 text-sm w-20 bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
               />
               <span className="text-xs text-[var(--admin-text-muted)]">days</span>
             </div>
@@ -281,14 +282,14 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                   },
                 })
               }
-              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
             />
             <input
               type="text"
               placeholder="City (optional)"
               value={filter.params.city ?? ""}
               onChange={(e) => onChange({ params: { ...filter.params, city: e.target.value } })}
-              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
             />
           </>
         )}
@@ -301,7 +302,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
               onChange={(e) =>
                 onChange({ params: { ...filter.params, order_history: e.target.value as "all" | "first_order" | "repeat" } })
               }
-              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
             >
               {ORDER_HISTORY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -315,7 +316,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 max={365}
                 value={filter.params.days_back ?? 90}
                 onChange={(e) => onChange({ params: { ...filter.params, days_back: parseInt(e.target.value) } })}
-                className="border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 text-sm w-20 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="border border-[var(--admin-border)] rounded-lg px-2.5 py-1.5 text-sm w-20 bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
               />
               <span className="text-xs text-[var(--admin-text-muted)]">days</span>
             </div>
@@ -336,7 +337,7 @@ function FilterBlock({ brandId, filter, onChange, onRemove }: FilterBlockProps) 
                 },
               })
             }
-            className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-[var(--admin-accent)] focus:border-[var(--admin-accent)]"
           />
         )}
 

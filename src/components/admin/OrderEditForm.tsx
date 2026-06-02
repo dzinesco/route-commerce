@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrder, updateOrderItem, deleteOrderItem } from "@/actions/orders/update-order";
+import { AdminInput, AdminTextInput, AdminTextarea } from "./design-system";
 
 type OrderItem = {
   id: string;
@@ -199,8 +200,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-stone-500">Qty</label>
+                  <AdminInput label="Qty">
                     <input
                       type="number"
                       min="1"
@@ -210,10 +210,9 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                       }
                       className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
                     />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-stone-500">Price</label>
-                    <input
+                  </AdminInput>
+                  <AdminInput label="Price">
+                    <AdminTextInput
                       type="number"
                       step="0.01"
                       min="0"
@@ -221,9 +220,8 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
                       onChange={(e) =>
                         updateItem(item.id, "price", Number(e.target.value))
                       }
-                      className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
                     />
-                  </div>
+                  </AdminInput>
                 </div>
 
                 <p className="mt-2 text-right text-sm font-semibold text-stone-900">
@@ -237,8 +235,7 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
 
       {/* Pricing */}
       <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-stone-500">Subtotal (auto-calculated)</label>
+        <AdminInput label="Subtotal (auto-calculated)">
           <input
             type="number"
             step="0.01"
@@ -246,30 +243,25 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
             readOnly
             className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm text-stone-500"
           />
-        </div>
+        </AdminInput>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-500">Discount Amount</label>
-            <input
+          <AdminInput label="Discount Amount">
+            <AdminTextInput
               type="number"
               step="0.01"
               min="0"
               value={discount_amount}
               onChange={(e) => setDiscount_amount(Number(e.target.value))}
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-500">Discount Reason</label>
-            <input
-              type="text"
+          </AdminInput>
+          <AdminInput label="Discount Reason">
+            <AdminTextInput
               value={discount_reason}
               onChange={(e) => setDiscount_reason(e.target.value)}
               placeholder="Optional"
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
-          </div>
+          </AdminInput>
         </div>
 
         <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
@@ -284,34 +276,27 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
 
       {/* Customer fields */}
       <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-stone-500">Name</label>
-          <input
-            type="text"
+        <AdminInput label="Name">
+          <AdminTextInput
             value={customer_name}
             onChange={(e) => setCustomer_name(e.target.value)}
-            className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
           />
-        </div>
+        </AdminInput>
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-500">Email</label>
-            <input
+          <AdminInput label="Email">
+            <AdminTextInput
               type="email"
               value={customer_email}
               onChange={(e) => setCustomer_email(e.target.value)}
-              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-500">Phone</label>
-            <input
+          </AdminInput>
+          <AdminInput label="Phone">
+            <AdminTextInput
               type="tel"
               value={customer_phone}
               onChange={(e) => setCustomer_phone(e.target.value)}
-              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
-          </div>
+          </AdminInput>
         </div>
       </div>
 
@@ -352,16 +337,14 @@ export default function OrderEditForm({ order, brandId }: OrderEditFormProps) {
       </div>
 
       {/* Internal notes */}
-      <div>
-        <label className="mb-1 block text-xs font-semibold text-stone-500">Internal Notes</label>
-        <textarea
+      <AdminInput label="Internal Notes">
+        <AdminTextarea
           value={internal_notes}
           onChange={(e) => setInternal_notes(e.target.value)}
           rows={2}
           placeholder="Private notes for staff..."
-          className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500 resize-none"
         />
-      </div>
+      </AdminInput>
 
       <button
         onClick={handleSave}

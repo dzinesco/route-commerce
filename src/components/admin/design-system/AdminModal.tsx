@@ -33,7 +33,7 @@ export default function AdminModal({ title, subtitle, onClose, children, maxWidt
       <div
         className={`relative w-full ${maxWidth} rounded-2xl`}
         style={{
-          backgroundColor: "#ffffff",
+          backgroundColor: "var(--admin-card-bg)",
           border: "1px solid var(--admin-border)",
           boxShadow: "0 25px 50px -12px rgba(60, 56, 37, 0.35), 0 12px 24px -8px rgba(60, 56, 37, 0.2)",
         }}

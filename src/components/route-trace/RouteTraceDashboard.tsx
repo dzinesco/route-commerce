@@ -599,12 +599,6 @@ export default function RouteTraceDashboard({
           {Icons.camera("w-3.5 h-3.5 sm:w-4 sm:h-4")} <span className="hidden sm:inline">Scan QR</span>
         </button>
         <FsmaReportModal brandId={brandId} />
-        <button
-          onClick={() => setShowQuickNew(true)}
-          className="rounded-xl border border-[var(--admin-border)] bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
-        >
-          {Icons.plus("w-3.5 h-3.5 sm:w-4 sm:h-4")} <span className="hidden sm:inline">New Lot</span>
-        </button>
         <Link
           href="/admin/route-trace/lots"
           className="rounded-xl border border-[var(--admin-border)] bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors flex items-center gap-1.5 sm:gap-2"

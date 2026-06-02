@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateStop } from "@/actions/stops/update-stop";
+import { AdminInput, AdminTextInput, AdminSelect } from "./design-system";
 
 type Brand = {
   id: string;
@@ -94,113 +95,86 @@ export default function StopEditForm({ stop, brands }: StopEditFormProps) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">City</label>
-          <input
-            type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
+        <AdminInput label="City">
+            <AdminTextInput
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="City name"
+            />
+          </AdminInput>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">State</label>
-          <input
-            type="text"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
+          <AdminInput label="State">
+            <AdminTextInput
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              placeholder="State code"
+            />
+          </AdminInput>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
+        <AdminInput label="Date">
+            <AdminTextInput
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </AdminInput>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Time</label>
-          <input
-            type="text"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            placeholder="e.g. 8:00 AM – 2:00 PM"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
+          <AdminInput label="Time">
+            <AdminTextInput
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              placeholder="e.g. 8:00 AM – 2:00 PM"
+            />
+          </AdminInput>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">Location</label>
-        <input
-          type="text"
+      <AdminInput label="Location">
+        <AdminTextInput
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Street address or intersection"
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
         />
-      </div>
+      </AdminInput>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Street Address</label>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="123 Main St"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
+        <AdminInput label="Street Address">
+            <AdminTextInput
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Main St"
+            />
+          </AdminInput>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">ZIP Code</label>
-          <input
-            type="text"
-            value={zip}
-            onChange={(e) => setZip(e.target.value)}
-            placeholder="80102"
-            maxLength={10}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-          />
-        </div>
+          <AdminInput label="ZIP Code">
+            <AdminTextInput
+              value={zip}
+              onChange={(e) => setZip(e.target.value)}
+              placeholder="80102"
+              maxLength={10}
+            />
+          </AdminInput>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">Order Cutoff</label>
-        <input
-          type="datetime-local"
-          value={cutoff_time}
-          onChange={(e) => setCutoff_time(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-        />
-        <p className="mt-1 text-xs text-slate-400">
-          Customers must order before this time to be included at this stop.
-        </p>
-      </div>
+      <AdminInput 
+          label="Order Cutoff"
+          helpText="Customers must order before this time to be included at this stop."
+        >
+          <AdminTextInput
+            type="datetime-local"
+            value={cutoff_time}
+            onChange={(e) => setCutoff_time(e.target.value)}
+          />
+        </AdminInput>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-zinc-300">Brand</label>
-        <select
+      <AdminInput label="Brand">
+        <AdminSelect
           value={brand_id}
           onChange={(e) => setBrand_id(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base outline-none focus:border-slate-900"
-        >
-          {brands.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-      </div>
+          options={brands.map((b) => ({ value: b.id, label: b.name }))}
+        />
+      </AdminInput>
 
       <div>
         <label className="mb-2 block text-sm font-medium text-zinc-300">Status</label>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { deleteProduct } from "@/actions/products";
+import AdminBadge from "./design-system/AdminBadge";
 
 type Product = {
   id: string;
@@ -146,22 +147,16 @@ export default function ProductTableBody({
               </td>
 
               <td className="px-5 py-4">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    product.active
-                      ? "bg-green-900/40 text-green-400"
-                      : "bg-zinc-950 text-zinc-400"
-                  }`}
-                >
+                <AdminBadge variant={product.active ? "success" : "default"} dot>
                   {product.active ? "Active" : "Inactive"}
-                </span>
+                </AdminBadge>
               </td>
 
               <td className="px-5 py-4">
                 {product.is_taxable === false ? (
-                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">Non-taxable</span>
+                  <AdminBadge variant="warning">Non-taxable</AdminBadge>
                 ) : (
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">Taxable</span>
+                  <AdminBadge variant="success">Taxable</AdminBadge>
                 )}
               </td>
 
@@ -181,7 +176,9 @@ export default function ProductTableBody({
                     }}
                     className="rounded-lg px-2 py-1.5 text-xs text-zinc-500 hover:bg-zinc-950"
                   >
-                    ⋮
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/>
+                    </svg>
                   </button>
 
                   {openMenu === product.id && (
@@ -225,7 +222,7 @@ export default function ProductTableBody({
                           <button
                             onClick={() => handleDelete(product.id)}
                             disabled={deletingId === product.id}
-                            className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                            className="flex-1 rounded-lg bg-[var(--admin-danger)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--admin-danger-hover)] disabled:opacity-50"
                           >
                             {deletingId === product.id ? "..." : "Delete"}
                           </button>

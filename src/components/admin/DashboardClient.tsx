@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import UpgradePlanModal from "@/components/admin/UpgradePlanModal";
+import { PageHeader, AdminButton, AdminFilterTabs, AdminBadge } from "@/components/admin/design-system";
 
 type Section = {
   title: string;
@@ -200,48 +201,50 @@ export default function DashboardClient({
 
   return (
     <div className="min-h-screen bg-[var(--admin-bg)]">
-      {/* Header */}
+      {/* Page Header */}
       <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-emerald-600">
-              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
+        <PageHeader
+          icon={
+            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          }
+          title="Admin Dashboard"
+          subtitle={`${brandName} Control Center`}
+          actions={
+            <div className="flex items-center gap-4">
+              <a href="/admin/settings/billing" className="text-sm font-medium text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] transition-colors">
+                Billing →
+              </a>
+              {planTier === "starter" && brandId && (
+                <AdminButton
+                  onClick={() => setIsUpgradeOpen(true)}
+                  size="md"
+                >
+                  Upgrade Plan
+                </AdminButton>
+              )}
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-[var(--admin-text-primary)] tracking-tight">Admin Dashboard</h1>
-              <p className="text-xs sm:text-sm text-[var(--admin-text-muted)]">{brandName} Control Center</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="/admin/settings/billing" className="text-sm font-medium text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] transition-colors">
-              Billing →
-            </a>
-            {planTier === "starter" && brandId && (
-              <button
-                onClick={() => setIsUpgradeOpen(true)}
-                className="rounded-full bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition-all shadow-sm"
-              >
-                Upgrade Plan
-              </button>
-            )}
-          </div>
-        </div>
+          }
+          className="mb-0"
+        />
+      </div>
 
+      {/* Content */}
+      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 -mt-4">
         {/* Usage stats - compact bar */}
         <div className="rounded-xl border border-[var(--admin-border)] bg-white p-4 mb-4">
           <div className="flex items-center gap-4 mb-3">
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold tracking-wide ${
-              planTier === "enterprise" ? "bg-amber-100 text-amber-700 border border-amber-200" :
-              planTier === "farm" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" :
-              "bg-stone-100 text-stone-600 border border-stone-200"
-            }`}>
+            <AdminBadge variant={
+              planTier === "enterprise" ? "warning" :
+              planTier === "farm" ? "success" :
+              "default"
+            }>
               {planTier.charAt(0).toUpperCase() + planTier.slice(1)} Plan
-            </span>
+            </AdminBadge>
             <span className="text-xs text-stone-500">{brandId ? "Tuxedo Corn" : "All Brands"}</span>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -255,10 +258,10 @@ export default function DashboardClient({
                   <span className="text-xs font-medium text-stone-600">{label}</span>
                   <span className="text-xs font-semibold text-stone-900">{value}</span>
                 </div>
-                <div className="h-1 rounded-full bg-stone-200 overflow-hidden">
+                <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      pct > 85 ? "bg-amber-500" : "bg-emerald-500"
+                      pct > 90 ? "bg-red-500" : pct > 75 ? "bg-amber-500" : "bg-[var(--admin-accent)]"
                     }`}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />
@@ -268,30 +271,21 @@ export default function DashboardClient({
           </div>
         </div>
 
-        {/* Tab navigation */}
-        <nav className="grid grid-cols-4 gap-1 p-1.5 rounded-xl bg-white border border-[var(--admin-border)]">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-sm font-semibold transition-colors ${
-                activeTab === tab.id
-                  ? "bg-emerald-600 text-white"
-                  : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-              {activeTab === tab.id && (
-                <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-0.5 w-6 sm:w-12 bg-white rounded-full" />
-              )}
-            </button>
-          ))}
-        </nav>
-      </div>
+        {/* Tab navigation using AdminFilterTabs */}
+        <AdminFilterTabs
+          activeTab={activeTab}
+          onTabChange={(value) => setActiveTab(value as Tab)}
+          tabs={TABS.map((tab) => ({
+            value: tab.id,
+            label: tab.label,
+            icon: tab.icon,
+          }))}
+          size="md"
+          showCounts={false}
+          className="mb-4"
+        />
 
-      {/* Content */}
-      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+        {/* Section Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {tabSections.map((section) => {
             if (section.title === "Water Log" && !isWaterLogVisible) return null;
@@ -310,7 +304,7 @@ export default function DashboardClient({
                   isAddon && !isEnabled
                     ? "border-stone-200 shadow-sm opacity-75 hover:opacity-100"
                     : isProminent
-                    ? "border-emerald-200 shadow-md shadow-emerald-100/50"
+                    ? "border-[var(--admin-accent)]/20 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
                     : "border-stone-200 shadow-sm",
                 ].join(" ")}
               >
@@ -319,27 +313,27 @@ export default function DashboardClient({
                     isAddon && !isEnabled
                       ? "bg-stone-100 text-stone-400"
                       : isProminent
-                      ? "bg-emerald-100 text-emerald-600"
-                      : "bg-violet-100 text-violet-600"
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-stone-100 text-stone-600"
                   }`}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                   {isAddon && !isEnabled && (
-                    <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2.5 py-0.5">
+                    <AdminBadge variant="warning">
                       Add-on
-                    </span>
+                    </AdminBadge>
                   )}
                   {isAddon && isEnabled && (
-                    <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5">
+                    <AdminBadge variant="success">
                       Active
-                    </span>
+                    </AdminBadge>
                   )}
                   {isProminent && (
-                    <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5">
+                    <AdminBadge variant="success">
                       Core
-                    </span>
+                    </AdminBadge>
                   )}
                 </div>
 

@@ -1,3 +1,8 @@
+/**
+ * @deprecated Use AdminSidebar instead. AdminHeader is deprecated and will be removed.
+ * The AdminSidebar provides the complete navigation system for admin pages.
+ * It includes an expandable Settings sub-menu with all settings pages.
+ */
 "use client";
 
 import Link from "next/link";

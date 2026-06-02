@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { savePaymentSettings, type PaymentProvider, type PaymentSettings } from "@/actions/payments";
 import { syncSquareNow, getSyncLog, type SyncLogEntry } from "@/actions/square-sync-ui";
 import WebhookLogsSection from "@/components/admin/WebhookLogsSection";
+import { AdminInput, AdminTextInput, AdminSelect } from "./design-system";
 
 type InventoryMode = "none" | "rc_to_square" | "square_to_rc" | "bidirectional";
 
@@ -153,18 +154,13 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
     <form onSubmit={handleSave} className="space-y-8">
       {/* Platform admin brand picker */}
       {isPlatformAdmin && brands.length > 0 && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Brand</label>
-          <select
+        <AdminInput label="Brand">
+          <AdminSelect
             value={activeBrandId}
             onChange={(e) => setActiveBrandId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-base text-zinc-100 outline-none focus:border-zinc-400"
-          >
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
+            options={brands.map((b) => ({ value: b.id, label: b.name }))}
+          />
+        </AdminInput>
       )}
 
       {error && (
@@ -297,16 +293,13 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
             </div>
           ) : (
             <>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300">Location ID</label>
-                <input
-                  type="text"
+              <AdminInput label="Location ID">
+                <AdminTextInput
                   value={squareLocationId}
                   onChange={(e) => setSquareLocationId(e.target.value)}
                   placeholder="L..."
-                  className="mt-1 w-full rounded-xl border border-zinc-600 px-4 py-3 text-sm font-mono outline-none focus:border-slate-900"
                 />
-              </div>
+              </AdminInput>
               <button
                 type="button"
                 onClick={handleDisconnectSquare}

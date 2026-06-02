@@ -8,6 +8,7 @@ import { updateProduct } from "@/actions/products/update-product";
 import { deleteProduct } from "@/actions/products";
 import { uploadProductImage } from "@/actions/products/upload-image";
 import GlassModal from "@/components/admin/GlassModal";
+import { PageHeader, AdminButton, AdminIconButton, AdminSearchInput, AdminFilterTabs, AdminViewModeTabs } from "@/components/admin/design-system";
 
 type Product = {
   id: string;
@@ -33,35 +34,12 @@ type FormData = {
 
 type ViewMode = "table" | "cards";
 
-type Props = {
-  products: Product[];
-  brandId: string;
-};
-
 // Icons
 const Icons = {
   search: (className: string) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8"/>
       <path d="m21 21-4.3-4.3"/>
-    </svg>
-  ),
-  grid: (className: string) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7"/>
-      <rect x="14" y="3" width="7" height="7"/>
-      <rect x="14" y="14" width="7" height="7"/>
-      <rect x="3" y="14" width="7" height="7"/>
-    </svg>
-  ),
-  list: (className: string) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="8" y1="6" x2="21" y2="6"/>
-      <line x1="8" y1="12" x2="21" y2="12"/>
-      <line x1="8" y1="18" x2="21" y2="18"/>
-      <line x1="3" y1="6" x2="3.01" y2="6"/>
-      <line x1="3" y1="12" x2="3.01" y2="12"/>
-      <line x1="3" y1="18" x2="3.01" y2="18"/>
     </svg>
   ),
   plus: (className: string) => (
@@ -86,7 +64,17 @@ const Icons = {
   ),
 };
 
-export default function ProductsClient({ products, brandId }: Props) {
+// Page header icon
+const PackageIconHeader = () => (
+  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m7.5 4.27 9 5.15"/>
+    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+    <path d="m3.3 7 8.7 5 8.7-5"/>
+    <path d="M12 22V12"/>
+  </svg>
+);
+
+export default function ProductsClient({ products, brandId }: { products: Product[]; brandId: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
@@ -295,29 +283,29 @@ export default function ProductsClient({ products, brandId }: Props) {
     }
   };
 
+  // Filter tabs configuration
+  const filterTabs = [
+    { value: "all", label: "All", count: products.length },
+    { value: "active", label: "Active", count: activeCount },
+    { value: "inactive", label: "Inactive", count: inactiveCount },
+  ];
+
   return (
     <div className="p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
-            {Icons.package("h-5 w-5 text-white")}
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-[var(--admin-text-primary)]">Products</h2>
-            <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)]">
-              {filtered.length} product{filtered.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-colors"
-        >
-          {Icons.plus("h-4 w-4")}
-          Add Product
-        </button>
-      </div>
+      {/* Page Header */}
+      <PageHeader
+        icon={<PackageIconHeader />}
+        title="Products"
+        subtitle={`${filtered.length} product${filtered.length !== 1 ? "s" : ""}`}
+        actions={
+          <AdminButton
+            onClick={openAddModal}
+            icon={Icons.plus("h-4 w-4")}
+          >
+            Add Product
+          </AdminButton>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3 mb-6">
@@ -327,7 +315,7 @@ export default function ProductsClient({ products, brandId }: Props) {
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Active</p>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">{activeCount}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--admin-accent)] mt-1">{activeCount}</p>
         </div>
         <div className="bg-white rounded-xl border border-[var(--admin-border)] p-4">
           <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)] font-medium">Inactive</p>
@@ -338,53 +326,27 @@ export default function ProductsClient({ products, brandId }: Props) {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* Status Tabs */}
-        <div className="flex rounded-xl border border-[var(--admin-border)] bg-white p-1">
-          {(["all", "active", "inactive"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                statusFilter === f
-                  ? "bg-emerald-600 text-white"
-                  : "text-stone-500 hover:bg-stone-50"
-              }`}
-            >
-              {f === "all" ? "All" : f === "active" ? "Active" : "Inactive"}
-            </button>
-          ))}
-        </div>
+        <AdminFilterTabs
+          activeTab={statusFilter}
+          onTabChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}
+          tabs={filterTabs}
+          size="md"
+        />
 
         {/* Search */}
-        <div className="relative flex-1">
-          {Icons.search("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400")}
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm border border-[var(--admin-border)] rounded-xl bg-white text-[var(--admin-text-primary)] placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
+        <AdminSearchInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={() => setSearch("")}
+          placeholder="Search products..."
+          containerClassName="flex-1"
+        />
 
         {/* View Toggle */}
-        <div className="flex rounded-xl border border-[var(--admin-border)] bg-white p-1">
-          <button
-            onClick={() => setViewMode("table")}
-            className={`rounded-lg p-2 transition-colors ${
-              viewMode === "table" ? "bg-emerald-600 text-white" : "text-stone-500 hover:bg-stone-50"
-            }`}
-          >
-            {Icons.list("h-4 w-4")}
-          </button>
-          <button
-            onClick={() => setViewMode("cards")}
-            className={`rounded-lg p-2 transition-colors ${
-              viewMode === "cards" ? "bg-emerald-600 text-white" : "text-stone-500 hover:bg-stone-50"
-            }`}
-          >
-            {Icons.grid("h-4 w-4")}
-          </button>
-        </div>
+        <AdminViewModeTabs
+          activeTab={viewMode}
+          onTabChange={(value) => setViewMode(value as ViewMode)}
+        />
       </div>
 
       {/* Content */}
@@ -431,7 +393,7 @@ export default function ProductsClient({ products, brandId }: Props) {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Product name"
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
                 required
               />
             </div>
@@ -443,7 +405,7 @@ export default function ProductsClient({ products, brandId }: Props) {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Product description"
                 rows={2}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 resize-none"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] resize-none"
               />
             </div>
 
@@ -459,7 +421,7 @@ export default function ProductsClient({ products, brandId }: Props) {
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-[var(--admin-border)] bg-stone-50 pl-8 pr-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full rounded-xl border border-[var(--admin-border)] bg-white pl-8 pr-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
                     required
                   />
                 </div>
@@ -469,7 +431,7 @@ export default function ProductsClient({ products, brandId }: Props) {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full rounded-xl border border-[var(--admin-border)] bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
                 >
                   <option value="pickup">Pickup</option>
                   <option value="wholesale">Wholesale</option>
@@ -493,13 +455,13 @@ export default function ProductsClient({ products, brandId }: Props) {
                 onClick={() => !uploading && fileInputRef.current?.click()}
                 className={`
                   flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-colors
-                  ${uploadError ? "border-red-400" : "border-[var(--admin-border)] hover:border-emerald-400 hover:bg-emerald-50/50"}
+                  ${uploadError ? "border-red-400" : "border-[var(--admin-border)] hover:border-[var(--admin-accent)] hover:bg-[var(--admin-accent)]/5"}
                   ${uploading ? "opacity-50 pointer-events-none" : ""}
                 `}
               >
                 {uploading ? (
                   <>
-                    <div className="h-5 w-5 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+                    <div className="h-5 w-5 rounded-full border-2 border-[var(--admin-accent)] border-t-transparent animate-spin" />
                     <span className="text-sm text-stone-500">Uploading...</span>
                   </>
                 ) : imagePreview ? (
@@ -553,7 +515,7 @@ export default function ProductsClient({ products, brandId }: Props) {
                   type="checkbox"
                   checked={formData.active}
                   onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  className="h-4 w-4 rounded border-stone-300 text-emerald-600"
+                  className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/30 focus:ring-offset-1 cursor-pointer"
                 />
                 <span className="text-sm font-medium text-stone-700">Active</span>
               </label>
@@ -562,27 +524,28 @@ export default function ProductsClient({ products, brandId }: Props) {
                   type="checkbox"
                   checked={formData.is_taxable}
                   onChange={(e) => setFormData({ ...formData, is_taxable: e.target.checked })}
-                  className="h-4 w-4 rounded border-stone-300 text-emerald-600"
+                  className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/30 focus:ring-offset-1 cursor-pointer"
                 />
                 <span className="text-sm font-medium text-stone-700">Taxable</span>
               </label>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
-              <button
+              <AdminButton
                 type="button"
+                variant="secondary"
                 onClick={closeModal}
-                className="rounded-xl border border-[var(--admin-border)] px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50"
               >
                 Cancel
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton
                 type="submit"
-                disabled={saving || !formData.name.trim() || !formData.price}
-                className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                variant="primary"
+                isLoading={saving}
+                disabled={!formData.name.trim() || !formData.price}
               >
-                {saving ? "Saving..." : editingProduct ? "Save Changes" : "Create Product"}
-              </button>
+                {editingProduct ? "Save Changes" : "Create Product"}
+              </AdminButton>
             </div>
           </form>
         </GlassModal>
@@ -656,7 +619,7 @@ function TableView({
                     <div>
                       <button
                         onClick={() => onEdit(product)}
-                        className="font-semibold text-[var(--admin-text-primary)] hover:text-emerald-600 transition-colors text-left"
+                        className="font-semibold text-[var(--admin-text-primary)] hover:text-[var(--admin-accent)] transition-colors text-left"
                       >
                         {product.name}
                       </button>
@@ -679,7 +642,7 @@ function TableView({
 
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                    product.active ? "bg-emerald-100 text-emerald-700" : "bg-stone-100 text-stone-500"
+                    product.active ? "bg-[var(--admin-accent)]/10 text-[var(--admin-accent)]" : "bg-stone-100 text-stone-500"
                   }`}>
                     {product.active ? "Active" : "Inactive"}
                   </span>
@@ -687,17 +650,20 @@ function TableView({
 
                 <td className="px-4 py-3 text-right">
                   <div className="relative inline-flex items-center justify-end gap-1">
-                    <button
+                    <AdminButton
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onEdit(product)}
-                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition-colors"
                     >
                       Edit
-                    </button>
+                    </AdminButton>
                     <button
                       onClick={() => onDelete(product.id)}
-                      className="rounded-lg px-2 py-1.5 text-xs text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="rounded-lg px-2 py-1.5 text-xs text-[var(--admin-text-muted)] hover:text-red-600 hover:bg-red-50 transition-colors"
                     >
-                      ⋮
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
                     </button>
 
                     {deleteConfirm === product.id && (
@@ -717,13 +683,15 @@ function TableView({
                             >
                               Cancel
                             </button>
-                            <button
+                            <AdminButton
                               onClick={() => onDeleteConfirm(product.id)}
                               disabled={deletingId === product.id}
-                              className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 hover:bg-red-500"
+                              variant="danger"
+                              size="sm"
+                              className="flex-1"
                             >
                               {deletingId === product.id ? "..." : "Delete"}
-                            </button>
+                            </AdminButton>
                           </div>
                         </div>
                       </>
@@ -772,7 +740,7 @@ function CardView({
         products.map((product) => (
           <div
             key={product.id}
-            className="group relative rounded-xl border border-[var(--admin-border)] bg-white hover:shadow-md hover:border-emerald-200 transition-all overflow-hidden"
+            className="group relative rounded-xl border border-[var(--admin-border)] bg-white hover:shadow-md hover:border-[var(--admin-accent)]/30 transition-all overflow-hidden"
           >
             {/* Image */}
             <div className="relative h-40 bg-stone-100">
@@ -793,7 +761,7 @@ function CardView({
               {/* Status badge */}
               <div className="absolute top-3 right-3">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold shadow-sm ${
-                  product.active ? "bg-emerald-500 text-white" : "bg-stone-500 text-white"
+                  product.active ? "bg-[var(--admin-accent)] text-white" : "bg-stone-500 text-white"
                 }`}>
                   {product.active ? "Active" : "Inactive"}
                 </span>
@@ -806,7 +774,7 @@ function CardView({
                 onClick={() => onEdit(product)}
                 className="block w-full text-left"
               >
-                <h3 className="font-semibold text-[var(--admin-text-primary)] group-hover:text-emerald-600 transition-colors line-clamp-1">
+                <h3 className="font-semibold text-[var(--admin-text-primary)] group-hover:text-[var(--admin-accent)] transition-colors line-clamp-1">
                   {product.name}
                 </h3>
                 <p className="text-xs text-stone-500 mt-1 line-clamp-2 h-8">
@@ -834,17 +802,21 @@ function CardView({
               </div>
 
               <div className="flex items-center gap-2 mt-3">
-                <button
+                <AdminButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => onEdit(product)}
-                  className="flex-1 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                  className="flex-1"
                 >
                   Edit
-                </button>
+                </AdminButton>
                 <button
                   onClick={() => onDelete(product.id)}
-                  className="rounded-lg border border-[var(--admin-border)] px-3 py-2 text-xs font-semibold text-stone-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                  className="rounded-lg border border-[var(--admin-border)] px-3 py-2 text-xs font-semibold text-[var(--admin-text-muted)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                 >
-                  🗑
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                 </button>
               </div>
             </div>

@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { uploadProductImage, deleteProductImage } from "@/actions/products/upload-image";
 import { updateProduct } from "@/actions/products/update-product";
+import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect } from "./design-system";
 
 type Brand = {
   id: string;
@@ -157,65 +158,51 @@ export default function ProductEditForm({ product, brands }: ProductEditFormProp
         </div>
       )}
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">Name</label>
-        <input
-          type="text"
+      <AdminInput label="Name">
+        <AdminTextInput
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-slate-900"
+          placeholder="Product name"
         />
-      </div>
+      </AdminInput>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">Description</label>
-        <textarea
+      <AdminInput label="Description">
+        <AdminTextarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-slate-900"
+          placeholder="Product description"
         />
-      </div>
+      </AdminInput>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Price</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-slate-900"
-          />
-        </div>
+        <AdminInput label="Price">
+            <AdminTextInput
+              type="number"
+              step="0.01"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value))}
+              placeholder="0.00"
+            />
+          </AdminInput>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Type</label>
-          <input
-            type="text"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder="e.g. Sweet Corn"
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-slate-900"
-          />
-        </div>
+        <AdminInput label="Type">
+            <AdminTextInput
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              placeholder="e.g. Sweet Corn"
+            />
+          </AdminInput>
       </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-zinc-300">Brand</label>
-        <select
+      <AdminInput label="Brand">
+        <AdminSelect
           value={brand_id}
           onChange={(e) => setBrand_id(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-slate-900"
-        >
-          {brands.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-      </div>
+          options={brands.map((b) => ({ value: b.id, label: b.name }))}
+        />
+      </AdminInput>
 
       <div>
         <label className="mb-2 block text-sm font-medium text-zinc-300">Status</label>
@@ -247,18 +234,19 @@ export default function ProductEditForm({ product, brands }: ProductEditFormProp
         <p className="mt-1.5 text-xs text-zinc-500">Tax is calculated at checkout for shipping orders in your brand&apos;s nexus states. Non-taxable items (e.g. cooler boxes, apparel) are always exempt.</p>
       </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-zinc-300">Pickup Type</label>
-        <select
-          value={pickup_type}
-          onChange={(e) => setPickup_type(e.target.value)}
-          className="w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-slate-900"
+      <AdminInput 
+          label="Pickup Type"
+          helpText="Shed pickup uses the product description as the pickup location — no stop required at checkout."
         >
-          <option value="scheduled_stop">Scheduled Stop — requires stop selection at checkout</option>
-          <option value="shed">Shed Pickup — uses description as location</option>
-        </select>
-        <p className="mt-1.5 text-xs text-zinc-500">Shed pickup uses the product description as the pickup location — no stop required at checkout.</p>
-      </div>
+          <AdminSelect
+            value={pickup_type}
+            onChange={(e) => setPickup_type(e.target.value)}
+            options={[
+              { value: "scheduled_stop", label: "Scheduled Stop — requires stop selection at checkout" },
+              { value: "shed", label: "Shed Pickup — uses description as location" },
+            ]}
+          />
+        </AdminInput>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-zinc-300">Product Image</label>

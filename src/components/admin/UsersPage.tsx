@@ -300,7 +300,11 @@ export default function UsersPage({ initialUsers, brands, currentUser }: UsersPa
       {error && (
         <div className="mb-4 flex items-start justify-between rounded-lg bg-red-50 p-4 text-sm text-red-700 gap-3 border border-red-200">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">✕</button>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 

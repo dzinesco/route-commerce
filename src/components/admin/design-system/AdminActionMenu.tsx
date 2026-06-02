@@ -16,7 +16,7 @@ type AdminActionMenuProps = {
   className?: string;
 };
 
-export default function AdminActionMenu({ actions, triggerLabel = "⋮", className = "" }: AdminActionMenuProps) {
+export default function AdminActionMenu({ actions, triggerLabel, className = "" }: AdminActionMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +41,9 @@ export default function AdminActionMenu({ actions, triggerLabel = "⋮", classNa
         onClick={() => setOpen(!open)}
         className="rounded-lg px-2 py-1.5 text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors"
       >
-        {triggerLabel}
+        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+          <circle cx="10" cy="4" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="10" cy="16" r="1.5"/>
+        </svg>
       </button>
 
       {open && (

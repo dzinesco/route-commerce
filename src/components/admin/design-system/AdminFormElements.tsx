@@ -33,72 +33,71 @@ export function AdminInput({
 }
 
 // Styled text input wrapper
-type AdminTextInputProps = {
-  value: string;
+type AdminTextInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'type'> & {
+  value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
   type?: string;
-  disabled?: boolean;
-  className?: string;
 };
 
 export function AdminTextInput({ 
   value, 
   onChange, 
-  placeholder,
   type = "text",
   disabled,
-  className = "" 
+  className = "",
+  maxLength,
+  autoComplete,
+  step,
+  min,
+  max,
+  ...rest
 }: AdminTextInputProps) {
   return (
     <input
       type={type}
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
       disabled={disabled}
-      className={`w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] placeholder:text-[var(--admin-text-muted)] disabled:bg-[var(--admin-bg-subtle)] disabled:text-[var(--admin-text-muted)] ${className}`}
+      className={`w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] disabled:opacity-50 ${className}`}
+      maxLength={maxLength}
+      autoComplete={autoComplete}
+      step={step}
+      min={min}
+      max={max}
+      {...rest}
     />
   );
 }
 
 // Styled textarea wrapper
-type AdminTextareaProps = {
-  value: string;
+type AdminTextareaProps = Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> & {
+  value: string | number;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  placeholder?: string;
-  rows?: number;
-  disabled?: boolean;
-  className?: string;
 };
 
 export function AdminTextarea({ 
   value, 
   onChange, 
-  placeholder,
-  rows = 3,
   disabled,
-  className = "" 
+  className = "",
+  ...rest
 }: AdminTextareaProps) {
   return (
     <textarea
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
-      rows={rows}
       disabled={disabled}
-      className={`w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] placeholder:text-[var(--admin-text-muted)] resize-none disabled:bg-[var(--admin-bg-subtle)] disabled:text-[var(--admin-text-muted)] ${className}`}
+      className={`w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] resize-none disabled:opacity-50 ${className}`}
+      {...rest}
     />
   );
 }
 
 // Styled select wrapper
-type AdminSelectProps = {
-  value: string;
+type AdminSelectProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'value'> & {
+  value: string | number;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: { value: string; label: string }[];
-  disabled?: boolean;
-  className?: string;
 };
 
 export function AdminSelect({ 
@@ -106,14 +105,16 @@ export function AdminSelect({
   onChange, 
   options,
   disabled,
-  className = "" 
+  className = "",
+  ...rest
 }: AdminSelectProps) {
   return (
     <select
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className={`w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] disabled:bg-[var(--admin-bg-subtle)] disabled:text-[var(--admin-text-muted)] ${className}`}
+      className={`w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 disabled:opacity-50 ${className}`}
+      {...rest}
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -147,7 +148,7 @@ export function AdminCheckbox({
         checked={checked}
         onChange={onChange}
         disabled={disabled}
-        className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-accent)] focus:ring-[var(--admin-accent)]"
+        className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/30 focus:ring-offset-1 cursor-pointer"
       />
       <span className="text-sm font-medium text-[var(--admin-text-secondary)]">{label}</span>
     </label>

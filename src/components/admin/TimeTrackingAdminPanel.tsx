@@ -21,6 +21,7 @@ import {
 } from "@/actions/time-tracking";
 import { formatDate } from "@/lib/format-date";
 import TimeTrackingSettingsClient from "./TimeTrackingSettingsClient";
+import { AdminButton, AdminFilterTabs } from "./design-system";
 
 // One-color outline icons
 const Icons = {
@@ -112,7 +113,7 @@ const PAGE_SIZE = 50;
 function StatusBadge({ active }: { active: boolean }) {
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-      active ? "bg-green-50 text-green-700" : "bg-stone-100 text-stone-500"
+      active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"
     }`}>
       <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-green-500" : "bg-stone-400"}`} />
       {active ? "Active" : "Inactive"}
@@ -135,12 +136,12 @@ function formatMinutes(minutes: number): string {
 
 type Tab = "summary" | "workers" | "tasks" | "logs" | "settings";
 
-const TABS: { id: Tab; label: string; description: string }[] = [
-  { id: "summary", label: "Summary", description: "Overview & stats" },
-  { id: "workers", label: "Workers", description: "Manage team" },
-  { id: "tasks", label: "Tasks", description: "Job types" },
-  { id: "logs", label: "Logs", description: "Time entries" },
-  { id: "settings", label: "Settings", description: "Configuration" },
+const TABS = [
+  { value: "summary", label: "Summary", icon: Icons.chart("h-4 w-4") },
+  { value: "workers", label: "Workers", icon: Icons.user("h-4 w-4") },
+  { value: "tasks", label: "Tasks", icon: Icons.clipboard("h-4 w-4") },
+  { value: "logs", label: "Logs", icon: Icons.clock("h-4 w-4") },
+  { value: "settings", label: "Settings", icon: Icons.settings("h-4 w-4") },
 ];
 
 export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }) {
@@ -193,7 +194,7 @@ export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }
 
   if (!brandId) {
     return (
-      <div className="text-center py-20 text-stone-500">
+      <div className="text-center py-20 text-[var(--admin-text-muted)]">
         <p className="text-sm">Select a brand to view time tracking.</p>
       </div>
     );
@@ -205,7 +206,7 @@ export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }
       <div className="px-4 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-emerald-600">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-[var(--admin-accent)]">
               {Icons.clock("h-5 w-5 sm:h-6 sm:w-6 text-white")}
             </div>
             <div>
@@ -213,40 +214,23 @@ export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }
               <p className="text-xs text-[var(--admin-text-muted)]">{dateRange.start} — {dateRange.end}</p>
             </div>
           </div>
-          <button
+          <AdminButton
             onClick={() => setExportModal(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50 shadow-sm transition-colors"
+            icon={Icons.download("h-4 w-4")}
+            variant="secondary"
           >
-            {Icons.download("h-4 w-4")}
-            <span>Export</span>
-          </button>
+            Export
+          </AdminButton>
         </div>
 
-        {/* Tab navigation - Route Trace style */}
-        <nav className="grid grid-cols-5 gap-1 p-1.5 rounded-xl bg-white border border-stone-200">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`relative flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-4 py-2.5 sm:py-3 text-[10px] sm:text-sm font-semibold transition-colors ${
-                tab === t.id
-                  ? "bg-emerald-600 text-white"
-                  : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
-              }`}
-            >
-              {t.id === "summary" && Icons.chart("h-4 w-4")}
-              {t.id === "workers" && Icons.user("h-4 w-4")}
-              {t.id === "tasks" && Icons.clipboard("h-4 w-4")}
-              {t.id === "logs" && Icons.clock("h-4 w-4")}
-              {t.id === "settings" && Icons.settings("h-4 w-4")}
-              <span className="hidden sm:inline">{t.label}</span>
-              <span className="sm:hidden">{t.label.substring(0, 3)}</span>
-              {tab === t.id && (
-                <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-0.5 w-6 sm:w-12 bg-white rounded-full" />
-              )}
-            </button>
-          ))}
-        </nav>
+        {/* Tab navigation - using AdminFilterTabs */}
+        <AdminFilterTabs
+          activeTab={tab}
+          onTabChange={(t) => setTab(t as Tab)}
+          tabs={TABS}
+          size="md"
+          showCounts={false}
+        />
       </div>
 
       {/* Content */}
@@ -356,17 +340,17 @@ export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }
       {exportModal && (
         <GlassModal title="Export Time Logs" onClose={() => setExportModal(false)}>
           <div className="p-6">
-            <p className="text-sm text-stone-600 mb-4">Download time logs for the selected date range.</p>
-            <button
+            <p className="text-sm text-[var(--admin-text-secondary)] mb-4">Download time logs for the selected date range.</p>
+            <AdminButton
               onClick={() => {
                 window.location.href = `/api/time-tracking/export?brandId=${brandId}&start=${dateRange.start}&end=${dateRange.end}`;
                 setExportModal(false);
               }}
-              className="w-full rounded-xl bg-[var(--admin-accent)] py-3 text-sm font-bold text-white hover:opacity-90 flex items-center justify-center gap-2"
+              icon={Icons.download("h-4 w-4")}
+              fullWidth
             >
-              {Icons.download("h-4 w-4")}
               Download CSV
-            </button>
+            </AdminButton>
           </div>
         </GlassModal>
       )}
@@ -377,28 +361,28 @@ export default function TimeTrackingAdminPanel({ brandId }: { brandId?: string }
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-stone-500 uppercase tracking-wider mb-1">Worker</p>
-                <p className="text-sm font-semibold text-stone-900">{logModal.worker_name}</p>
+                <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-wider mb-1">Worker</p>
+                <p className="text-sm font-semibold text-[var(--admin-text-primary)]">{logModal.worker_name}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-500 uppercase tracking-wider mb-1">Task</p>
-                <p className="text-sm font-semibold text-stone-900">{logModal.task_name || "—"}</p>
+                <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-wider mb-1">Task</p>
+                <p className="text-sm font-semibold text-[var(--admin-text-primary)]">{logModal.task_name || "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-500 uppercase tracking-wider mb-1">Clock In</p>
-                <p className="text-sm font-semibold text-stone-900">{logModal.clock_in ? formatDate(logModal.clock_in) : "—"}</p>
+                <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-wider mb-1">Clock In</p>
+                <p className="text-sm font-semibold text-[var(--admin-text-primary)]">{logModal.clock_in ? formatDate(logModal.clock_in) : "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-500 uppercase tracking-wider mb-1">Clock Out</p>
-                <p className="text-sm font-semibold text-stone-900">{logModal.clock_out ? formatDate(logModal.clock_out) : "Open"}</p>
+                <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-wider mb-1">Clock Out</p>
+                <p className="text-sm font-semibold text-[var(--admin-text-primary)]">{logModal.clock_out ? formatDate(logModal.clock_out) : "Open"}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-500 uppercase tracking-wider mb-1">Duration</p>
-                <p className="text-sm font-semibold text-stone-900">{formatMinutes(logModal.total_minutes)}</p>
+                <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-wider mb-1">Duration</p>
+                <p className="text-sm font-semibold text-[var(--admin-text-primary)]">{formatMinutes(logModal.total_minutes)}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-500 uppercase tracking-wider mb-1">Notes</p>
-                <p className="text-sm text-stone-600">{logModal.notes || "—"}</p>
+                <p className="text-xs text-[var(--admin-text-muted)] uppercase tracking-wider mb-1">Notes</p>
+                <p className="text-sm text-[var(--admin-text-secondary)]">{logModal.notes || "—"}</p>
               </div>
             </div>
           </div>
@@ -429,7 +413,7 @@ function SummaryTab({ summary, workers, loading, dateRange, setDateRange, onRefr
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
-              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-stone-50 text-stone-900 text-sm focus:outline-none focus:border-emerald-600"
+              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] text-sm focus:outline-none focus:border-[var(--admin-accent)]"
             />
           </div>
           <div className="space-y-1">
@@ -438,16 +422,12 @@ function SummaryTab({ summary, workers, loading, dateRange, setDateRange, onRefr
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
-              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-stone-50 text-stone-900 text-sm focus:outline-none focus:border-emerald-600"
+              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] text-sm focus:outline-none focus:border-[var(--admin-accent)]"
             />
           </div>
-          <button
-            onClick={onRefresh}
-            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors flex items-center gap-2"
-          >
-            {Icons.refresh("h-4 w-4")}
-            <span>Refresh</span>
-          </button>
+          <AdminButton onClick={onRefresh} icon={Icons.refresh("h-4 w-4")}>
+            Refresh
+          </AdminButton>
         </div>
       </div>
 
@@ -502,12 +482,12 @@ function SummaryTab({ summary, workers, loading, dateRange, setDateRange, onRefr
 
           {/* By Worker Table */}
           <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
-            <div className="px-5 py-4 border-b border-[var(--admin-border)] bg-stone-50/40">
+            <div className="px-5 py-4 border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
               <h3 className="text-sm font-bold text-[var(--admin-text-primary)]">By Worker</h3>
             </div>
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[var(--admin-border)] bg-stone-50/50">
+                <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
                   <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Worker</th>
                   <th className="px-5 py-3 text-right text-xs font-bold text-[var(--admin-text-muted)] uppercase">Entries</th>
                   <th className="px-5 py-3 text-right text-xs font-bold text-[var(--admin-text-muted)] uppercase">Total Hours</th>
@@ -518,7 +498,7 @@ function SummaryTab({ summary, workers, loading, dateRange, setDateRange, onRefr
                   <tr><td colSpan={3} className="px-5 py-8 text-center text-[var(--admin-text-muted)]">No data</td></tr>
                 ) : (
                   (summary.by_worker ?? []).map((w) => (
-                    <tr key={w.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/40 transition-colors">
+                    <tr key={w.id} className="border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-bg-subtle)] transition-colors">
                       <td className="px-5 py-4 text-sm font-semibold text-[var(--admin-text-primary)]">{w.name}</td>
                       <td className="px-5 py-4 text-sm text-[var(--admin-text-secondary)] text-right">{w.entry_count}</td>
                       <td className="px-5 py-4 text-sm font-semibold text-[var(--admin-text-primary)] text-right">{formatMinutes(w.total_hours * 60)}</td>
@@ -549,19 +529,15 @@ function WorkersTab({ workers, onAdd, onEdit, brandId, onSave }: {
 }) {
   return (
     <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
-      <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between bg-stone-50/40">
+      <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between bg-[var(--admin-bg-subtle)]">
         <h3 className="text-sm font-bold text-[var(--admin-text-primary)]">Workers ({workers.length})</h3>
-        <button
-          onClick={onAdd}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 transition-colors"
-        >
-          {Icons.plus("h-4 w-4")}
-          <span>Add Worker</span>
-        </button>
+        <AdminButton onClick={onAdd} icon={Icons.plus("h-4 w-4")}>
+          Add Worker
+        </AdminButton>
       </div>
       <table className="w-full">
         <thead>
-          <tr className="border-b border-[var(--admin-border)] bg-stone-50/50">
+          <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
             <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Name</th>
             <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">PIN</th>
             <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Status</th>
@@ -574,7 +550,7 @@ function WorkersTab({ workers, onAdd, onEdit, brandId, onSave }: {
             <tr><td colSpan={5} className="px-5 py-8 text-center text-[var(--admin-text-muted)]">No workers yet</td></tr>
           ) : (
             workers.map((w) => (
-              <tr key={w.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/40 transition-colors">
+              <tr key={w.id} className="border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-bg-subtle)] transition-colors">
                 <td className="px-5 py-4 text-sm font-semibold text-[var(--admin-text-primary)]">{w.name}</td>
                 <td className="px-5 py-4 text-sm font-mono text-[var(--admin-text-secondary)]">{w.pin || "—"}</td>
                 <td className="px-5 py-4"><StatusBadge active={w.active} /></td>
@@ -604,19 +580,15 @@ function TasksTab({ tasks, onAdd, onEdit, brandId, onSave }: {
 }) {
   return (
     <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
-      <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between bg-stone-50/40">
+      <div className="px-5 py-4 border-b border-[var(--admin-border)] flex items-center justify-between bg-[var(--admin-bg-subtle)]">
         <h3 className="text-sm font-bold text-[var(--admin-text-primary)]">Tasks ({tasks.length})</h3>
-        <button
-          onClick={onAdd}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 transition-colors"
-        >
-          {Icons.plus("h-4 w-4")}
-          <span>Add Task</span>
-        </button>
+        <AdminButton onClick={onAdd} icon={Icons.plus("h-4 w-4")}>
+          Add Task
+        </AdminButton>
       </div>
       <table className="w-full">
         <thead>
-          <tr className="border-b border-[var(--admin-border)] bg-stone-50/50">
+          <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
             <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Name</th>
             <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Unit</th>
             <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Status</th>
@@ -628,7 +600,7 @@ function TasksTab({ tasks, onAdd, onEdit, brandId, onSave }: {
             <tr><td colSpan={4} className="px-5 py-8 text-center text-[var(--admin-text-muted)]">No tasks yet</td></tr>
           ) : (
             tasks.map((t) => (
-              <tr key={t.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/40 transition-colors">
+              <tr key={t.id} className="border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-bg-subtle)] transition-colors">
                 <td className="px-5 py-4">
                   <div className="text-sm font-semibold text-[var(--admin-text-primary)]">{t.name}</div>
                   {t.name_es && <div className="text-xs text-[var(--admin-text-muted)]">{t.name_es}</div>}
@@ -676,7 +648,7 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
-              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-stone-50 text-stone-900 text-sm focus:outline-none focus:border-emerald-600"
+              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] text-sm focus:outline-none focus:border-[var(--admin-accent)]"
             />
           </div>
           <div className="space-y-1">
@@ -685,7 +657,7 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
-              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-stone-50 text-stone-900 text-sm focus:outline-none focus:border-emerald-600"
+              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] text-sm focus:outline-none focus:border-[var(--admin-accent)]"
             />
           </div>
           <div className="space-y-1">
@@ -693,7 +665,7 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
             <select
               value={selectedWorker}
               onChange={(e) => setSelectedWorker(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-stone-50 text-stone-900 text-sm focus:outline-none focus:border-emerald-600 min-w-[160px]"
+              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] text-sm focus:outline-none focus:border-[var(--admin-accent)] min-w-[160px]"
             >
               <option value="">All Workers</option>
               {workers.map((w) => (
@@ -706,7 +678,7 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
             <select
               value={selectedTask}
               onChange={(e) => setSelectedTask(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-stone-50 text-stone-900 text-sm focus:outline-none focus:border-emerald-600 min-w-[160px]"
+              className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-white text-[var(--admin-text-primary)] text-sm focus:outline-none focus:border-[var(--admin-accent)] min-w-[160px]"
             >
               <option value="">All Tasks</option>
               {tasks.map((t) => (
@@ -714,13 +686,9 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
               ))}
             </select>
           </div>
-          <button
-            onClick={onRefresh}
-            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors flex items-center gap-2"
-          >
-            {Icons.refresh("h-4 w-4")}
-            <span>Refresh</span>
-          </button>
+          <AdminButton onClick={onRefresh} icon={Icons.refresh("h-4 w-4")}>
+            Refresh
+          </AdminButton>
         </div>
       </div>
 
@@ -737,12 +705,12 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
         </div>
       ) : (
         <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
-          <div className="px-5 py-4 border-b border-[var(--admin-border)] bg-stone-50/40">
+          <div className="px-5 py-4 border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
             <h3 className="text-sm font-bold text-[var(--admin-text-primary)]">Time Logs</h3>
           </div>
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[var(--admin-border)] bg-stone-50/50">
+              <tr className="border-b border-[var(--admin-border)] bg-[var(--admin-bg-subtle)]">
                 <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Worker</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Task</th>
                 <th className="px-5 py-3 text-left text-xs font-bold text-[var(--admin-text-muted)] uppercase">Clock In</th>
@@ -755,7 +723,7 @@ function LogsTab({ logs, workers, tasks, dateRange, setDateRange, selectedWorker
                 <tr><td colSpan={5} className="px-5 py-8 text-center text-[var(--admin-text-muted)]">No logs yet</td></tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/40 transition-colors cursor-pointer" onClick={() => onViewLog(log)}>
+                  <tr key={log.id} className="border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-bg-subtle)] transition-colors cursor-pointer" onClick={() => onViewLog(log)}>
                     <td className="px-5 py-4 text-sm font-semibold text-[var(--admin-text-primary)]">{log.worker_name}</td>
                     <td className="px-5 py-4 text-sm text-[var(--admin-text-secondary)]">{log.task_name || "—"}</td>
                     <td className="px-5 py-4 text-sm text-[var(--admin-text-muted)]">{log.clock_in ? formatDate(log.clock_in) : "—"}</td>
@@ -822,42 +790,42 @@ function WorkerModal({ worker, brandId, onClose, onSave }: {
     <GlassModal title={isEdit ? "Edit Worker" : "Add Worker"} onClose={onClose}>
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Name *</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-600" />
+          <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Name *</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--admin-accent)]" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Role</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-600">
+          <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Role</label>
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--admin-accent)]">
             <option value="worker">Worker</option>
             <option value="supervisor">Supervisor</option>
             <option value="admin">Admin</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Language</label>
-          <select value={lang} onChange={(e) => setLang(e.target.value)} className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-600">
+          <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Language</label>
+          <select value={lang} onChange={(e) => setLang(e.target.value)} className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--admin-accent)]">
             <option value="en">English</option>
             <option value="es">Español</option>
           </select>
         </div>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="rounded border-[var(--admin-border)]" />
-          <span className="text-sm text-stone-700">Active</span>
+          <span className="text-sm text-[var(--admin-text-secondary)]">Active</span>
         </label>
         <div className="flex gap-2 pt-2">
           {isEdit && worker && (
             <>
-              <button type="button" onClick={handleResetPin} disabled={loading} className="rounded-lg border border-[var(--admin-border)] px-3 py-2 text-xs font-semibold text-[var(--admin-text-secondary)] hover:bg-stone-50 disabled:opacity-50 flex items-center gap-1">
-                {Icons.refresh("h-3.5 w-3.5")} Reset PIN
-              </button>
-              <button type="button" onClick={handleDelete} disabled={loading} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 ml-auto flex items-center gap-1">
-                {Icons.trash("h-3.5 w-3.5")} Delete
-              </button>
+              <AdminButton type="button" variant="secondary" size="sm" onClick={handleResetPin} disabled={loading} icon={Icons.refresh("h-3.5 w-3.5")}>
+                Reset PIN
+              </AdminButton>
+              <AdminButton type="button" variant="danger" size="sm" onClick={handleDelete} disabled={loading} icon={Icons.trash("h-3.5 w-3.5")}>
+                Delete
+              </AdminButton>
             </>
           )}
-          <button type="submit" disabled={loading} className="rounded-lg bg-[var(--admin-accent)] px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50 ml-auto">
+          <AdminButton type="submit" disabled={loading} isLoading={loading} className="ml-auto">
             {loading ? "Saving..." : isEdit ? "Update" : "Create"}
-          </button>
+          </AdminButton>
         </div>
       </form>
     </GlassModal>
@@ -907,16 +875,16 @@ function TaskModal({ task, brandId, onClose, onSave }: {
     <GlassModal title={isEdit ? "Edit Task" : "Add Task"} onClose={onClose}>
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Task Name *</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g., Harvesting" className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-600" />
+          <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Task Name *</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g., Harvesting" className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--admin-accent)]" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Name in Spanish</label>
-          <input value={nameEs} onChange={(e) => setNameEs(e.target.value)} placeholder="e.g., Cosecha" className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-600" />
+          <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Name in Spanish</label>
+          <input value={nameEs} onChange={(e) => setNameEs(e.target.value)} placeholder="e.g., Cosecha" className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--admin-accent)]" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Unit</label>
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-600">
+          <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Unit</label>
+          <select value={unit} onChange={(e) => setUnit(e.target.value)} className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--admin-accent)]">
             <option value="hours">Hours</option>
             <option value="pieces">Pieces</option>
             <option value="units">Units</option>
@@ -924,17 +892,17 @@ function TaskModal({ task, brandId, onClose, onSave }: {
         </div>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="rounded border-[var(--admin-border)]" />
-          <span className="text-sm text-stone-700">Active</span>
+          <span className="text-sm text-[var(--admin-text-secondary)]">Active</span>
         </label>
         <div className="flex gap-2 pt-2">
           {isEdit && task && (
-            <button type="button" onClick={handleDelete} disabled={loading} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 flex items-center gap-1">
-              {Icons.trash("h-3.5 w-3.5")} Delete
-            </button>
+            <AdminButton type="button" variant="danger" size="sm" onClick={handleDelete} disabled={loading} icon={Icons.trash("h-3.5 w-3.5")}>
+              Delete
+            </AdminButton>
           )}
-          <button type="submit" disabled={loading} className="rounded-lg bg-[var(--admin-accent)] px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50 ml-auto">
+          <AdminButton type="submit" disabled={loading} isLoading={loading} className="ml-auto">
             {loading ? "Saving..." : isEdit ? "Update" : "Create"}
-          </button>
+          </AdminButton>
         </div>
       </form>
     </GlassModal>

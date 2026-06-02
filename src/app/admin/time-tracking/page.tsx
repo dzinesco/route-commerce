@@ -2,6 +2,7 @@ import TimeTrackingAdminPanel from "@/components/admin/TimeTrackingAdminPanel";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/admin/design-system";
 
 const TUXEDO_BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
 const IRD_BRAND_ID = "b1cb7a96-d82b-40b1-80b1-d6dd26c56e28";
@@ -33,6 +34,15 @@ export default async function AdminTimeTrackingPage() {
   const effectiveBrandId = adminUser?.brand_id ?? TUXEDO_BRAND_ID;
 
   return (
-    <TimeTrackingAdminPanel brandId={effectiveBrandId} />
+    <div className="min-h-screen bg-[var(--admin-bg)]">
+      <PageHeader
+        title="Time Tracking"
+        subtitle="Manage workers, tasks, and time logs"
+        className="px-6 pt-6"
+      />
+      <div className="px-6 pb-8">
+        <TimeTrackingAdminPanel brandId={effectiveBrandId} />
+      </div>
+    </div>
   );
 }

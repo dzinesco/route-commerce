@@ -6,6 +6,7 @@ import SegmentBuilderPanel from "./SegmentBuilderPanel";
 import MatchingCustomersPanel from "./MatchingCustomersPanel";
 import SegmentListSidebar from "./SegmentListSidebar";
 import SegmentEditModal from "./SegmentEditModal";
+import { PageHeader, AdminButton } from "@/components/admin/design-system";
 
 type Props = {
   brandId: string;
@@ -13,15 +14,13 @@ type Props = {
 };
 
 // Icon components
-const Icons = {
-  layers: (className: string) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-      <polyline points="2 17 12 22 22 17"/>
-      <polyline points="2 12 12 17 22 12"/>
-    </svg>
-  ),
-};
+const LayersIcon = (className: string) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+    <polyline points="2 17 12 22 22 17"/>
+    <polyline points="2 12 12 17 22 12"/>
+  </svg>
+);
 
 export default function SegmentBuilderPage({ brandId, initialSegments }: Props) {
   const [segments, setSegments] = useState<Segment[]>(initialSegments);
@@ -80,20 +79,11 @@ export default function SegmentBuilderPage({ brandId, initialSegments }: Props) 
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-text-primary)]">
-            {Icons.layers("w-4 h-4 text-[var(--admin-bg)]")}
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-[var(--admin-text-primary)]">Segment Builder</h2>
-            <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)]">
-              Build filters to define your audience, then save and reuse the segment.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={<LayersIcon className="w-5 h-5" />}
+        title="Segment Builder"
+        subtitle="Build filters to define your audience, then save and reuse the segment."
+      />
 
       {/* Main layout */}
       <div className="flex flex-col lg:flex-row gap-4">

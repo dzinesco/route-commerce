@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { uploadProductImage } from "@/actions/products/upload-image";
 import { createProduct } from "@/actions/products/create-product";
+import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect } from "./design-system";
 
 export default function NewProductForm() {
   const router = useRouter();
@@ -15,6 +16,16 @@ export default function NewProductForm() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImageUrl, setPendingImageUrl] = useState<string>("");
+
+  // Form state
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [type, setType] = useState("Pickup");
+  const [brandId, setBrandId] = useState("");
+  const [isTaxable, setIsTaxable] = useState("true");
+  const [pickupType, setPickupType] = useState("scheduled_stop");
+  const [active, setActive] = useState("true");
 
   async function handleFileSelect(file: File) {
     const validTypes = ["image/png", "image/jpeg", "image/webp"];
@@ -71,33 +82,23 @@ export default function NewProductForm() {
     });
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const description = formData.get("description") as string;
-    const price = parseFloat(formData.get("price") as string);
-    const type = formData.get("type") as string;
-    const brandId = formData.get("brand_id") as string;
-    const active = formData.get("active") === "true";
-
     // Use pendingImageUrl if image was uploaded, otherwise null
     const imageUrl = pendingImageUrl || null;
-    const isTaxable = formData.get("is_taxable") === "true";
-    const pickup_type = formData.get("pickup_type") as string;
 
     const result = await createProduct(brandId, {
       name,
       description,
-      price,
+      price: parseFloat(price),
       type,
-      active,
+      active: active === "true",
       image_url: imageUrl,
-      is_taxable: isTaxable,
-      pickup_type,
+      is_taxable: isTaxable === "true",
+      pickup_type: pickupType,
     });
 
     if (!result.success) {
@@ -118,117 +119,92 @@ export default function NewProductForm() {
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">
-          Product Name
-        </label>
-        <input
-          name="name"
-          required
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+      <AdminInput label="Product Name" required>
+        <AdminTextInput
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Dozen Sweet Corn"
           autoComplete="off"
         />
-      </div>
+      </AdminInput>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">
-          Description
-        </label>
-        <textarea
-          name="description"
+      <AdminInput label="Description">
+        <AdminTextarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
           placeholder="e.g. Fresh-picked Olathe sweet corn."
         />
-      </div>
+      </AdminInput>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">
-            Price ($)
-          </label>
-          <input
-            name="price"
+        <AdminInput label="Price ($)" required>
+          <AdminTextInput
             type="number"
             step="0.01"
-            required
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             placeholder="12.00"
           />
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">
-            Type
-          </label>
-          <select
-            name="type"
-            required
-            className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-          >
-            <option value="Pickup">Pickup</option>
-            <option value="Shipping">Shipping</option>
-            <option value="Pickup & Shipping">Pickup & Shipping</option>
-          </select>
-        </div>
+        <AdminInput label="Type" required>
+          <AdminSelect
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            options={[
+              { value: "Pickup", label: "Pickup" },
+              { value: "Shipping", label: "Shipping" },
+              { value: "Pickup & Shipping", label: "Pickup & Shipping" },
+            ]}
+          />
+        </AdminInput>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">
-          Brand
-        </label>
-        <select
-          name="brand_id"
-          required
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-        >
-          <option value="">Select brand...</option>
-          <option value="64294306-5f42-463d-a5e8-2ad6c81a96de">
-            Tuxedo Corn
-          </option>
-          <option value="b1cb7a96-d82b-40b1-80b1-d6dd26c56e28">
-            Indian River Direct
-          </option>
-        </select>
-      </div>
+      <AdminInput label="Brand" required>
+        <AdminSelect
+          value={brandId}
+          onChange={(e) => setBrandId(e.target.value)}
+          options={[
+            { value: "", label: "Select brand..." },
+            { value: "64294306-5f42-463d-a5e8-2ad6c81a96de", label: "Tuxedo Corn" },
+            { value: "b1cb7a96-d82b-40b1-80b1-d6dd26c56e28", label: "Indian River Direct" },
+          ]}
+        />
+      </AdminInput>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">Taxable</label>
-        <p className="text-xs text-zinc-500 mb-2">Tax applied at checkout for shipping orders in nexus states. Disable for non-taxable items like apparel or cooler boxes.</p>
-        <select
-          name="is_taxable"
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-        >
-          <option value="true">Yes — taxable (default)</option>
-          <option value="false">No — non-taxable</option>
-        </select>
-      </div>
+      <AdminInput label="Taxable" helpText="Tax applied at checkout for shipping orders in nexus states. Disable for non-taxable items like apparel or cooler boxes.">
+        <AdminSelect
+          value={isTaxable}
+          onChange={(e) => setIsTaxable(e.target.value)}
+          options={[
+            { value: "true", label: "Yes — taxable (default)" },
+            { value: "false", label: "No — non-taxable" },
+          ]}
+        />
+      </AdminInput>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">Pickup Type</label>
-        <p className="text-xs text-zinc-500 mb-2">Shed pickup uses the product description as the location — no stop required at checkout.</p>
-        <select
-          name="pickup_type"
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-        >
-          <option value="scheduled_stop">Scheduled Stop — requires stop selection at checkout</option>
-          <option value="shed">Shed Pickup — uses description as location</option>
-        </select>
-      </div>
+      <AdminInput label="Pickup Type" helpText="Shed pickup uses the product description as the location — no stop required at checkout.">
+        <AdminSelect
+          value={pickupType}
+          onChange={(e) => setPickupType(e.target.value)}
+          options={[
+            { value: "scheduled_stop", label: "Scheduled Stop — requires stop selection at checkout" },
+            { value: "shed", label: "Shed Pickup — uses description as location" },
+          ]}
+        />
+      </AdminInput>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-300">
-          Active
-        </label>
-        <select
-          name="active"
-          className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-slate-900"
-        >
-          <option value="true">Yes — show on storefront</option>
-          <option value="false">No — hide from storefront</option>
-        </select>
-      </div>
+      <AdminInput label="Active">
+        <AdminSelect
+          value={active}
+          onChange={(e) => setActive(e.target.value)}
+          options={[
+            { value: "true", label: "Yes — show on storefront" },
+            { value: "false", label: "No — hide from storefront" },
+          ]}
+        />
+      </AdminInput>
 
       <div>
         <label className="block text-sm font-medium text-zinc-300">Product Image</label>

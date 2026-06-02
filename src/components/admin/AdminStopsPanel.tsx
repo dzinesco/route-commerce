@@ -257,9 +257,11 @@ export default function AdminStopsPanel({ stops, brandId }: Props) {
                         </Link>
                         <button
                           onClick={() => setOpenMenu(openMenu === stop.id ? null : stop.id)}
-                          className="rounded-lg px-2 py-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
+                          className="rounded-lg px-2 py-1.5 text-[var(--admin-text-muted)] hover:text-stone-600 hover:bg-stone-100 transition-colors"
                         >
-                          ⋮
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
                         </button>
 
                         {openMenu === stop.id && (
@@ -303,7 +305,7 @@ export default function AdminStopsPanel({ stops, brandId }: Props) {
                                 </button>
                                 <button
                                   onClick={() => handleDelete(stop.id)}
-                                  className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-500"
+                                  className="flex-1 rounded-lg bg-[var(--admin-danger)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--admin-danger-hover)]"
                                 >
                                   Delete
                                 </button>

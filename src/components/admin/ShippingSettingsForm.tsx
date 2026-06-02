@@ -7,6 +7,7 @@ import {
   testFedExConnection,
   type ShippingSettings,
 } from "@/actions/shipping/settings";
+import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect } from "./design-system";
 
 const SERVICE_OPTIONS = [
   { value: "FEDEX_OVERNIGHT", label: "FedEx Overnight" },
@@ -121,18 +122,13 @@ export default function ShippingSettingsForm({
     <form onSubmit={handleSave} className="space-y-8">
       {/* Platform admin brand picker */}
       {isPlatformAdmin && brands.length > 0 && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">Brand</label>
-          <select
+        <AdminInput label="Brand">
+          <AdminSelect
             value={activeBrandId}
             onChange={(e) => setActiveBrandId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-base text-zinc-100 outline-none focus:border-zinc-400"
-          >
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
+            options={brands.map((b) => ({ value: b.id, label: b.name }))}
+          />
+        </AdminInput>
       )}
 
       {/* Connection status banner */}
@@ -180,45 +176,29 @@ export default function ShippingSettingsForm({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">
-              FedEx Account Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+          <AdminInput label="FedEx Account Number *">
+            <AdminTextInput
               value={fedexAccountNumber}
               onChange={(e) => setFedexAccountNumber(e.target.value)}
               placeholder="000000000000 (12 digits)"
-              maxLength={12}
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm font-mono text-zinc-100 outline-none focus:border-zinc-400"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300">
-              API Key <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+          </AdminInput>
+          <AdminInput label="API Key *">
+            <AdminTextInput
               value={fedexApiKey}
               onChange={(e) => setFedexApiKey(e.target.value)}
               placeholder="Your FedEx API key"
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-400"
             />
-          </div>
+          </AdminInput>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">
-            API Secret <span className="text-red-500">*</span>
-            <span className="ml-2 text-slate-400 font-normal">(password field)</span>
-          </label>
-          <div className="relative mt-1">
-            <input
+        <AdminInput label="API Secret *" helpText="Password field — click Show/Hide to reveal">
+          <div className="relative">
+            <AdminTextInput
               type={showSecret ? "text" : "password"}
               value={fedexApiSecret}
               onChange={(e) => setFedexApiSecret(e.target.value)}
               placeholder="Your FedEx API secret"
-              className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 pr-12 text-sm text-zinc-100 outline-none focus:border-zinc-400"
             />
             <button
               type="button"
@@ -228,7 +208,7 @@ export default function ShippingSettingsForm({
               {showSecret ? "Hide" : "Show"}
             </button>
           </div>
-        </div>
+        </AdminInput>
 
         {/* Production toggle */}
         <div className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3">
@@ -287,20 +267,13 @@ export default function ShippingSettingsForm({
           </p>
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-300">
-            Default for non-perishable orders
-          </label>
-          <select
+        <AdminInput label="Default for non-perishable orders">
+          <AdminSelect
             value={defaultServiceType}
             onChange={(e) => setDefaultServiceType(e.target.value)}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-400"
-          >
-            {SERVICE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+            options={SERVICE_OPTIONS}
+          />
+        </AdminInput>
       </div>
 
       {/* Handling notes */}
@@ -312,34 +285,26 @@ export default function ShippingSettingsForm({
           </p>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            🌽 Refrigerated / Perishable Notes
-          </label>
-          <textarea
+        <AdminInput 
+          label="Refrigerated / Perishable Notes"
+          helpText="Applied to all shipments with perishable items (is_perishable = true)."
+        >
+          <AdminTextarea
             value={refrigeratedHandlingNotes}
             onChange={(e) => setRefrigeratedHandlingNotes(e.target.value)}
             rows={3}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-400"
             placeholder="e.g. Keep refrigerated. Do not freeze. Contains fresh sweet corn and/or onions."
           />
-          <p className="mt-1 text-xs text-zinc-500">
-            Applied to all shipments with perishable items (is_perishable = true).
-          </p>
-        </div>
+        </AdminInput>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            📦 Fragile Items Notes
-          </label>
-          <textarea
+        <AdminInput label="Fragile Items Notes">
+          <AdminTextarea
             value={fragileHandlingNotes}
             onChange={(e) => setFragileHandlingNotes(e.target.value)}
             rows={2}
-            className="w-full rounded-xl border border-zinc-600 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-400"
             placeholder="e.g. Fragile — handle with care. Do not stack heavy items on top."
           />
-        </div>
+        </AdminInput>
       </div>
 
       {loading ? (

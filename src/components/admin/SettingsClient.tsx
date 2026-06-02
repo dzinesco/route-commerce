@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import SettingsSections from "@/components/admin/SettingsSections";
 import UsersPage from "@/components/admin/UsersPage";
+import { PageHeader, AdminButton } from "@/components/admin/design-system";
 
 type Tab = "general" | "workers" | "tasks" | "users";
 
@@ -77,41 +78,43 @@ export default function SettingsClient({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--admin-bg)]">
-      {/* Header */}
+    <main className="min-h-screen bg-[var(--admin-bg)]">
+      {/* Page Header */}
       <div className="px-4 sm:px-6 md:px-8 pt-4 sm:pt-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-emerald-600">
-            {Icons.settings("h-5 w-5 sm:h-6 sm:w-6 text-white")}
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-[var(--admin-text-primary)] tracking-tight">Settings</h1>
-            <p className="text-xs text-[var(--admin-text-muted)]">Manage your brand, workers, and integrations</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your brand, workers, and integrations"
+          icon={
+            <svg className="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          }
+          actions={
+            <AdminButton
+              variant="secondary"
+              size="sm"
+              onClick={() => window.location.href = "/admin/advanced"}
+            >
+              Advanced Settings
+            </AdminButton>
+          }
+        />
 
         {/* Tab navigation */}
-        <nav className="grid grid-cols-5 gap-1 p-1.5 rounded-xl bg-white border border-stone-200">
+        <nav className="flex items-center gap-1 p-1.5 rounded-xl bg-white border border-[var(--admin-border)] overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-lg px-1 sm:px-3 py-2 text-[9px] sm:text-xs font-semibold transition-colors ${
+              className={`relative flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-emerald-600 text-white"
-                  : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"
+                  ? "bg-[var(--admin-accent)] text-white shadow-sm"
+                  : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)] hover:bg-stone-50"
               }`}
             >
-              {tab.icon === "settings" && Icons.settings("h-4 w-4")}
-              {tab.icon === "users" && Icons.users("h-4 w-4")}
-              {tab.icon === "user-check" && Icons["user-check"]("h-4 w-4")}
-              {tab.icon === "plug" && Icons.plug("h-4 w-4")}
-              {tab.icon === "list" && Icons.list("h-4 w-4")}
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.substring(0, 3)}</span>
-              {activeTab === tab.id && (
-                <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-0.5 w-6 sm:w-8 bg-white rounded-full" />
-              )}
+              {/* icons */}
+              <span>{tab.label}</span>
             </button>
           ))}
         </nav>
@@ -129,7 +132,7 @@ export default function SettingsClient({
           <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
             <div className="p-4 sm:p-6 border-b border-[var(--admin-border)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-accent)]">
                   {Icons.users("w-4 h-4 text-white")}
                 </div>
                 <div>
@@ -190,28 +193,29 @@ export default function SettingsClient({
           </div>
         )}
 
-        <div className="mt-6 p-4 rounded-xl border border-violet-100 bg-violet-50/50">
+        <div className="mt-6 p-4 rounded-xl border border-[var(--admin-accent)] bg-[var(--admin-accent-light)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
-                <svg className="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-accent)]">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-stone-900">Advanced Settings</p>
-                <p className="text-xs text-stone-500">AI, integrations, Square sync, shipping, and webhooks</p>
+                <p className="text-sm font-semibold text-[var(--admin-accent-text)]">Advanced Settings</p>
+                <p className="text-xs text-[var(--admin-text-muted)]">AI, integrations, Square sync, shipping, and webhooks</p>
               </div>
             </div>
-            <a
-              href="/admin/advanced"
-              className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 transition-colors"
+            <AdminButton
+              variant="secondary"
+              size="sm"
+              onClick={() => window.location.href = "/admin/advanced"}
             >
               Open Advanced →
-            </a>
+            </AdminButton>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
