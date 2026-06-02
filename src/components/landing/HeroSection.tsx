@@ -561,16 +561,16 @@ export default function HeroSection() {
             }} />
 
             <div className="container mx-auto px-8 text-center relative z-10 max-w-4xl">
-              <reveal-scale className="mb-8">
+              <div className="mb-8 reveal-scale">
                 <span
                   className="inline-block text-xs font-bold tracking-[0.3em] uppercase"
                   style={{ color: "#c97a3e", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   The Challenge
                 </span>
-              </FadeOnScroll>
+              </div>
 
-              <reveal-scale delay={0.1}>
+              <div className="reveal-scale" style={{ animationDelay: "0.1s" }}>
                 <h2
                   className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-8"
                   style={{
@@ -582,9 +582,9 @@ export default function HeroSection() {
                   <br />
                   <span style={{ color: "#c97a3e" }}>sit in transit for days</span>
                 </h2>
-              </FadeOnScroll>
+              </div>
 
-              <reveal-scale delay={0.2}>
+              <div className="reveal-scale" style={{ animationDelay: "0.2s" }}>
                 <p
                   className="text-xl max-w-2xl mx-auto"
                   style={{
@@ -595,7 +595,7 @@ export default function HeroSection() {
                 >
                   Traditional distribution means your harvest loses freshness, quality, and value before reaching customers.
                 </p>
-              </FadeOnScroll>
+              </div>
             </div>
           </div>
         </div>
@@ -793,14 +793,14 @@ export default function HeroSection() {
         }} />
 
         <div className="container mx-auto px-8 relative z-10">
-          <reveal-scale className="text-center mb-16">
+          <div className="text-center mb-16 reveal-scale">
             <span
               className="inline-block text-xs font-bold tracking-[0.2em] uppercase"
               style={{ color: "#c97a3e", fontFamily: "'DM Sans', sans-serif" }}
             >
               Our Impact
             </span>
-          </FadeOnScroll>
+          </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
@@ -857,9 +857,9 @@ export default function HeroSection() {
         <div className="container mx-auto px-8 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             {/* Label */}
-            <reveal-scale>
+            <div className="reveal-scale mb-8">
               <span
-                className="reveal-text inline-block text-xs font-bold tracking-[0.2em] uppercase px-5 py-2 rounded-full mb-8"
+                className="reveal-text inline-block text-xs font-bold tracking-[0.2em] uppercase px-5 py-2 rounded-full"
                 style={{
                   color: "#c97a3e",
                   background: "rgba(201, 122, 62, 0.1)",
@@ -868,10 +868,10 @@ export default function HeroSection() {
               >
                 Get Started Today
               </span>
-            </FadeOnScroll>
+            </div>
 
             {/* Headline */}
-            <reveal-scale delay={0.1}>
+            <div className="reveal-scale" style={{ animationDelay: "0.1s" }}>
               <h2
                 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight mb-8"
                 style={{
@@ -882,10 +882,10 @@ export default function HeroSection() {
                 Ready to Transform<br />
                 Your Distribution?
               </h2>
-            </FadeOnScroll>
+            </div>
 
             {/* Subtext */}
-            <reveal-scale delay={0.2}>
+            <div className="reveal-scale" style={{ animationDelay: "0.2s" }}>
               <p
                 className="text-xl mb-12 max-w-xl mx-auto"
                 style={{
@@ -895,38 +895,36 @@ export default function HeroSection() {
               >
                 Join hundreds of farms already using Route Commerce to deliver fresher produce faster.
               </p>
-            </FadeOnScroll>
+            </div>
 
             {/* CTAs */}
-            <reveal-scale delay={0.3}>
-              <div className="flex flex-wrap items-center justify-center gap-5">
-                <Link
-                  href="/login"
-                  className="group relative inline-flex items-center gap-3 px-10 py-6 rounded-2xl font-semibold text-xl overflow-hidden"
-                  style={{
-                    background: "linear-gradient(135deg, #1a4d2e 0%, #166534 100%)",
-                    color: "white",
-                    boxShadow: "0 8px 32px rgba(26, 77, 46, 0.35)",
-                  }}
-                >
-                  <span>Start Free Trial</span>
-                  <svg className="w-6 h-6 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-                <Link
-                  href="/contact"
-                  className="group inline-flex items-center gap-3 px-10 py-6 rounded-2xl font-semibold text-xl border-2"
-                  style={{
-                    color: "#1a4d2e",
-                    borderColor: "#1a4d2e",
-                    background: "rgba(26, 77, 46, 0.03)",
-                  }}
-                >
-                  <span>Contact Sales</span>
-                </Link>
-              </div>
-            </FadeOnScroll>
+            <div className="reveal-scale flex flex-wrap items-center justify-center gap-5" style={{ animationDelay: "0.3s" }}>
+              <Link
+                href="/login"
+                className="group relative inline-flex items-center gap-3 px-10 py-6 rounded-2xl font-semibold text-xl overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, #1a4d2e 0%, #166534 100%)",
+                  color: "white",
+                  boxShadow: "0 8px 32px rgba(26, 77, 46, 0.35)",
+                }}
+              >
+                <span>Start Free Trial</span>
+                <svg className="w-6 h-6 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+              <Link
+                href="/contact"
+                className="group inline-flex items-center gap-3 px-10 py-6 rounded-2xl font-semibold text-xl border-2"
+                style={{
+                  color: "#1a4d2e",
+                  borderColor: "#1a4d2e",
+                  background: "rgba(26, 77, 46, 0.03)",
+                }}
+              >
+                <span>Contact Sales</span>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
