@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AdminUserRow, CreateAdminUserInput, UpdateAdminUserInput } from "@/actions/admin/users";
+import { AdminUserRow, UpdateAdminUserInput } from "@/actions/admin/users";
 import { formatDate } from "@/lib/format-date";
+import CreateUserModal from "./CreateUserModal";
 
 type UsersPageProps = {
   initialUsers: AdminUserRow[];
@@ -12,6 +13,7 @@ type UsersPageProps = {
     role: string;
     can_manage_users?: boolean;
   };
+  onUserCreated?: (user: AdminUserRow) => void;
 };
 
 type PasswordModal = {
@@ -110,9 +112,10 @@ function editingFromRow(row: AdminUserRow): EditingUser {
   };
 }
 
-export default function UsersPage({ initialUsers, brands, currentUser }: UsersPageProps) {
+export default function UsersPage({ initialUsers, brands, currentUser, onUserCreated }: UsersPageProps) {
   const [users, setUsers] = useState(initialUsers);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [editing, setEditing] = useState<EditingUser>(emptyEditing(true));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,9 +129,12 @@ export default function UsersPage({ initialUsers, brands, currentUser }: UsersPa
     (currentUser.role === "brand_admin" && currentUser.can_manage_users);
 
   function openCreate() {
-    setEditing(emptyEditing(true));
-    setError(null);
-    setPanelOpen(true);
+    setShowCreateModal(true);
+  }
+
+  function handleUserCreated(user: AdminUserRow) {
+    setUsers((prev) => [user, ...prev]);
+    onUserCreated?.(user);
   }
 
   function openEdit(row: AdminUserRow) {
@@ -655,6 +661,17 @@ export default function UsersPage({ initialUsers, brands, currentUser }: UsersPa
           </div>
         </div>
       )}
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleUserCreated}
+        brands={brands}
+        currentUser={{
+          role: currentUser.role,
+        }}
+      />
     </>
   );
 }

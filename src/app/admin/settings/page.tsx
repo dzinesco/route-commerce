@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getAdminUsers, getBrands } from "@/actions/admin/users";
+import { getPaymentSettings } from "@/actions/payments";
 import SettingsClient from "@/components/admin/SettingsClient";
 
 export const metadata = {
@@ -19,11 +20,16 @@ export default async function AdminSettingsPage() {
     getBrands(),
   ]);
 
+  // Fetch payment settings for the brand tab
+  const paymentResult = await getPaymentSettings(brandId);
+  const paymentSettings = paymentResult.success ? paymentResult.settings : null;
+
   return (
     <SettingsClient
       brandId={brandId}
       users={error ? [] : users}
       brands={brands}
+      paymentSettings={paymentSettings}
       currentUser={{
         id: adminUser.id ?? adminUser.user_id,
         role: adminUser.role,

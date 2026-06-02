@@ -29,9 +29,6 @@ type SettingsItem = {
 
 const SETTINGS_SUB_LINKS: SettingsItem[] = [
   { href: "/admin/settings", label: "General", description: "Brand name, logo, timezone" },
-  { href: "/admin/settings/brand", label: "Brand", description: "Brand profile and preferences" },
-  { href: "/admin/users", label: "Users & Permissions", description: "Team members and access roles" },
-  { href: "/admin/settings/integrations", label: "Integrations", description: "Stripe, Square, Resend, Twilio" },
   { href: "/admin/settings/apps", label: "Add-ons", description: "Enable and manage feature add-ons" },
   { href: "/admin/settings/billing", label: "Billing & Plans", description: "Subscription, invoices, usage" },
   { href: "/admin/settings/payments", label: "Payments", description: "Stripe, Square, payment methods" },

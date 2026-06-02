@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react";
 import SettingsSections from "@/components/admin/SettingsSections";
 import UsersPage from "@/components/admin/UsersPage";
+import BrandSettingsForm from "@/components/admin/BrandSettingsForm";
+import PaymentSettingsForm from "@/components/admin/PaymentSettingsForm";
 import { PageHeader, AdminButton } from "@/components/admin/design-system";
+import type { PaymentProvider } from "@/actions/payments";
 
-type Tab = "general" | "workers" | "tasks" | "users";
+type Tab = "general" | "brand" | "workers" | "tasks" | "users";
 
 const TABS: { id: Tab; label: string; icon: string; hash: string }[] = [
   { id: "general", label: "General", icon: "settings", hash: "general" },
+  { id: "brand", label: "Brand", icon: "brand", hash: "brand" },
   { id: "workers", label: "Workers", icon: "users", hash: "workers" },
   { id: "tasks", label: "Tasks", icon: "list", hash: "tasks" },
   { id: "users", label: "Users", icon: "user-check", hash: "users" },
@@ -20,6 +24,11 @@ const Icons = {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
       <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  brand: (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.592 9.592c1.106.105 1.35.374 1.591.659l4.317 4.317c.221.241.375.574.375.896v.318c0 .621-.504 1.125-1.125 1.125H5.25A2.25 2.25 0 013 16.5v-4.318c0-.597-.237-1.17-.659-1.591l-9.592-9.592A2.25 2.25 0 012.25 5.25m5.318 4.5v4.318l3.591 3.591M5.25 7.5a2.25 2.25 0 012.25-2.25h4.318m0 0L9 10.5m5.25-2.25v4.318m0 0L14.25 12m5.25-2.25H9.75" />
     </svg>
   ),
   users: (className: string) => (
@@ -53,6 +62,17 @@ type Props = {
   brandId: string;
   users: import("@/actions/admin/users").AdminUserRow[];
   brands: Brand[];
+  paymentSettings?: {
+    provider?: PaymentProvider | null;
+    stripe_publishable_key?: string | null;
+    stripe_secret_key?: string | null;
+    square_access_token?: string | null;
+    square_location_id?: string | null;
+    square_sync_enabled?: boolean;
+    square_inventory_mode?: "none" | "rc_to_square" | "square_to_rc" | "bidirectional";
+    square_last_sync_at?: string | null;
+    square_last_sync_error?: string | null;
+  } | null;
   currentUser: {
     id: string;
     role: string;
@@ -64,6 +84,7 @@ export default function SettingsClient({
   brandId,
   users,
   brands,
+  paymentSettings,
   currentUser,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("general");
@@ -125,6 +146,59 @@ export default function SettingsClient({
         {activeTab === "general" && (
           <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
             <SettingsSections brandId={brandId} />
+          </div>
+        )}
+
+        {activeTab === "brand" && (
+          <div className="space-y-6">
+            {/* Brand Settings */}
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-[var(--admin-border)]">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500">
+                    {Icons.brand("w-4 h-4 text-white")}
+                  </div>
+                  <div>
+                    <h2 className="text-sm sm:text-lg font-bold text-[var(--admin-text-primary)]">Brand Settings</h2>
+                    <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)]">Company information, logos, and default signatures</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6">
+                <BrandSettingsForm
+                  settings={null}
+                  brandId={brandId}
+                  brandName=""
+                  brands={brands}
+                  isPlatformAdmin={currentUser.role === "platform_admin"}
+                />
+              </div>
+            </div>
+
+            {/* Payment Settings */}
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-white overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-[var(--admin-border)]">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-accent)]">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 0h3m-3.75 0h3m-3.75 0h3m-3.75 0h3m3.75 0h3m-3.75 0h3m-3.75 0h3m-3.75 0h3m3.75 0h3m-3.75 0h3m-3.75 0h3m-3.75 0h3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-sm sm:text-lg font-bold text-[var(--admin-text-primary)]">Payment Settings</h2>
+                    <p className="text-[10px] sm:text-xs text-[var(--admin-text-muted)]">Configure your payment provider for checkout processing</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6">
+                <PaymentSettingsForm
+                  settings={paymentSettings ?? null}
+                  brandId={brandId}
+                  brands={brands}
+                  isPlatformAdmin={currentUser.role === "platform_admin"}
+                />
+              </div>
+            </div>
           </div>
         )}
 

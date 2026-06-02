@@ -27,17 +27,17 @@ export default async function BillingPage({ params }: Props) {
       resolvedBrandId = firstBrand.id;
     } else {
       return (
-        <main className="min-h-screen bg-stone-100 px-6 py-12">
+        <main className="min-h-screen bg-[var(--admin-bg)] px-6 py-12">
           <div className="mx-auto max-w-6xl">
-            <nav className="flex items-center gap-2 text-xs text-stone-500 mb-6">
-              <a href="/admin" className="hover:text-stone-800 transition-colors">Admin</a>
+            <nav className="flex items-center gap-2 text-xs text-[var(--admin-text-muted)] mb-6">
+              <a href="/admin" className="hover:text-[var(--admin-text-primary)] transition-colors">Admin</a>
               <span>/</span>
-              <span className="text-stone-800">Billing</span>
+              <span className="text-[var(--admin-text-primary)]">Billing</span>
             </nav>
-            <div className="card p-8 shadow-xl text-center">
-              <h1 className="text-2xl font-bold text-stone-950">No Brands Found</h1>
-              <p className="mt-2 text-stone-500">Create a brand in the database before accessing billing settings.</p>
-              <a href="/admin" className="mt-4 inline-block rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-3 text-sm font-medium text-white transition-colors">
+            <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] p-8 text-center">
+              <h1 className="text-2xl font-bold text-[var(--admin-text-primary)]">No Brands Found</h1>
+              <p className="mt-2 text-[var(--admin-text-muted)]">Create a brand in the database before accessing billing settings.</p>
+              <a href="/admin" className="mt-4 inline-block rounded-xl bg-[var(--admin-accent)] hover:bg-[var(--admin-accent-hover)] px-6 py-3 text-sm font-medium text-white transition-colors">
                 Back to Admin
               </a>
             </div>
@@ -69,31 +69,31 @@ export default async function BillingPage({ params }: Props) {
   const hasStripeCustomer = !!brand?.stripe_customer_id;
 
   return (
-    <main className="min-h-screen bg-stone-100">
+    <main className="min-h-screen bg-[var(--admin-bg)]">
       {/* Platform billing header */}
-      <div className="bg-stone-200 border-b border-stone-300 px-6 py-3">
+      <div className="bg-[var(--admin-bg-subtle)] border-b border-[var(--admin-border)] px-6 py-3">
         <div className="mx-auto max-w-6xl">
-          <p className="text-xs text-stone-600">
-            <span className="font-medium text-stone-700">Route Commerce Platform Billing</span>
+          <p className="text-xs text-[var(--admin-text-muted)]">
+            <span className="font-medium text-[var(--admin-text-primary)]">Route Commerce Platform Billing</span>
             {" — "}Invoiced by Cielo Hermosa, LLC · Manage your platform subscription and add-ons.
-            {" "}Questions? <a href="mailto:billing@cielohermosa.com" className="text-blue-600 hover:text-blue-700 underline transition-colors">billing@cielohermosa.com</a>
+            {" "}Questions? <a href="mailto:billing@cielohermosa.com" className="text-[var(--admin-accent)] hover:text-[var(--admin-accent-hover)] underline transition-colors">billing@cielohermosa.com</a>
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-xs text-stone-500 mb-6">
-          <a href="/admin" className="hover:text-stone-800 transition-colors">Admin</a>
+        <nav className="flex items-center gap-2 text-xs text-[var(--admin-text-muted)] mb-6">
+          <a href="/admin" className="hover:text-[var(--admin-text-primary)] transition-colors">Admin</a>
           <span>/</span>
-          <a href="/admin/settings" className="hover:text-stone-800 transition-colors">Settings</a>
+          <a href="/admin/settings" className="hover:text-[var(--admin-text-primary)] transition-colors">Settings</a>
           <span>/</span>
-          <span className="text-stone-800">Billing</span>
+          <span className="text-[var(--admin-text-primary)]">Billing</span>
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-stone-950">Billing &amp; Subscription</h1>
-          <p className="mt-1 text-stone-500">
+          <h1 className="text-3xl font-bold text-[var(--admin-text-primary)]">Billing &amp; Subscription</h1>
+          <p className="mt-1 text-[var(--admin-text-muted)]">
             Manage your Route Commerce subscription for {brand?.name ?? "your brand"}.
           </p>
         </div>

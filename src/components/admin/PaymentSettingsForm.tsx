@@ -164,16 +164,16 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
       )}
 
       {error && (
-        <div className="rounded-xl bg-red-900/50 border border-red-700 p-4 text-sm text-red-200">{error}</div>
+        <div className="rounded-xl bg-red-950/50 border border-red-800 p-4 text-sm text-red-300">{error}</div>
       )}
       {saved && (
-        <div className="rounded-xl bg-green-900/50 border border-green-700 p-4 text-sm text-green-200">
+        <div className="rounded-xl bg-green-950/50 border border-green-800 p-4 text-sm text-green-300">
           Payment settings saved.
         </div>
       )}
       {syncResult && (
         <div className={`rounded-xl p-4 text-sm border ${
-          syncResult.success ? "bg-green-900/50 border-green-700 text-green-200" : "bg-red-900/50 border-red-700 text-red-200"
+          syncResult.success ? "bg-green-950/50 border-green-800 text-green-300" : "bg-red-950/50 border-red-800 text-red-300"
         }`}>
           {syncResult.message}
         </div>
@@ -181,19 +181,19 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
 
       {/* Connected status banner */}
       {settings?.stripe_publishable_key && (
-        <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-900/30 px-4 py-3 text-sm">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-900/300 text-white text-xs font-bold">✓</span>
+        <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-white text-xs font-bold">✓</span>
           <div>
-            <p className="font-semibold text-green-300">Stripe Connected</p>
-            <p className="text-xs text-green-400/70">Payments are configured for this brand</p>
+            <p className="font-semibold text-green-800">Stripe Connected</p>
+            <p className="text-xs text-green-600">Payments are configured for this brand</p>
           </div>
         </div>
       )}
 
       {/* Provider selection */}
       <div>
-        <label className="block text-sm font-semibold text-zinc-300">Payment Provider</label>
-        <p className="mt-1 text-sm text-zinc-500">
+        <label className="block text-sm font-semibold text-[var(--admin-text-primary)]">Payment Provider</label>
+        <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
           Choose how to process payments for this brand.
         </p>
         <div className="mt-3 flex gap-3">
@@ -210,10 +210,10 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                 setShowStripe(opt.value === "stripe");
                 setShowSquare(opt.value === "square");
               }}
-              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+              className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
                 provider === opt.value
-                  ? "border-zinc-400 bg-zinc-700 text-zinc-50"
-                  : "border-zinc-600 text-zinc-400 hover:bg-zinc-800"
+                  ? "border-[var(--admin-accent)] bg-[var(--admin-accent)] text-white"
+                  : "border-[var(--admin-border)] text-[var(--admin-text-secondary)] hover:bg-stone-50"
               }`}
             >
               {opt.label}
@@ -224,12 +224,12 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
 
       {/* Stripe credentials */}
       {showStripe && (
-        <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-900/30 p-4">
+        <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-blue-900">Stripe</h3>
             {settings?.stripe_publishable_key && (
-              <span className="flex items-center gap-1.5 rounded-full bg-green-900/40 px-2.5 py-1 text-xs font-semibold text-green-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-900/300"></span>
+              <span className="flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span>
                 Connected
               </span>
             )}
@@ -237,7 +237,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
           
           {!settings?.stripe_publishable_key ? (
             <div className="space-y-3">
-              <p className="text-sm text-blue-200">
+              <p className="text-sm text-blue-800">
                 Connect your Stripe account to process payments. You'll be redirected to Stripe to authorize the connection.
               </p>
               <a
@@ -249,7 +249,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-green-400">
+              <p className="text-sm text-green-700">
                 ✓ Your Stripe account is connected and ready to accept payments.
               </p>
               <button
@@ -266,7 +266,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                     window.location.reload();
                   }
                 }}
-                className="text-sm text-red-400 hover:underline"
+                className="text-sm text-red-600 hover:underline"
               >
                 Disconnect Stripe
               </button>
@@ -277,11 +277,11 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
 
       {/* Square credentials */}
       {showSquare && (
-        <div className="space-y-4 rounded-xl border border-green-200 bg-green-900/30 p-4">
+        <div className="space-y-4 rounded-xl border border-green-200 bg-green-50 p-4">
           <h3 className="font-semibold text-green-900">Square</h3>
           {!hasSquareToken ? (
             <div className="space-y-3">
-              <p className="text-sm text-green-400">
+              <p className="text-sm text-green-800">
                 Connect your Square account via OAuth to enable sync.
               </p>
               <a
@@ -303,7 +303,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
               <button
                 type="button"
                 onClick={handleDisconnectSquare}
-                className="text-sm text-red-400 hover:underline"
+                className="text-sm text-red-600 hover:underline"
               >
                 Disconnect Square
               </button>
@@ -314,10 +314,10 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
 
       {/* Square Sync section */}
       {hasSquareToken && provider === "square" && (
-        <div className="space-y-5 rounded-xl border border-purple-200 bg-purple-50 p-5">
+        <div className="space-y-5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg-light)] p-5">
           <div>
-            <h3 className="font-semibold text-purple-900">Square Sync</h3>
-            <p className="mt-1 text-sm text-purple-700">
+            <h3 className="font-semibold text-[var(--admin-text-primary)]">Square Sync</h3>
+            <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
               Keep products, orders, and inventory in sync between Route Commerce and Square.
             </p>
           </div>
@@ -328,16 +328,16 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
               type="button"
               onClick={() => setSquareSyncEnabled(!squareSyncEnabled)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                squareSyncEnabled ? "bg-purple-600" : "bg-slate-300"
+                squareSyncEnabled ? "bg-[var(--admin-accent)]" : "bg-stone-300"
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-zinc-900 transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                   squareSyncEnabled ? "translate-x-6" : "translate-x-1"
                 }`}
               />
             </button>
-            <span className="text-sm font-medium text-purple-900">
+            <span className="text-sm font-medium text-[var(--admin-text-primary)]">
               {squareSyncEnabled ? "Enabled" : "Disabled"}
             </span>
           </div>
@@ -346,7 +346,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
             <>
               {/* Inventory mode */}
               <div>
-                <p className="mb-2 text-sm font-medium text-zinc-300">Inventory sync direction</p>
+                <p className="mb-2 text-sm font-medium text-[var(--admin-text-primary)]">Inventory sync direction</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {[
                     { value: "none", label: "None" },
@@ -360,8 +360,8 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                       onClick={() => setSquareInventoryMode(opt.value as InventoryMode)}
                       className={`rounded-lg border px-3 py-2 text-xs font-medium ${
                         squareInventoryMode === opt.value
-                          ? "border-purple-600 bg-purple-600 text-white"
-                          : "border-zinc-600 text-zinc-400 hover:bg-purple-100"
+                          ? "border-[var(--admin-accent)] bg-[var(--admin-accent)] text-white"
+                          : "border-[var(--admin-border)] text-[var(--admin-text-secondary)] hover:bg-stone-50"
                       }`}
                     >
                       {opt.label}
@@ -376,7 +376,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                   type="button"
                   onClick={() => handleSyncNow("products")}
                   disabled={syncing}
-                  className="rounded-lg border border-purple-300 bg-zinc-900 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+                  className="rounded-lg border border-[var(--admin-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-text-primary)] hover:bg-stone-50 disabled:opacity-50"
                 >
                   {syncing ? "Syncing..." : "Sync Products Now"}
                 </button>
@@ -384,7 +384,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                   type="button"
                   onClick={() => handleSyncNow("orders")}
                   disabled={syncing}
-                  className="rounded-lg border border-purple-300 bg-zinc-900 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+                  className="rounded-lg border border-[var(--admin-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-text-primary)] hover:bg-stone-50 disabled:opacity-50"
                 >
                   {syncing ? "Syncing..." : "Sync Orders Now"}
                 </button>
@@ -392,24 +392,24 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                   type="button"
                   onClick={() => handleSyncNow("all")}
                   disabled={syncing}
-                  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+                  className="rounded-lg bg-[var(--admin-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {syncing ? "Syncing..." : "Sync All Now"}
                 </button>
               </div>
 
               {/* Last sync info */}
-              <div className="text-xs text-zinc-500">
+              <div className="text-xs text-[var(--admin-text-muted)]">
                 Last sync: {lastSyncAt}
                 {settings?.square_last_sync_error && (
-                  <span className="ml-2 text-red-500">— {settings.square_last_sync_error}</span>
+                  <span className="ml-2 text-red-600">— {settings.square_last_sync_error}</span>
                 )}
               </div>
 
               {/* Sync log preview */}
               {syncLog.length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--admin-text-muted)]">
                     Recent sync activity
                   </p>
                   <div className="space-y-1">
@@ -418,14 +418,14 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
                         key={entry.id}
                         className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
                           entry.status === "success"
-                            ? "border-green-200 bg-green-900/30 text-green-400"
-                            : "border-red-200 bg-red-900/30 text-red-400"
+                            ? "border-green-200 bg-green-50 text-green-700"
+                            : "border-red-200 bg-red-50 text-red-700"
                         }`}
                       >
                         <span>
                           [{entry.direction ?? "—"}] {entry.event_type} — {entry.status}
                         </span>
-                        <span className="text-slate-400">
+                        <span className="text-[var(--admin-text-muted)]">
                           {new Date(entry.created_at).toLocaleTimeString()}
                         </span>
                       </div>
@@ -444,7 +444,7 @@ export default function PaymentSettingsForm({ settings, brandId, brands = [], is
       <button
         type="submit"
         disabled={saving}
-        className="rounded-xl bg-zinc-100 px-6 py-3 text-sm font-bold text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+        className="rounded-xl bg-[var(--admin-accent)] px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
       >
         {saving ? "Saving..." : "Save Payment Settings"}
       </button>
