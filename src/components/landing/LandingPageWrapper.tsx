@@ -214,69 +214,90 @@ interface FooterProps {
 
 export function Footer({ className = "" }: FooterProps) {
   const footerLinks = [
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "Privacy", href: "/privacy-policy" },
+    { label: "Terms", href: "/terms-and-conditions" },
+    { label: "Contact", href: "/contact" },
   ];
 
   return (
     <footer
-      className={`w-full py-8 border-t bg-[#faf8f5] ${className}`}
-      style={{ borderColor: "#6b8f71/20" }}
+      className={`w-full py-12 border-t border-[#e8e4dc] bg-[#faf8f5] ${className}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Logo + Copyright */}
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "#1a4d2e" }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-8">
+          {/* Logo + Tagline */}
+          <div className="flex flex-col items-center sm:items-start gap-1">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "#1a4d2e" }}
               >
-                <path
-                  d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z"
-                  fill="#faf8f5"
-                  stroke="#faf8f5"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z"
+                    fill="#faf8f5"
+                    stroke="#faf8f5"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <span
+                className="text-sm font-medium tracking-tight"
+                style={{
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  color: "#1a1a1a",
+                }}
+              >
+                Route Commerce
+              </span>
             </div>
             <span
-              className="text-sm"
+              className="text-xs mt-1"
               style={{
                 fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-                color: "#1a1a1a",
-                opacity: 0.7,
+                color: "#9a9590",
               }}
             >
-              © 2025 Route Commerce. All rights reserved.
+              Fresh produce, delivered fresh.
             </span>
           </div>
 
           {/* Links */}
-          <nav className="flex items-center gap-6">
+          <nav className="flex items-center gap-8">
             {footerLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="text-sm font-medium transition-opacity hover:opacity-70"
+                className="text-xs font-medium uppercase tracking-wider transition-colors hover:text-[#1a4d2e]"
                 style={{
                   fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
                   color: "#6b8f71",
+                  letterSpacing: "0.08em",
                 }}
               >
                 {link.label}
               </a>
             ))}
           </nav>
+
+          {/* Copyright */}
+          <span
+            className="text-xs"
+            style={{
+              fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+              color: "#b5b0a8",
+            }}
+          >
+            © 2025
+          </span>
         </div>
       </div>
     </footer>
