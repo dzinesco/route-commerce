@@ -69,7 +69,20 @@ export const setUserContext = (userId: string, brandId?: string) => {
   });
 };
 
-// Export for transaction tracing
-export const startTransaction = (name: string, op: string = "custom") => {
-  return Sentry.startTransaction({ name, op });
-};
+// Export for transaction tracing - simplified wrapper
+export async function withTransaction<T>(
+  name: string,
+  op: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  return Sentry.withScope(async (scope) => {
+    scope.setTransactionName(name);
+    try {
+      const result = await fn();
+      return result;
+    } catch (error) {
+      Sentry.captureException(error);
+      throw error;
+    }
+  });
+}
