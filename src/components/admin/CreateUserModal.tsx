@@ -146,11 +146,11 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
       onClose={handleClose}
       maxWidth="max-w-lg"
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Error banner */}
         {error && (
-          <div className="flex items-start justify-between rounded-lg bg-red-50 p-4 text-sm text-red-700 gap-3 border border-red-200">
-            <span>{error}</span>
+          <div className="flex items-start justify-between rounded-lg bg-red-50 p-3 sm:p-4 text-sm text-red-700 gap-3 border border-red-200">
+            <span className="text-xs sm:text-sm">{error}</span>
             <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -185,29 +185,30 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
           />
         </div>
 
-        {/* Display Name */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Display Name</label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
-            placeholder="Kyle Martinez"
-          />
-        </div>
+        {/* Display Name & Phone - 2 columns on larger screens */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Display Name</label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
+              placeholder="Kyle Martinez"
+            />
+          </div>
 
-        {/* Phone Number */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Phone Number</label>
-          <p className="text-xs text-[var(--admin-text-muted)] mb-1.5">Optional.</p>
-          <input
-            type="tel"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
-            placeholder="+1 (555) 000-0000"
-          />
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Phone Number</label>
+            <p className="text-xs text-[var(--admin-text-muted)] mb-1.5">Optional.</p>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
+              placeholder="+1 (555) 000-0000"
+            />
+          </div>
         </div>
 
         {/* Role */}
@@ -225,7 +226,7 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
                   className="accent-[var(--admin-accent)]"
                 />
                 <div>
-                  <span className="font-medium text-[var(--admin-text-primary)] capitalize">{r.replace("_", " ")}</span>
+                  <span className="font-medium text-[var(--admin-text-primary)] capitalize text-sm">{r.replace("_", " ")}</span>
                   <p className="text-xs text-[var(--admin-text-muted)]">{roleDescriptions[r]}</p>
                 </div>
               </label>
@@ -255,14 +256,14 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
           <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-2">Permissions</label>
           <div className="space-y-2">
             {ALL_FLAGS.map((flag) => (
-              <label key={flag} className="flex items-center justify-between rounded-lg border border-[var(--admin-border)] px-4 py-2.5 hover:bg-[var(--admin-bg)] cursor-pointer transition-colors">
-                <span className="text-sm text-[var(--admin-text-primary)]">{FLAG_LABELS[flag]}</span>
+              <label key={flag} className="flex items-center justify-between rounded-lg border border-[var(--admin-border)] px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-[var(--admin-bg)] cursor-pointer transition-colors">
+                <span className="text-xs sm:text-sm text-[var(--admin-text-primary)]">{FLAG_LABELS[flag]}</span>
                 <button
                   type="button"
                   onClick={() => toggleFlag(flag)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${flags[flag] ? "bg-[var(--admin-accent)]" : "bg-stone-300"}`}
+                  className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${flags[flag] ? "bg-[var(--admin-accent)]" : "bg-stone-300"}`}
                 >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${flags[flag] ? "translate-x-6" : "translate-x-1"}`} />
+                  <span className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white shadow transition-transform ${flags[flag] ? "translate-x-5 sm:translate-x-6" : "translate-x-0.5 sm:translate-x-1"}`} />
                 </button>
               </label>
             ))}
@@ -271,21 +272,21 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-3 mt-8 -mx-8 -mb-8 px-8 py-6 border-t border-[var(--admin-border)] bg-[var(--admin-bg)] rounded-b-2xl">
+      <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3 mt-6 sm:mt-8 -mx-4 sm:-mx-6 md:-mx-8 -mb-4 sm:-mb-6 md:-mb-8 px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-[var(--admin-border)] bg-[var(--admin-bg)] rounded-b-2xl">
         <button
           onClick={handleClose}
           disabled={saving}
-          className="rounded-xl border border-[var(--admin-border)] px-5 py-2.5 text-sm font-medium text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto rounded-xl border border-[var(--admin-border)] px-4 sm:px-5 py-2.5 text-sm font-medium text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-subtle)] transition-colors disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           onClick={handleSubmit}
           disabled={saving || !email.includes("@") || !password || password.length < 6}
-          className="rounded-xl bg-[var(--admin-accent)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--admin-accent-hover)] transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto rounded-xl bg-[var(--admin-accent)] px-4 sm:px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--admin-accent-hover)] transition-colors disabled:opacity-50"
         >
           {saving ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center justify-center gap-2">
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
