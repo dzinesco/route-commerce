@@ -15,7 +15,7 @@ export function Header({ className = "" }: HeaderProps) {
   const navLinks = [
     { label: "Features", href: "#features" },
     { label: "Stats", href: "#stats" },
-    { label: "Reviews", href: "#reviews" },
+    { label: "Reviews", href: "#reviews" }, // anchors added to HeroSection sections (fixes missing id issue)
   ];
 
   return (

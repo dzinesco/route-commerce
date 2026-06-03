@@ -26,8 +26,25 @@ export default function HeroSection() {
   }, []);
 
   // ─── GSAP SCROLL ANIMATIONS ────────────────────────────────────────────────
+  // Resilient: respects reduced-motion, safe GSAP target checks, reliable counter impl, proper scope
   useEffect(() => {
     if (!mounted || !heroRef.current || !contentRef.current) return;
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+
+    // For reduced motion: show final states immediately (no scroll-driven anims to avoid jank/warnings)
+    if (prefersReducedMotion) {
+      const counterEls = document.querySelectorAll<Element>(".counter-animate");
+      counterEls.forEach((el) => {
+        const targetStr = el.getAttribute("data-target") || "0";
+        const target = parseInt(targetStr, 10);
+        el.textContent = target.toLocaleString();
+      });
+      // Still allow basic scroll progress bar if wanted, but skip all ScrollTrigger/GSAP heavy
+      return;
+    }
 
     const ctx = gsap.context(() => {
       // Scroll progress tracking
@@ -158,33 +175,52 @@ export default function HeroSection() {
         );
       });
 
-      // Counter animations with proper initialization
+      // Counter animations - fixed: use reliable proxy object (avoids textContent tween pitfalls that left counters at 0)
+      // + always scoped + fallback path (though reduced handled above) + !gsap guard per requirements
       const counterElements = gsap.utils.toArray<Element>(".counter-animate");
+      const hasGSAP = typeof gsap !== "undefined" && typeof gsap.to === "function";
       counterElements.forEach((el) => {
         const targetStr = el.getAttribute("data-target") || "0";
         const target = parseInt(targetStr, 10);
-        
-        gsap.fromTo(
-          el,
-          { textContent: 0 },
-          {
-            textContent: target,
+        el.textContent = "0"; // ensure start
+
+        if (hasGSAP && gsap) {
+          const obj = { val: 0 };
+          gsap.to(obj, {
+            val: target,
             duration: 2.5,
             ease: "power2.out",
-            snap: { textContent: 1 },
             scrollTrigger: {
               trigger: el,
               start: "top 85%",
               toggleActions: "play none none none",
             },
-            onUpdate: function() {
-              const val = Math.floor(gsap.getProperty(el, "textContent") as number);
+            onUpdate: () => {
               if (el.textContent !== null) {
-                el.textContent = val.toLocaleString();
+                el.textContent = Math.floor(obj.val).toLocaleString();
               }
             },
-          }
-        );
+          });
+        } else {
+          // pure fallback using IO + rAF (IntersectionObserver + requestAnimationFrame) if no GSAP
+          const io = new IntersectionObserver((entries) => {
+            if (entries[0]?.isIntersecting) {
+              io.disconnect();
+              const startTime = Date.now();
+              const dur = 2000;
+              const tick = () => {
+                const p = Math.min((Date.now() - startTime) / dur, 1);
+                const eased = 1 - Math.pow(1 - p, 3);
+                const val = Math.floor(target * eased);
+                el.textContent = val.toLocaleString();
+                if (p < 1) requestAnimationFrame(tick);
+                else el.textContent = target.toLocaleString();
+              };
+              tick();
+            }
+          }, { threshold: 0.3 });
+          io.observe(el);
+        }
       });
     }, containerRef);
 
@@ -213,6 +249,8 @@ export default function HeroSection() {
       </div>
 
       {/* ─── HERO SECTION - SCROLL-DRIVEN PIN ───────────────────────────── */}
+      {/* containerRef wraps animated sections for proper GSAP context scope (fixes "Invalid scope" + missing targets) */}
+      <div ref={containerRef}>
       <section
         ref={heroRef}
         className="hero-section relative min-h-screen flex items-center overflow-hidden"
@@ -558,7 +596,8 @@ export default function HeroSection() {
 
       {/* ─── STORY SECTION - SCROLL-DRIVEN REVEAL ──────────────────────────── */}
       <section id="story" className="relative" style={{ background: "#1a1a1a" }}>
-        <div className="relative" style={{ minHeight: "300vh" }}>
+        {/* Reduced from 300vh to avoid "long blank scroll regions" complaint while keeping cinematic sticky scroll effect */}
+        <div className="relative" style={{ minHeight: "140vh" }}>
           {/* Sticky Container */}
           <div
             className="sticky top-0 h-screen flex items-center justify-center overflow-hidden"
@@ -611,6 +650,7 @@ export default function HeroSection() {
 
       {/* ─── FEATURES SECTION - PROGRESSIVE REVEAL ───────────────────────────── */}
       <section
+        id="features"
         className="relative py-32 overflow-hidden"
         style={{ background: "linear-gradient(180deg, #faf8f5 0%, #fef7f0 100%)" }}
       >
@@ -788,6 +828,7 @@ export default function HeroSection() {
 
       {/* ─── STATS SECTION - SCROLL-TRIGGERED COUNTERS ──────────────────────── */}
       <section
+        id="stats"
         className="relative py-32 overflow-hidden"
         style={{ background: "#1a4d2e" }}
       >
@@ -844,7 +885,9 @@ export default function HeroSection() {
       </section>
 
       {/* ─── CTA SECTION - FINAL REVEAL ─────────────────────────────────────── */}
+      {/* id="reviews" provides anchor for nav "Reviews" link (matches nav expectations; section contains final messaging) */}
       <section
+        id="reviews"
         className="relative py-40 overflow-hidden"
         style={{ background: "linear-gradient(180deg, #faf8f5 0%, #f5f2ed 100%)" }}
       >
@@ -936,67 +979,10 @@ export default function HeroSection() {
           </div>
         </div>
       </section>
+      </div>
+      {/* /containerRef for GSAP scope */}
 
-      {/* ─── FOOTER ─────────────────────────────────────────────────────────── */}
-      <footer className="relative py-16 overflow-hidden" style={{ background: "#1a1a1a" }}>
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: "linear-gradient(180deg, #faf8f5 0%, #1a1a1a 100%)",
-        }} />
-        
-        <div className="container mx-auto px-8 relative z-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-12 border-b border-white/10">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: "#1a4d2e" }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" />
-                </svg>
-              </div>
-              <span 
-                className="text-xl font-semibold"
-                style={{ 
-                  fontFamily: "'Playfair Display', serif",
-                  color: "#faf8f5",
-                }}
-              >
-                Route Commerce
-              </span>
-            </div>
-
-            {/* Legal Links */}
-            <nav className="flex flex-wrap items-center justify-center gap-8">
-              {[
-                { label: "Privacy Policy", href: "/privacy-policy" },
-                { label: "Terms of Service", href: "/terms-and-conditions" },
-                { label: "Security", href: "/security" },
-                { label: "Contact", href: "/contact" },
-              ].map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-sm transition-colors hover:text-white"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
-          </div>
-
-          {/* Copyright */}
-          <div className="pt-8 text-center">
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-              © {new Date().getFullYear()} Route Commerce. All rights reserved.
-            </p>
-            <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-              Fresh produce wholesale platform for farms, Co-ops, and distributors.
-            </p>
-          </div>
-        </div>
-      </footer>
+      {/* (duplicate inline footer removed -- LandingPageWrapper <Footer /> now provides the only footer; eliminates repeated content + trims scroll height) */}
 
       {/* ─── GLOBAL STYLES ────────────────────────────────────────────────────── */}
       <style jsx>{`

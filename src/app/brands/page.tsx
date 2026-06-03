@@ -11,7 +11,7 @@ export default function BrandsPage() {
     if (typeof window === "undefined") return;
 
     const ctx = gsap.context(() => {
-      // Header animation
+      // Header animation (selectors scoped to containerRef)
       gsap.from(".header-content", { 
         y: -30, 
         opacity: 0, 

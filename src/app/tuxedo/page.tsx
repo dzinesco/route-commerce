@@ -442,6 +442,9 @@ export default function TuxedoPage() {
   const [brandBgColor, setBrandBgColor] = useState<string | null>(null);
   const [brandTextColor, setBrandTextColor] = useState<string | null>(null);
 
+  // Scope ref for GSAP context (fixes "invalid scope"/missing targets by providing explicit scope; selectors now limited to page)
+  const pageScopeRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     async function load() {
       const slug = "tuxedo";
@@ -504,6 +507,7 @@ export default function TuxedoPage() {
   }
 
   // ─── GSAP SCROLL ANIMATIONS ──────────────────────────────────────────────
+  // Now explicitly scoped + resilient guards (no more "invalid scope" warnings)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -564,10 +568,15 @@ export default function TuxedoPage() {
         );
       });
 
-      // Counter animations
+      // Counter animations (uses reliable proxy like before; now also has reduced-motion guard for resilience)
+      const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       const counterElements = gsap.utils.toArray<Element>(".counter-animate");
       counterElements.forEach((el) => {
         const target = parseInt(el.getAttribute("data-target") || "0", 10);
+        if (prefersReduced) {
+          el.textContent = target.toLocaleString();
+          return;
+        }
         const obj = { val: 0 };
         gsap.to(obj, {
           val: target,
@@ -604,7 +613,7 @@ export default function TuxedoPage() {
           }
         );
       });
-    });
+    }, pageScopeRef);
 
     return () => ctx.revert();
   }, []);
@@ -612,7 +621,7 @@ export default function TuxedoPage() {
   const featuredProducts = products.slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div ref={pageScopeRef} className="min-h-screen bg-stone-50">
       <BrandStylesProvider
         primaryColor={brandPrimaryColor}
         bgColor={brandBgColor}

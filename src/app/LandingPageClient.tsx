@@ -14,30 +14,32 @@ if (typeof window !== "undefined") {
 export default function LandingPageClient() {
   const mainRef = useRef<HTMLDivElement>(null);
 
-  // Global scroll animations
+  // Global scroll animations (guarded to prevent missing-target warnings when no .scroll-reveal elements)
   useEffect(() => {
     if (typeof window === "undefined" || !mainRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Reveal animations for sections
+      // Reveal animations for sections - only if targets exist (prevents GSAP "missing targets" warnings)
       const revealElements = gsap.utils.toArray<Element>(".scroll-reveal");
-      revealElements.forEach((el) => {
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 60 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        );
-      });
+      if (revealElements.length > 0) {
+        revealElements.forEach((el) => {
+          gsap.fromTo(
+            el,
+            { opacity: 0, y: 60 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 1,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: el,
+                start: "top 85%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        });
+      }
     }, mainRef);
 
     return () => ctx.revert();
