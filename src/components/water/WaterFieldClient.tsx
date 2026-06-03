@@ -133,7 +133,6 @@ function WaterFieldInner() {
   });
   const [pin, setPin] = useState("");
   const [irrigatorName, setIrrigatorName] = useState("");
-  const [selectedRole, setSelectedRole] = useState<"irrigator" | "water_admin" | null>(null);
   const [headgates, setHeadgates] = useState<Headgate[]>([]);
   const [selectedHeadgate, setSelectedHeadgate] = useState("");
   const [headgateLocked, setHeadgateLocked] = useState(false);
@@ -396,13 +395,13 @@ function WaterFieldInner() {
           <p className="text-stone-500 text-center mb-8">{t.whoAreYou}</p>
           <div className="flex flex-col gap-4">
             <button
-              onClick={() => { setSelectedRole("irrigator"); setStep("pin"); }}
+              onClick={() => { setStep("pin"); }}
               className="w-full rounded-xl bg-white px-6 py-5 text-xl font-semibold text-stone-900 shadow-sm ring-1 ring-stone-200 hover:bg-stone-50 min-h-[64px]"
             >
               Irrigator
             </button>
             <button
-              onClick={() => { setSelectedRole("water_admin"); setStep("pin"); }}
+              onClick={() => { setStep("pin"); }}
               className="w-full rounded-xl bg-stone-900 px-6 py-5 text-xl font-semibold text-white shadow-sm ring-1 ring-stone-700 hover:bg-stone-800 min-h-[64px]"
             >
               Admin
@@ -496,7 +495,10 @@ function WaterFieldInner() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-lg px-4 py-6 space-y-5">
+      <form
+        onSubmit={handleSubmitEntry}
+        className="mx-auto max-w-lg px-4 py-6 space-y-5"
+      >
         {/* Success banner */}
         {success && (
           <div className="rounded-xl bg-green-100 border border-green-200 px-4 py-4 text-center text-green-800 font-semibold">
@@ -688,7 +690,7 @@ function WaterFieldInner() {
         {loading && (
           <p className="text-center text-xs text-stone-400 mt-1">Submitting your reading...</p>
         )}
-      </div>
+      </form>
     </div>
   );
 }

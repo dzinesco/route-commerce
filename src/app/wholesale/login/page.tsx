@@ -14,7 +14,7 @@ const BRANDS = [
   { id: "64294306-5f42-463d-a5e8-2ad6c81a96de", name: "Tuxedo Corn", slug: "tuxedo" },
 ];
 
-function BrandLogo({ name }: { name: string }) {
+function BrandLogo() {
   return (
     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-900/60 border border-emerald-700/50">
       <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -119,7 +119,7 @@ export default function WholesaleLoginPage() {
       <div className="bg-zinc-900 border-b border-zinc-800">
         <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BrandLogo name={selectedBrand.name} />
+            <BrandLogo />
             <div>
               <p className="font-bold text-base text-zinc-100 leading-none">{selectedBrand.name}</p>
               <p className="text-xs text-zinc-500 mt-0.5">Wholesale Portal</p>
