@@ -133,8 +133,9 @@ export default function WaterLogSettingsPage() {
                 <p className="text-xs text-zinc-500">Leave blank to keep existing PIN. Set a new PIN to replace it.</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">New PIN</label>
+                    <label htmlFor="water-new-pin" className="block text-xs font-medium text-zinc-400 mb-1">New PIN</label>
                     <input
+                      id="water-new-pin"
                       type="password"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -147,8 +148,9 @@ export default function WaterLogSettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">Confirm PIN</label>
+                    <label htmlFor="water-confirm-pin" className="block text-xs font-medium text-zinc-400 mb-1">Confirm PIN</label>
                     <input
+                      id="water-confirm-pin"
                       type="password"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -225,13 +227,15 @@ export default function WaterLogSettingsPage() {
 
                 {alertsEnabled && (
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">Alert Phone Number</label>
+                    <label htmlFor="water-alert-phone" className="block text-xs font-medium text-zinc-400 mb-1">Alert Phone Number</label>
                     <input
+                      id="water-alert-phone"
                       type="tel"
                       value={alertPhone}
                       onChange={(e) => setAlertPhone(e.target.value)}
                       placeholder="+1234567890"
                       className="w-full rounded-xl border border-zinc-600 px-4 py-3 text-base outline-none focus:border-stone-900"
+                      autoComplete="tel"
                     />
                     <p className="text-xs text-zinc-500 mt-1">U.S. format recommended. Must include country code (e.g. +1 for USA).</p>
                   </div>

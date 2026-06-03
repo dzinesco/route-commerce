@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { type Campaign, type CampaignType } from "@/actions/harvest-reach/campaigns";
 import { type Template } from "@/actions/communications/templates";
 import type { Segment, SegmentRuleV2 } from "@/actions/harvest-reach/segments";
@@ -323,9 +323,53 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  // Audience preview (visible count + sample contacts)
+  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [previewSamples, setPreviewSamples] = useState<string[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
   const selectedSegment = segments.find((s) => s.id === selectedSegmentId);
+
+  // Load audience preview when entering the Audience step or changing the segment
+  useEffect(() => {
+    if (step !== 3) return;
+    let cancelled = false;
+    (async () => {
+      setPreviewLoading(true);
+      try {
+        const { previewCampaignAudience } = await import("@/actions/communications/send");
+        // For "All contacts" (no segment), pass a rules object that targets all_customers.
+        // For a chosen segment, use the segment's rules. The action's rules type
+        // accepts a permissive object, so we cast through unknown.
+        const rules = (selectedSegment?.rules ?? { target: "all_customers" }) as unknown as Parameters<typeof previewCampaignAudience>[1];
+        const result = await previewCampaignAudience(brandId, rules);
+        if (cancelled) return;
+        if (result) {
+          setPreviewCount(result.count ?? 0);
+          setPreviewSamples(
+            (result.sample_customers ?? [])
+              .map((c) => c.email)
+              .filter((e): e is string => Boolean(e))
+              .slice(0, 5),
+          );
+        } else {
+          setPreviewCount(0);
+          setPreviewSamples([]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPreviewCount(0);
+          setPreviewSamples([]);
+        }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, selectedSegment, brandId]);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     setSelectedTemplateId(template.id);
@@ -547,6 +591,44 @@ export default function CampaignComposerPage({ brandId, campaigns, templates, se
                     <p className="text-xs text-stone-400 mt-1">
                       Using segment: {selectedSegment?.name}
                     </p>
+                  )}
+                </div>
+
+                {/* Audience Preview — always-visible count + sample */}
+                <div
+                  className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"
+                  data-testid="audience-preview"
+                  aria-live="polite"
+                  aria-busy={previewLoading}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                        Audience Preview
+                      </p>
+                      {previewLoading ? (
+                        <p className="text-sm text-emerald-700 mt-1">Counting recipients…</p>
+                      ) : previewCount === null ? (
+                        <p className="text-sm text-emerald-700 mt-1">Calculating…</p>
+                      ) : (
+                        <p className="text-sm text-emerald-900 mt-1">
+                          <span className="text-2xl font-bold text-emerald-700">
+                            {previewCount.toLocaleString()}
+                          </span>{" "}
+                          <span className="text-stone-700">
+                            {previewCount === 1 ? "contact" : "contacts"} will receive this campaign
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {!previewLoading && previewSamples.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-emerald-200">
+                      <p className="text-xs font-semibold text-emerald-700 mb-1">Sample recipients:</p>
+                      <p className="text-xs text-emerald-800 break-words">
+                        {previewSamples.join(", ")}
+                      </p>
+                    </div>
                   )}
                 </div>
 

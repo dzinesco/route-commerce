@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
+import { useCart } from "@/context/CartContext";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -16,11 +17,16 @@ interface Product {
   price: string;
   type: string;
   imageUrl: string | null;
+  brand_id?: string;
+  brand_slug?: string;
+  is_taxable?: boolean;
+  pickup_type?: "scheduled_stop" | "shed";
 }
 
 interface CinematicShowcaseProps {
   products: Product[];
   brandSlug?: string;
+  brandName?: string;
 }
 
 // Single product card with scroll-driven morphing
@@ -117,10 +123,41 @@ function MorphingProductCard({
 export default function CinematicShowcase({
   products,
   brandSlug = "tuxedo",
+  brandName = "Tuxedo Corn",
 }: CinematicShowcaseProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [addedId, setAddedId] = useState<string | null>(null);
+  const { addToCart } = useCart();
+
+  const activeProduct = products[activeIndex];
+  const isPickupOnly = activeProduct?.type === "Pickup";
+  const isShippingOnly = activeProduct?.type === "Shipping";
+  const isBoth = activeProduct?.type === "Pickup & Shipping";
+  const canAdd = !!activeProduct && !!activeProduct.brand_id;
+
+  function handleAddActive() {
+    if (!activeProduct || !canAdd) return;
+    const baseItem = {
+      id: activeProduct.id,
+      name: activeProduct.name,
+      price: activeProduct.price,
+      brand_id: activeProduct.brand_id ?? "",
+      brand_slug: activeProduct.brand_slug ?? brandSlug,
+      is_taxable: activeProduct.is_taxable ?? true,
+      pickup_type: activeProduct.pickup_type ?? "scheduled_stop",
+      description: activeProduct.description ?? "",
+    };
+    if (isPickupOnly) addToCart(baseItem, "pickup");
+    else if (isShippingOnly) addToCart(baseItem, "ship");
+    else addToCart(baseItem, "pickup");
+
+    setAddedId(activeProduct.id);
+    window.setTimeout(() => {
+      setAddedId((cur) => (cur === activeProduct?.id ? null : cur));
+    }, 1800);
+  }
 
   useEffect(() => {
     if (typeof window === "undefined" || !containerRef.current) return;
@@ -282,6 +319,47 @@ export default function CinematicShowcase({
               <p className="text-xs text-white/30 max-w-md">
                 {products[activeIndex]?.description}
               </p>
+              {activeProduct && (
+                <div className="mt-5 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAddActive}
+                    disabled={!canAdd}
+                    aria-label={`Add ${activeProduct.name} to cart`}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold tracking-wider transition-all duration-200 ${
+                      !canAdd
+                        ? "bg-white/10 text-white/40 cursor-not-allowed"
+                        : addedId === activeProduct.id
+                          ? "bg-emerald-500 text-white"
+                          : "bg-white text-stone-950 hover:bg-stone-100 active:bg-stone-200"
+                    }`}
+                  >
+                    {addedId === activeProduct.id ? (
+                      <>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Added
+                      </>
+                    ) : isBoth ? (
+                      "Add to Cart"
+                    ) : isShippingOnly ? (
+                      "Add — Ships"
+                    ) : (
+                      "Add to Cart"
+                    )}
+                  </button>
+                  <span className="text-xs text-white/40 hidden sm:inline">
+                    {isBoth
+                      ? "Preorder for pickup or shipping"
+                      : isShippingOnly
+                        ? "Shipped after season"
+                        : isPickupOnly
+                          ? "Pickup at a scheduled stop"
+                          : ""}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

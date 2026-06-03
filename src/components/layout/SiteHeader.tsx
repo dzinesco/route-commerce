@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const BRAND_NAMES: Record<string, string> = {
   tuxedo: "Tuxedo Corn",
@@ -10,6 +11,26 @@ const BRAND_NAMES: Record<string, string> = {
 
 export default function SiteHeader() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Only show the Admin link to users who are actually authenticated as admins.
+  // This prevents leaking the Admin entry point on public marketing pages
+  // (e.g. /, /pricing, /contact, /security, /roadmap, /changelog, /blog, etc.).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const mod = await import("@/actions/admin-user");
+        const user = await mod.getCurrentAdminUser();
+        if (!cancelled) setIsAdmin(!!user);
+      } catch {
+        if (!cancelled) setIsAdmin(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   const showBrandName = pathname?.startsWith("/tuxedo") || pathname?.startsWith("/indian-river-direct");
   const brandKey = pathname?.split("/")[1];
@@ -83,8 +104,8 @@ export default function SiteHeader() {
             </>
           )}
 
-          {/* Admin link */}
-          {!isAdminRoute && (
+          {/* Admin link — only rendered for users who are signed in as admins. */}
+          {!isAdminRoute && isAdmin && (
             <Link
               href="/admin"
               className="text-xs sm:text-sm font-medium uppercase tracking-wider transition-colors hover:opacity-70"

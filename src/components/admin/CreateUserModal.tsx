@@ -161,11 +161,17 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Email</label>
+          <label htmlFor="create-user-email" className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">
+            Email
+          </label>
           <input
+            id="create-user-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
+            aria-required="true"
+            autoComplete="email"
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
             placeholder="user@example.com"
           />
@@ -173,12 +179,19 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Password</label>
-          <p className="text-xs text-[var(--admin-text-muted)] mb-1.5">Minimum 6 characters.</p>
+          <label htmlFor="create-user-password" className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">
+            Password
+          </label>
+          <p id="create-user-password-help" className="text-xs text-[var(--admin-text-muted)] mb-1.5">Minimum 6 characters.</p>
           <input
+            id="create-user-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            aria-required="true"
+            aria-describedby="create-user-password-help"
+            autoComplete="new-password"
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
             placeholder="Choose a password"
             minLength={6}
@@ -188,23 +201,31 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
         {/* Display Name & Phone - 2 columns on larger screens */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Display Name</label>
+            <label htmlFor="create-user-display-name" className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">
+              Display Name
+            </label>
             <input
+              id="create-user-display-name"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              autoComplete="name"
               className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
               placeholder="Kyle Martinez"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Phone Number</label>
+            <label htmlFor="create-user-phone" className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">
+              Phone Number
+            </label>
             <p className="text-xs text-[var(--admin-text-muted)] mb-1.5">Optional.</p>
             <input
+              id="create-user-phone"
               type="tel"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
+              autoComplete="tel"
               className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)]"
               placeholder="+1 (555) 000-0000"
             />
@@ -237,10 +258,13 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess, brands, cu
         {/* Brand */}
         {showBrandSelect && (
           <div>
-            <label className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Brand</label>
+            <label htmlFor="create-user-brand" className="block text-sm font-medium text-[var(--admin-text-primary)] mb-1.5">Brand</label>
             <select
+              id="create-user-brand"
               value={brandId ?? ""}
               onChange={(e) => setBrandId(e.target.value || null)}
+              required
+              aria-required="true"
               className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-bg)] px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
             >
               <option value="">Select a brand</option>

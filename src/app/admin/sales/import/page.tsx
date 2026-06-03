@@ -90,8 +90,9 @@ John Doe,john@example.com,555-5678,{STOP_ID},{PRODUCT_ID},1,shipping
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-stone-600">Brand ID</label>
+          <label htmlFor="import-orders-brand" className="block text-sm font-medium text-stone-600">Brand ID</label>
           <input
+            id="import-orders-brand"
             type="text"
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
@@ -101,10 +102,12 @@ John Doe,john@example.com,555-5678,{STOP_ID},{PRODUCT_ID},1,shipping
         </div>
 
         <div className="mb-4 card p-6">
-          <label className="block text-sm font-medium text-stone-600 mb-2">Upload CSV</label>
-          <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} className="w-full text-sm text-stone-500" />
+          <label htmlFor="import-orders-csv" className="block text-sm font-medium text-stone-600 mb-2">Upload CSV</label>
+          <input id="import-orders-csv" ref={fileRef} type="file" accept=".csv" onChange={handleFile} className="w-full text-sm text-stone-500" />
           <p className="mt-2 text-xs text-stone-500">Paste CSV content below:</p>
+          <label htmlFor="import-orders-text" className="sr-only">CSV text</label>
           <textarea
+            id="import-orders-text"
             value={csvText}
             onChange={(e) => setCsvText(e.target.value)}
             rows={6}

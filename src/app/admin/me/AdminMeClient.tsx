@@ -153,13 +153,14 @@ export default function AdminMeClient({ currentUser }: ProfilePageProps) {
           {editing && (
             <form onSubmit={handleSaveProfile} className="mt-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>Display Name</label>
+                <label htmlFor="me-display-name" className="block text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>Display Name</label>
                 <input
+                  id="me-display-name"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                  style={{ 
+                  style={{
                     borderColor: "var(--admin-border)",
                     color: "var(--admin-text-primary)",
                     backgroundColor: "white"
@@ -168,18 +169,20 @@ export default function AdminMeClient({ currentUser }: ProfilePageProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>Phone Number</label>
+                <label htmlFor="me-phone" className="block text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>Phone Number</label>
                 <input
+                  id="me-phone"
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                  style={{ 
+                  style={{
                     borderColor: "var(--admin-border)",
                     color: "var(--admin-text-primary)",
                     backgroundColor: "white"
                   }}
                   placeholder="+1 (555) 000-0000"
+                  autoComplete="tel"
                 />
               </div>
               <div className="flex justify-end gap-3">
@@ -228,18 +231,22 @@ export default function AdminMeClient({ currentUser }: ProfilePageProps) {
           ) : (
             <form onSubmit={handleEmailChange} className="mt-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>New Email Address</label>
+                <label htmlFor="me-new-email" className="block text-sm font-medium" style={{ color: "var(--admin-text-primary)" }}>New Email Address</label>
                 <input
+                  id="me-new-email"
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
+                  required
+                  aria-required="true"
                   className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                  style={{ 
+                  style={{
                     borderColor: "var(--admin-border)",
                     color: "var(--admin-text-primary)",
                     backgroundColor: "white"
                   }}
                   placeholder="new@example.com"
+                  autoComplete="email"
                 />
               </div>
               {emailError && (

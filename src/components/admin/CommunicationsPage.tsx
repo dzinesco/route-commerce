@@ -98,6 +98,7 @@ export default function CommunicationsPage({
   initialSegments = [],
   initialAnalytics = [],
   editCampaignId,
+  initialTab,
 }: {
   campaigns: Campaign[];
   templates: Template[];
@@ -110,8 +111,9 @@ export default function CommunicationsPage({
   initialSegments?: Segment[];
   initialAnalytics?: CampaignAnalytics[];
   editCampaignId?: string;
+  initialTab?: Tab;
 }) {
-  const [currentTab, setCurrentTab] = useState<Tab>("campaigns");
+  const [currentTab, setCurrentTab] = useState<Tab>(initialTab ?? "campaigns");
   const [isComposing, setIsComposing] = useState(false);
 
   return (

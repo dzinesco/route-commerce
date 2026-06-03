@@ -76,7 +76,13 @@ export default function ContactClientPage() {
               </svg>
             </div>
             <h3 className="text-lg font-bold text-[#0a0a0a] mb-3">Phone</h3>
-            <p className="text-[#666] leading-relaxed">support@routecommerce.com</p>
+            <a
+              href="tel:+19703235631"
+              className="block text-[#1a4d2e] hover:text-[#2d6a4f] font-semibold leading-relaxed"
+            >
+              (970) 323-5631
+            </a>
+            <p className="text-sm text-[#888] mt-1">Mon&ndash;Fri, 8 AM &ndash; 6 PM MT</p>
           </article>
 
           <article className="rounded-3xl bg-white border border-[#e5e5e5] p-8 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
@@ -86,7 +92,18 @@ export default function ContactClientPage() {
               </svg>
             </div>
             <h3 className="text-lg font-bold text-[#0a0a0a] mb-3">Email</h3>
-            <p className="text-[#666] leading-relaxed">hello@routecommerce.com</p>
+            <a
+              href="mailto:hello@routecommerce.com"
+              className="block text-[#1a4d2e] hover:text-[#2d6a4f] font-semibold leading-relaxed"
+            >
+              hello@routecommerce.com
+            </a>
+            <a
+              href="mailto:support@routecommerce.com"
+              className="block text-sm text-[#666] hover:text-[#1a4d2e] mt-1"
+            >
+              support@routecommerce.com
+            </a>
           </article>
         </div>
 
@@ -265,7 +282,7 @@ export default function ContactClientPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-sm text-[#666]">2024 Route Commerce. All rights reserved.</span>
+              <span className="text-sm text-[#666]">&copy; {new Date().getFullYear()} Route Commerce. All rights reserved.</span>
             </div>
             <nav className="flex items-center gap-6 text-sm text-[#888]" aria-label="Footer navigation">
               <Link href="/privacy-policy" className="hover:text-[#1a4d2e] transition-colors">Privacy</Link>

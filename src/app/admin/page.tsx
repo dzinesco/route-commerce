@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { isFeatureEnabled } from "@/lib/feature-flags";
-import { getBrandPlanInfo } from "@/actions/billing/stripe-portal";
+import { getBillingOverview } from "@/actions/billing/billing-overview";
 import DashboardClient from "@/components/admin/DashboardClient";
 
 const TUXEDO_BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
@@ -22,20 +23,49 @@ export default async function AdminPage() {
   let limits = { max_users: 1, max_stops_monthly: 10, max_products: 25 };
   let brandDisplayName = "Admin";
 
-  if (adminUser?.brand_id) {
-    for (const key of ["harvest_reach", "wholesale_portal", "water_log", "ai_tools", "sms_campaigns", "square_sync", "route_trace"] as const) {
-      enabledAddons[key] = await isFeatureEnabled(adminUser.brand_id, key);
+  // For platform_admin in dev mode, adminUser.brand_id is null. To keep
+  // the dashboard's "Active Products" stat in sync with the billing page,
+  // we need to pick a brand and use the same getBillingOverview action
+  // the billing page does. Otherwise the dashboard falls back to default
+  // (0/0/0) usage values and contradicts the billing page's "Products 1/25".
+  let dashboardBrandId: string | null = adminUser?.brand_id ?? null;
+  if (!dashboardBrandId && adminUser?.role === "platform_admin") {
+    const { data: firstBrand } = await supabase
+      .from("brands")
+      .select("id")
+      .limit(1)
+      .single();
+    if (firstBrand?.id) {
+      dashboardBrandId = firstBrand.id;
     }
-    const planResult = await getBrandPlanInfo(adminUser.brand_id);
-    if (planResult.success && planResult.data) {
-      planTier = planResult.data.plan_tier ?? "starter";
-      usage = planResult.data.usage ?? usage;
-      limits = {
-        max_users: planResult.data.max_users ?? 1,
-        max_stops_monthly: planResult.data.max_stops_monthly ?? 10,
-        max_products: planResult.data.max_products ?? 25,
-      };
-      if (planResult.data.brand_name) brandDisplayName = planResult.data.brand_name;
+  }
+
+  if (dashboardBrandId) {
+    // Use the centralized billing overview so the dashboard's "Active Products"
+    // stat agrees with the plan usage in /admin/settings/billing. Previously
+    // these were derived from two different queries with different filters
+    // (active=true vs deleted_at IS NULL), causing the "1 vs 0/25" mismatch.
+    const overviewRes = await getBillingOverview(dashboardBrandId);
+    if (overviewRes.success && overviewRes.data) {
+      const o = overviewRes.data;
+      planTier = o.planTier;
+      usage = o.usage;
+      limits = o.limits;
+      if (o.brandName) brandDisplayName = o.brandName;
+      enabledAddons = o.enabledAddons;
+    } else {
+      // Fallback to per-feature flag check (matches prior behavior)
+      for (const key of [
+        "harvest_reach",
+        "wholesale_portal",
+        "water_log",
+        "ai_tools",
+        "sms_campaigns",
+        "square_sync",
+        "route_trace",
+      ] as const) {
+        enabledAddons[key] = await isFeatureEnabled(dashboardBrandId, key);
+      }
     }
   }
 

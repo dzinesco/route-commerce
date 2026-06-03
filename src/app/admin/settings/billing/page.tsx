@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { getBrandPlanInfo, getEnabledAddons } from "@/actions/billing/stripe-portal";
+import { getBillingOverview } from "@/actions/billing/billing-overview";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import BillingClientPage from "./BillingClientPage";
 
@@ -49,24 +49,25 @@ export default async function BillingPage({ params }: Props) {
 
   if (!resolvedBrandId) return <AdminAccessDenied />;
 
-  const [planResult, addons] = await Promise.all([
-    getBrandPlanInfo(resolvedBrandId),
-    getEnabledAddons(resolvedBrandId),
-  ]);
+  // Single source of truth for everything the billing client needs.
+  const overviewRes = await getBillingOverview(resolvedBrandId);
+  if (!overviewRes.success || !overviewRes.data) {
+    return (
+      <main className="min-h-screen bg-[var(--admin-bg)] px-6 py-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] p-8 text-center">
+            <h1 className="text-2xl font-bold text-[var(--admin-text-primary)]">Billing Unavailable</h1>
+            <p className="mt-2 text-[var(--admin-text-muted)]">{overviewRes.error ?? "Could not load billing information."}</p>
+            <a href="/admin" className="mt-4 inline-block rounded-xl bg-[var(--admin-accent)] hover:bg-[var(--admin-accent-hover)] px-6 py-3 text-sm font-medium text-white transition-colors">
+              Back to Admin
+            </a>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
-  const planData = (planResult.success && planResult.data && typeof planResult.data === "object")
-    ? planResult.data as Record<string, any>
-    : {} as Record<string, any>;
-
-  const planTier = planData.plan_tier ?? "starter";
-
-  const { data: brand } = await supabase
-    .from("brands")
-    .select("name, stripe_customer_id, stripe_subscription_id, stripe_subscription_status, stripe_current_period_end")
-    .eq("id", resolvedBrandId)
-    .single();
-
-  const hasStripeCustomer = !!brand?.stripe_customer_id;
+  const overview = overviewRes.data;
 
   return (
     <main className="min-h-screen bg-[var(--admin-bg)]">
@@ -94,20 +95,11 @@ export default async function BillingPage({ params }: Props) {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--admin-text-primary)]">Billing &amp; Subscription</h1>
           <p className="mt-1 text-[var(--admin-text-muted)]">
-            Manage your Route Commerce subscription for {brand?.name ?? "your brand"}.
+            Manage your Route Commerce subscription for {overview.brandName ?? "your brand"}.
           </p>
         </div>
 
-        <BillingClientPage
-          brandId={resolvedBrandId}
-          planTier={planTier}
-          brandName={brand?.name ?? null}
-          hasStripeCustomer={hasStripeCustomer}
-          enabledAddons={addons}
-          isPlatformAdmin={isPlatformAdmin}
-          subscriptionStatus={brand?.stripe_subscription_status ?? null}
-          currentPeriodEnd={brand?.stripe_current_period_end ?? null}
-        />
+        <BillingClientPage overview={overview} />
       </div>
     </main>
   );

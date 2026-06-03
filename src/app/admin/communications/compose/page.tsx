@@ -11,6 +11,12 @@ export const metadata: Metadata = {
   description: "Create and send email campaigns to your customers.",
 };
 
+// Legacy /compose route: now consolidated into the main Communications page.
+// We render the same component with initialTab="compose" so users land directly
+// in the unified CampaignComposerPage (no duplicate "edit" / "new" experience).
+// The previous render passed editMode="new" which forced a separate
+// CampaignEditPanel render in the campaigns tab — that duplicate has been
+// removed. /compose is preserved for backwards compatibility (existing links).
 export default async function ComposePage() {
   const adminUser = await getAdminUser();
   if (!adminUser || !adminUser.can_manage_messages) {
@@ -31,7 +37,7 @@ export default async function ComposePage() {
       templates={templatesResult.success ? templatesResult.templates : []}
       brandId={effectiveBrandId}
       initialSegments={segmentsResult.success ? segmentsResult.segments : []}
-      editMode="new"
+      initialTab="compose"
     />
   );
 }

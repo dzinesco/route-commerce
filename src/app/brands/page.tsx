@@ -212,7 +212,7 @@ export default function BrandsPage() {
       <footer className="footer">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between text-xs text-[#888]">
-            <span>© 2024 Route Commerce</span>
+            <span>© {new Date().getFullYear()} Route Commerce</span>
             <div className="flex gap-4">
               <a href="/privacy-policy" className="hover:text-[#1a4d2e]">Privacy</a>
               <a href="/terms-and-conditions" className="hover:text-[#1a4d2e]">Terms</a>

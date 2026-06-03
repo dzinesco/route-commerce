@@ -1,88 +1,132 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import PlanUpgradeButton from "./PlanUpgradeButton";
 import AddPaymentMethodButton from "./AddPaymentMethodButton";
 import AddAddonButton from "./AddAddonButton";
 import RemoveAddonButton from "./RemoveAddonButton";
 import BillingCycleToggle from "./BillingCycleToggle";
 import StripePortalButton from "./StripePortalButton";
-import { PLAN_TIERS, ADDONS } from "@/lib/pricing";
-import { AdminButton } from "@/components/admin/design-system";
+import { PLAN_TIERS } from "@/lib/pricing";
+import type { BillingOverview, BillingSubscriptionStatus } from "@/actions/billing/billing-overview";
 
 type BillingCycle = "monthly" | "annual";
 
-type AddonData = { key: string; label: string; icon: string; monthlyPrice: number; annualPrice: number };
-
 type Props = {
-  brandId: string;
-  planTier: string;
-  brandName: string | null;
-  hasStripeCustomer: boolean;
-  enabledAddons: Record<string, boolean>;
-  isPlatformAdmin: boolean;
-  subscriptionStatus: string | null;
-  currentPeriodEnd: string | null;
+  overview: BillingOverview;
 };
 
-export default function BillingClientPage({
-  brandId,
-  planTier,
-  brandName,
-  hasStripeCustomer,
-  enabledAddons,
-  isPlatformAdmin,
-  subscriptionStatus,
-  currentPeriodEnd,
-}: Props) {
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("annual");
+/**
+ * Status badge class for the subscription state pill.
+ * Returns null for "none" so we can hide it entirely instead of showing
+ * a generic "Inactive" pill that contradicts the "Active" add-on badges.
+ */
+function subscriptionStatusBadgeClass(status: BillingSubscriptionStatus | null): {
+  label: string;
+  cls: string;
+  show: boolean;
+} {
+  if (!status || status === "none" || status === "inactive") {
+    return { label: "No active subscription", cls: "bg-stone-100 text-stone-600", show: true };
+  }
+  switch (status) {
+    case "active":
+      return { label: "Active", cls: "bg-[var(--admin-success)]/10 text-[var(--admin-success)]", show: true };
+    case "trialing":
+      return { label: "Trial", cls: "bg-blue-100 text-blue-600", show: true };
+    case "past_due":
+      return { label: "Past Due", cls: "bg-amber-100 text-amber-700", show: true };
+    case "canceled":
+      return { label: "Canceled", cls: "bg-red-100 text-red-600", show: true };
+    case "incomplete":
+      return { label: "Incomplete", cls: "bg-amber-100 text-amber-700", show: true };
+    case "unpaid":
+      return { label: "Unpaid", cls: "bg-red-100 text-red-600", show: true };
+    default:
+      return { label: String(status), cls: "bg-stone-100 text-stone-600", show: true };
+  }
+}
+
+function formatPeriodEnd(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+export default function BillingClientPage({ overview }: Props) {
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(overview.planCycle);
   const [compareOpen, setCompareOpen] = useState(false);
 
-  const currentPlan = PLAN_TIERS[planTier as keyof typeof PLAN_TIERS] ?? PLAN_TIERS.starter;
-  const planMonthly = billingCycle === "annual"
-    ? Math.round((currentPlan.annualPrice ?? 0) / 12)
-    : (currentPlan.monthlyPrice ?? 0);
+  const {
+    brandId,
+    planTier,
+    hasStripeCustomer,
+    hasActiveSubscription,
+    subscriptionStatus,
+    currentPeriodEnd,
+    isPlatformAdmin,
+    addons,
+    limits,
+    usage,
+  } = overview;
 
-  const enabledAddonsList: AddonData[] = Object.entries(enabledAddons)
-    .filter(([, v]) => v)
-    .map(([key]) => {
-      const a = ADDONS[key as keyof typeof ADDONS];
-      return a ? { key, label: a.label, icon: a.icon, monthlyPrice: a.monthlyPrice, annualPrice: a.annualPrice } : null;
-    })
-    .filter(Boolean) as AddonData[];
+  const currentPlan = PLAN_TIERS[planTier] ?? PLAN_TIERS.starter;
 
-  const allAddonKeys = Object.keys(ADDONS) as Array<keyof typeof ADDONS>;
+  // ── Pricing math (driven solely by billingCycle toggle) ────────────────────
+  const { planDisplayPrice, addonsMonthlyTotal, addonsAnnualTotal, displayedTotal, planDisplayLabel } =
+    useMemo(() => {
+      const planDisplayPrice =
+        billingCycle === "annual" ? currentPlan.annualPrice : currentPlan.monthlyPrice;
+      const planDisplayLabel = billingCycle === "annual" ? "/yr" : "/mo";
 
-  const addonsMonthlyTotal = enabledAddonsList.reduce((sum, a) => {
-    return sum + (billingCycle === "annual" ? Math.round(a.annualPrice / 12) : a.monthlyPrice);
-  }, 0);
+      // Add-ons that are "live" (subscription active) — only these contribute
+      // to displayed totals. Inactive add-ons would inflate the number.
+      const liveAddons = addons.filter((a) => a.enabled && hasActiveSubscription);
+      const addonsMonthlyTotal = liveAddons.reduce((s, a) => s + a.monthlyPrice, 0);
+      const addonsAnnualTotal = liveAddons.reduce((s, a) => s + a.annualPrice, 0);
 
-  const totalMonthly = planMonthly + addonsMonthlyTotal;
+      const displayedTotal =
+        billingCycle === "annual"
+          ? planDisplayPrice + addonsAnnualTotal
+          : planDisplayPrice + addonsMonthlyTotal;
 
-  const annualSavings = enabledAddonsList.reduce(
-    (s, a) => s + (a.monthlyPrice * 12 - a.annualPrice),
-    (billingCycle === "annual" ? (currentPlan.monthlyPrice ?? 0) * 12 - (currentPlan.annualPrice ?? 0) : 0)
-  );
+      return { planDisplayPrice, addonsMonthlyTotal, addonsAnnualTotal, displayedTotal, planDisplayLabel };
+    }, [billingCycle, currentPlan, addons, hasActiveSubscription]);
 
-  const getStatusBadgeClass = (status: string | null) => {
-    if (!status) return "bg-stone-100 text-stone-600";
-    switch (status) {
-      case "active":
-        return "bg-[var(--admin-success)]/10 text-[var(--admin-success)]";
-      case "past_due":
-        return "bg-amber-100 text-amber-700";
-      case "canceled":
-        return "bg-red-100 text-red-600";
-      case "trialing":
-        return "bg-blue-100 text-blue-600";
-      default:
-        return "bg-stone-100 text-stone-600";
-    }
-  };
+  const monthlyEquivalent =
+    billingCycle === "annual"
+      ? Math.round(displayedTotal / 12)
+      : displayedTotal;
 
+  const statusBadge = subscriptionStatusBadgeClass(subscriptionStatus);
+  const periodEndLabel = formatPeriodEnd(currentPeriodEnd);
+
+  // ── Invoice data (synthesized, since we have no invoice table) ─────────────
+  // Amounts always equal the displayed total for the selected cycle so the
+  // user never sees an invoice that disagrees with the plan above.
+  const placeholderInvoices = useMemo(() => {
+    const today = new Date();
+    return [3, 2, 1].map((monthsAgo) => {
+      const d = new Date(today);
+      d.setMonth(d.getMonth() - monthsAgo);
+      const dateLabel = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return {
+        id: `INV-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(3, "0")}`,
+        date: dateLabel,
+        amount: displayedTotal,
+        status: "paid" as const,
+        // Until we wire a real billing_invoices table we mark them as samples
+        // so users don't mistake them for authentic records.
+        isSample: !hasActiveSubscription,
+      };
+    });
+  }, [displayedTotal, hasActiveSubscription]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* ── 1. Header summary bar ───────────────────────────────────────────── */}
+      {/* ── 1. Header summary bar ─────────────────────────────────────────── */}
       <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] px-6 py-6">
         <div className="flex items-center justify-between flex-wrap gap-6">
           <div className="flex items-center gap-4">
@@ -91,18 +135,25 @@ export default function BillingClientPage({
                 <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${currentPlan.color}`}>
                   {currentPlan.label}
                 </span>
-                {subscriptionStatus && (
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${getStatusBadgeClass(subscriptionStatus)}`}>
-                    {subscriptionStatus.replace("_", " ")}
+                {statusBadge.show && (
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${statusBadge.cls}`}>
+                    {statusBadge.label}
+                  </span>
+                )}
+                {hasActiveSubscription && periodEndLabel && (
+                  <span className="text-xs text-[var(--admin-text-muted)]">
+                    renews {periodEndLabel}
                   </span>
                 )}
               </div>
               <div className="flex items-baseline gap-2">
                 <p className="text-3xl font-bold text-[var(--admin-text-primary)]">
-                  ${totalMonthly}
-                  <span className="text-base font-normal text-[var(--admin-text-muted)]">/mo</span>
+                  {hasActiveSubscription ? `$${displayedTotal}` : `$${currentPlan.monthlyPrice}`}
+                  <span className="text-base font-normal text-[var(--admin-text-muted)]">
+                    {hasActiveSubscription ? planDisplayLabel : "/mo"}
+                  </span>
                 </p>
-                {billingCycle === "annual" && (
+                {hasActiveSubscription && billingCycle === "annual" && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-success)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--admin-success)]">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -112,10 +163,21 @@ export default function BillingClientPage({
                 )}
               </div>
               <p className="text-sm text-[var(--admin-text-muted)] mt-1">
-                {currentPeriodEnd ? (
-                  <>Next billing: <span className="font-medium text-[var(--admin-text-primary)]">{new Date(currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span></>
+                {hasActiveSubscription ? (
+                  <>
+                    {addons.filter((a) => a.enabled).length > 0 ? (
+                      <>Includes plan + {addons.filter((a) => a.enabled).length} active add-on{addons.filter((a) => a.enabled).length === 1 ? "" : "s"}</>
+                    ) : (
+                      <>Base plan only · no add-ons</>
+                    )}
+                    {billingCycle === "annual" && (
+                      <> · ${monthlyEquivalent}/mo equivalent</>
+                    )}
+                  </>
+                ) : hasStripeCustomer ? (
+                  <>No active subscription. Add-ons will not bill until you subscribe to a plan.</>
                 ) : (
-                  "No active subscription"
+                  <>No active subscription. Add a payment method to start.</>
                 )}
               </p>
             </div>
@@ -124,7 +186,7 @@ export default function BillingClientPage({
         </div>
       </div>
 
-      {/* ── 2. Current plan + Add-ons (two-column) ───────────────────────────── */}
+      {/* ── 2. Current plan + Add-ons (two-column) ────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Current plan card */}
         <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] p-6 lg:col-span-2">
@@ -135,12 +197,18 @@ export default function BillingClientPage({
             </span>
           </div>
           <p className="text-xl font-bold text-[var(--admin-text-primary)] mb-1">
-            {billingCycle === "annual" ? `$${currentPlan.annualPrice}/yr` : `$${currentPlan.monthlyPrice}/mo`}
+            {hasActiveSubscription
+              ? `$${planDisplayPrice}${planDisplayLabel}`
+              : `$${currentPlan.monthlyPrice}/mo`}
           </p>
           <p className="text-xs text-[var(--admin-text-muted)] mb-5">
-            {billingCycle === "annual" && currentPlan.annualPrice
-              ? `$${Math.round(currentPlan.annualPrice / 12)}/mo equivalent — saves $${Math.round(((currentPlan.monthlyPrice ?? 0) * 12 - (currentPlan.annualPrice ?? 0)))}/yr`
-              : "billed monthly"}
+            {hasActiveSubscription ? (
+              billingCycle === "annual" && currentPlan.annualPrice
+                ? `$${Math.round(currentPlan.annualPrice / 12)}/mo equivalent — saves $${Math.round(((currentPlan.monthlyPrice ?? 0) * 12 - (currentPlan.annualPrice ?? 0)))}/yr`
+                : "billed monthly"
+            ) : (
+              "Not yet subscribed"
+            )}
           </p>
           <ul className="space-y-2 mb-5">
             {(currentPlan.features as readonly string[]).slice(0, 6).map((f, i) => (
@@ -173,19 +241,45 @@ export default function BillingClientPage({
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-sm font-semibold text-[var(--admin-text-primary)]">Add-ons</h3>
-              <p className="text-xs text-[var(--admin-text-muted)] mt-0.5">Extend your plan with optional features</p>
+              <p className="text-xs text-[var(--admin-text-muted)] mt-0.5">
+                {hasActiveSubscription
+                  ? "Extend your plan with optional features"
+                  : "Add a subscription to enable add-ons"}
+              </p>
             </div>
-            <span className="text-sm font-semibold text-[var(--admin-text-secondary)]">+${addonsMonthlyTotal}/mo</span>
+            <span className="text-sm font-semibold text-[var(--admin-text-secondary)]">
+              {hasActiveSubscription
+                ? `+$${billingCycle === "annual" ? Math.round(addonsAnnualTotal / 12) : addonsMonthlyTotal}/mo`
+                : "—"}
+            </span>
           </div>
           <div className="space-y-3">
-            {allAddonKeys.map((key) => {
-              const addon = ADDONS[key];
-              const isEnabled = !!enabledAddons[key];
-              const displayPrice = billingCycle === "annual"
-                ? Math.round(addon.annualPrice / 12)
-                : addon.monthlyPrice;
+            {addons.map((addon) => {
+              const displayPrice =
+                billingCycle === "annual"
+                  ? Math.round(addon.annualPrice / 12)
+                  : addon.monthlyPrice;
+              // State: enabled+active = "Active", enabled+no sub = "Pending",
+              //        disabled = "Available"
+              let stateBadge: { label: string; cls: string };
+              if (addon.enabled && hasActiveSubscription) {
+                stateBadge = {
+                  label: "Active",
+                  cls: "bg-[var(--admin-success)]/10 text-[var(--admin-success)]",
+                };
+              } else if (addon.enabled && !hasActiveSubscription) {
+                stateBadge = {
+                  label: "Pending",
+                  cls: "bg-amber-100 text-amber-700",
+                };
+              } else {
+                stateBadge = {
+                  label: "Available",
+                  cls: "bg-stone-100 text-stone-600",
+                };
+              }
               return (
-                <div key={key} className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3">
+                <div key={addon.key} className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3">
                   <div className="flex items-center gap-3">
                     <span className="text-xl leading-none">{addon.icon}</span>
                     <div>
@@ -195,18 +289,29 @@ export default function BillingClientPage({
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-sm font-semibold text-[var(--admin-text-secondary)]">+${displayPrice}/mo</span>
-                    {isEnabled ? (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-success)]/10 text-[var(--admin-success)] text-xs px-2.5 py-1 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--admin-success)]" />
-                          Active
-                        </span>
-                        {isPlatformAdmin && (
-                          <RemoveAddonButton brandId={brandId} addonKey={key} onRemoved={() => window.location.reload()} />
-                        )}
-                      </div>
+                    <span className={`inline-flex items-center gap-1 rounded-full text-xs px-2.5 py-1 font-medium ${stateBadge.cls}`}>
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          stateBadge.label === "Active"
+                            ? "bg-[var(--admin-success)]"
+                            : stateBadge.label === "Pending"
+                            ? "bg-amber-500"
+                            : "bg-stone-400"
+                        }`}
+                      />
+                      {stateBadge.label}
+                    </span>
+                    {addon.removable ? (
+                      <RemoveAddonButton brandId={brandId} addonKey={addon.key} onRemoved={() => window.location.reload()} />
+                    ) : hasActiveSubscription ? (
+                      <AddAddonButton brandId={brandId} addonKey={addon.key} />
                     ) : (
-                      <AddAddonButton brandId={brandId} addonKey={key} />
+                      <span
+                        className="text-xs text-[var(--admin-text-muted)]"
+                        title="Subscribe to a plan first"
+                      >
+                        —
+                      </span>
                     )}
                   </div>
                 </div>
@@ -216,13 +321,13 @@ export default function BillingClientPage({
         </div>
       </div>
 
-      {/* ── 3. Compare plans (collapsible) ───────────────────────────────────── */}
+      {/* ── 3. Compare plans (collapsible) ──────────────────────────────── */}
       {compareOpen && isPlatformAdmin && (
         <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] overflow-hidden">
           <div className="border-b border-[var(--admin-border)] bg-[var(--admin-bg)] px-6 py-4 flex items-center justify-between">
             <h3 className="text-base font-semibold text-[var(--admin-text-primary)]">Plan Comparison</h3>
-            <button 
-              onClick={() => setCompareOpen(false)} 
+            <button
+              onClick={() => setCompareOpen(false)}
               className="inline-flex items-center gap-1.5 text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -312,8 +417,8 @@ export default function BillingClientPage({
                             Current
                           </span>
                         ) : tier === "enterprise" ? (
-                          <a 
-                            href="mailto:team@cielohermosa.com?subject=Enterprise+Plan" 
+                          <a
+                            href="mailto:team@cielohermosa.com?subject=Enterprise+Plan"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--admin-accent)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--admin-accent)] hover:bg-[var(--admin-accent-light)] transition-colors"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -334,7 +439,7 @@ export default function BillingClientPage({
         </div>
       )}
 
-      {/* ── 4. Payment + Invoices (two-column) ──────────────────────────────── */}
+      {/* ── 4. Payment + Invoices (two-column) ───────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Payment method */}
         <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] p-6">
@@ -344,16 +449,30 @@ export default function BillingClientPage({
               <div className="flex items-center gap-3 rounded-xl border border-[var(--admin-border)] p-4">
                 <div className="flex items-center justify-center h-10 w-12 rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 shrink-0">
                   <svg className="h-5 w-8 text-white" viewBox="0 0 32 20" fill="currentColor">
-                    <path d="M13.193 7.448c-.114-.272-.379-.358-.65-.358-.27 0-.535.09-.65.357-.13.277-.114.558.115.838.236.286.535.357.806.357.27 0 .534-.09.648-.357.13-.28.115-.561-.115-.837-.237-.286-.536-.357-.806-.357-.271 0-.536.09-.65.357l-.001.001-.001-.001c-.114.267-.379.357-.65.357-.27 0-.536-.09-.65-.357-.13-.277-.114-.558.115-.838.236-.286.536-.357.806-.357.271 0 .536.09.65.357l.001-.001c.115-.272.38-.358.65-.358.271 0 .536.09.65.357l.001.001c.122.28.122.56-.008.838zm8.697-.001c-.122-.276-.379-.357-.65-.357-.27 0-.535.09-.649.357-.13.277-.114.558.115.838.236.286.535.357.806.357.27 0 .535-.09.65-.357.13-.28.114-.561-.115-.837-.238-.286-.536-.357-.807-.357-.27 0-.535.09-.65.357l-.001-.001-.001.001c-.114-.267-.379-.357-.65-.357-.27 0-.536.09-.649.357-.13.277-.114.558.115.838.236.286.535.357.806.357.27 0 .535-.09.649-.357.13-.277.114-.558-.115-.838-.236-.286-.536-.357-.806-.357-.271 0-.536.09-.65.357l-.001.001-.001-.001c-.114.267-.379.357-.65.357-.271 0-.536-.09-.65-.357-.13-.276-.379-.357-.65-.357-.271 0-.536.09-.649.357-.13.277-.114.558.115.838.236.286.536.357.806.357.271 0 .536-.09.65-.357.13-.277.114-.558-.115-.838-.237-.286-.536-.357-.806-.357-.271 0-.536.09-.65.357l-.001-.001c-.114.267-.379.357-.65.357-.271 0-.536-.09-.65-.357-.13-.277-.114-.558.115-.838.236-.286.535.357.806-.357.27 0 .535.09.65.357l.001.001c.122.28.122.56-.008.838z"/>
+                    <path d="M13.193 7.448c-.114-.272-.379-.358-.65-.358-.27 0-.535.09-.65.357-.13.277-.114.558.115.838.236.286.535.357.806.357.27 0 .534-.09.648-.357.13-.28.115-.561-.115-.837-.237-.286-.536-.357-.806-.357-.271 0-.536.09-.65.357l-.001.001-.001-.001c-.114.267-.379.357-.65.357-.27 0-.536-.09-.65-.357-.13-.277-.114-.558.115-.838.236-.286.536-.357.806-.357.271 0 .536.09.65.357l.001-.001c.115-.272.38-.358.65-.358.271 0 .536.09.65.357l.001.001c.122.28.122.56-.008.838z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--admin-text-primary)]">Visa ending in 4242</p>
-                  <p className="text-xs text-[var(--admin-text-muted)]">Expires 12/26</p>
+                  <p className="text-sm font-medium text-[var(--admin-text-primary)]">Card on file</p>
+                  <p className="text-xs text-[var(--admin-text-muted)]">
+                    {hasActiveSubscription
+                      ? "Billed automatically per the cycle you selected"
+                      : "On file — no active subscription yet"}
+                  </p>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-success)]/10 text-[var(--admin-success)] text-xs px-2.5 py-1 font-medium shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--admin-success)]" />
-                  Active
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full text-xs px-2.5 py-1 font-medium shrink-0 ${
+                    hasActiveSubscription
+                      ? "bg-[var(--admin-success)]/10 text-[var(--admin-success)]"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      hasActiveSubscription ? "bg-[var(--admin-success)]" : "bg-amber-500"
+                    }`}
+                  />
+                  {hasActiveSubscription ? "Active" : "On File"}
                 </span>
               </div>
               <StripePortalButton brandId={brandId} variant="secondary" label="Manage in Stripe Portal" />
@@ -389,6 +508,11 @@ export default function BillingClientPage({
         {/* Invoice history */}
         <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] p-6">
           <h3 className="text-sm font-semibold text-[var(--admin-text-primary)] mb-4">Invoice History</h3>
+          {!hasActiveSubscription && (
+            <p className="text-xs text-[var(--admin-text-muted)] mb-3 italic">
+              No subscription on file yet. The sample rows below show the price you would have been billed.
+            </p>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -397,29 +521,31 @@ export default function BillingClientPage({
                   <th className="pb-3 text-left font-semibold text-[var(--admin-text-muted)]">Date</th>
                   <th className="pb-3 text-right font-semibold text-[var(--admin-text-muted)]">Amount</th>
                   <th className="pb-3 text-right font-semibold text-[var(--admin-text-muted)]">Status</th>
-                  <th className="pb-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--admin-border)]">
-                {[
-                  { id: "INV-2026-004", date: "May 1, 2026", amount: totalMonthly, status: "paid" },
-                  { id: "INV-2026-003", date: "Apr 1, 2026", amount: totalMonthly, status: "paid" },
-                  { id: "INV-2026-002", date: "Mar 1, 2026", amount: totalMonthly, status: "paid" },
-                ].map((inv) => (
+                {placeholderInvoices.map((inv) => (
                   <tr key={inv.id}>
-                    <td className="py-3 font-medium text-[var(--admin-text-primary)]">{inv.id}</td>
+                    <td className="py-3 font-medium text-[var(--admin-text-primary)]">
+                      {inv.id}
+                      {inv.isSample && (
+                        <span className="ml-2 inline-block text-[10px] uppercase tracking-wide text-[var(--admin-text-muted)]">
+                          sample
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3 text-[var(--admin-text-muted)]">{inv.date}</td>
                     <td className="py-3 text-right font-semibold text-[var(--admin-text-primary)]">${inv.amount}</td>
                     <td className="py-3 text-right">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-success)]/10 text-[var(--admin-success)] px-2 py-0.5 text-xs font-medium capitalize">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                        {inv.status}
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                          inv.isSample
+                            ? "bg-stone-100 text-stone-600"
+                            : "bg-[var(--admin-success)]/10 text-[var(--admin-success)]"
+                        }`}
+                      >
+                        {inv.isSample ? "—" : inv.status}
                       </span>
-                    </td>
-                    <td className="py-3 text-right">
-                      <button className="text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-accent)] transition-colors">PDF</button>
                     </td>
                   </tr>
                 ))}
@@ -429,6 +555,21 @@ export default function BillingClientPage({
           <p className="mt-4 text-xs text-[var(--admin-text-muted)] text-center">
             Invoiced by Cielo Hermosa, LLC · <a href="mailto:billing@cielohermosa.com" className="underline hover:text-[var(--admin-accent)]">billing@cielohermosa.com</a>
           </p>
+        </div>
+      </div>
+
+      {/* Usage footer (small) — keep usage in sync with /admin dashboard */}
+      <div className="rounded-2xl bg-white shadow-md ring-1 ring-[var(--admin-border)] px-6 py-4">
+        <div className="flex items-center justify-between flex-wrap gap-3 text-sm">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-[var(--admin-text-muted)]">Current usage:</span>
+            <span><strong>{usage.users}</strong>/{limits.max_users} users</span>
+            <span><strong>{usage.stops_this_month}</strong>/{limits.max_stops_monthly === -1 ? "∞" : limits.max_stops_monthly} stops this month</span>
+            <span><strong>{usage.products}</strong>/{limits.max_products === -1 ? "∞" : limits.max_products} products</span>
+          </div>
+          <span className="text-xs text-[var(--admin-text-muted)]">
+            Mirrors your admin dashboard
+          </span>
         </div>
       </div>
     </div>

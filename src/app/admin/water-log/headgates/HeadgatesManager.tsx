@@ -222,8 +222,9 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
           <div className="rounded-xl border border-[var(--admin-border)] bg-white p-5">
             <form onSubmit={handleAdd} className="flex gap-3 items-end">
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Headgate Name</label>
+                <label htmlFor="headgate-add-name" className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Headgate Name</label>
                 <input
+                  id="headgate-add-name"
                   autoFocus
                   type="text"
                   value={newName}
@@ -231,11 +232,13 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
                   placeholder="e.g. North Field Gate 1"
                   className="w-full rounded-xl border border-[var(--admin-border)] px-4 py-3 text-sm outline-none focus:border-[var(--admin-accent)]"
                   required
+                  aria-required="true"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Unit</label>
+                <label htmlFor="headgate-add-unit" className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Unit</label>
                 <select
+                  id="headgate-add-unit"
                   value={newUnit}
                   onChange={(e) => setNewUnit(e.target.value)}
                   className="rounded-xl border border-[var(--admin-border)] px-3 py-3 text-sm outline-none focus:border-[var(--admin-accent)]"
@@ -371,19 +374,22 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
             </div>
             <form onSubmit={handleEditSave} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Name</label>
+                <label htmlFor="headgate-edit-name" className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Name</label>
                 <input
+                  id="headgate-edit-name"
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="w-full rounded-xl border border-[var(--admin-border)] px-4 py-3 text-sm outline-none focus:border-[var(--admin-accent)]"
                   required
+                  aria-required="true"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Unit</label>
+                  <label htmlFor="headgate-edit-unit" className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Unit</label>
                   <select
+                    id="headgate-edit-unit"
                     value={editUnit}
                     onChange={(e) => setEditUnit(e.target.value)}
                     className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-3 text-sm outline-none focus:border-[var(--admin-accent)]"
@@ -395,15 +401,16 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
                 </div>
                 <div className="flex items-center">
                   <label className="flex items-center gap-2 text-sm text-[var(--admin-text-secondary)] cursor-pointer">
-                    <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} className="rounded" />
+                    <input id="headgate-edit-active" type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} className="rounded" />
                     Active
                   </label>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">High Alert Threshold</label>
+                  <label htmlFor="headgate-edit-high" className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">High Alert Threshold</label>
                   <input
+                    id="headgate-edit-high"
                     type="number"
                     step="any"
                     value={editHigh}
@@ -413,8 +420,9 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Low Alert Threshold</label>
+                  <label htmlFor="headgate-edit-low" className="block text-xs font-semibold text-[var(--admin-text-muted)] mb-1">Low Alert Threshold</label>
                   <input
+                    id="headgate-edit-low"
                     type="number"
                     step="any"
                     value={editLow}

@@ -55,14 +55,31 @@ export default function TuxedoStopsList({ stops, brandName, brandSlug }: Props) 
           </div>
 
           {upcomingStops.length === 0 ? (
-            <div className="max-w-4xl mx-auto text-center py-16">
+            <div className="max-w-2xl mx-auto text-center py-16">
               <div className="w-20 h-20 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-6">
                 <svg className="w-10 h-10 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-stone-800 mb-2">No Upcoming Stops</h2>
-              <p className="text-stone-500">Check back soon for new pickup locations!</p>
+              <h2 className="text-2xl font-bold text-stone-800 mb-2">No Upcoming Stops Yet</h2>
+              <p className="text-stone-500 mb-8 max-w-md mx-auto">
+                The corn is still ripening in the field. New pickup stops are added every week — check back soon, or browse the full season schedule.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/tuxedo"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-stone-950 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-800 active:bg-stone-900 transition-colors"
+                >
+                  Back to Tuxedo Corn
+                </Link>
+                <a
+                  href="/api/tuxedo/schedule-pdf"
+                  download
+                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 transition-colors"
+                >
+                  Download Full Schedule
+                </a>
+              </div>
             </div>
           ) : (
             <div className="max-w-4xl mx-auto space-y-3">

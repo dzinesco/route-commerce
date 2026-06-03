@@ -11,6 +11,7 @@ type CredentialField = {
   label: string;
   placeholder: string;
   isSecret?: boolean;
+  required?: boolean;
 };
 
 type SyncOption = {
@@ -346,22 +347,38 @@ function IntegrationCard({
       {/* Credentials */}
       <div className="space-y-3 mb-5">
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Credentials</p>
-        {integration.credentials.map((field) => (
-          <div key={field.key}>
-            <label className="block text-xs font-medium text-zinc-400 mb-1">{field.label}</label>
-            <div className="relative">
-              <input
-                type={showSecrets[field.key] ? "text" : "password"}
-                value={credentials[field.key] ?? ""}
-                onChange={(e) => setCredentials((p) => ({ ...p, [field.key]: e.target.value }))}
-                placeholder={field.placeholder}
-                className="w-full rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm pr-16 text-zinc-100 outline-none focus:border-violet-500"
-              />
+        {integration.credentials.map((field) => {
+          // Only mask the field as password when explicitly marked as a secret
+          // (e.g. API keys, tokens). Plain identifiers (emails, phone numbers,
+          // IDs) stay readable so admins can verify what they entered.
+          const inputId = `integration-${integration.id}-${field.key}`;
+          const inputType = field.isSecret
+            ? showSecrets[field.key]
+              ? "text"
+              : "password"
+            : (field as { type?: string }).type ?? "text";
+          return (
+            <div key={field.key}>
+              <label htmlFor={inputId} className="block text-xs font-medium text-zinc-400 mb-1">
+                {field.label}
+                {field.required && <span className="text-red-400 ml-1" aria-hidden="true">*</span>}
+              </label>
+              <div className="relative">
+                <input
+                  id={inputId}
+                  type={inputType}
+                  value={credentials[field.key] ?? ""}
+                  onChange={(e) => setCredentials((p) => ({ ...p, [field.key]: e.target.value }))}
+                  placeholder={field.placeholder}
+                  aria-required={field.required ? "true" : undefined}
+                  className="w-full rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm pr-16 text-zinc-100 outline-none focus:border-violet-500"
+                />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                 {field.isSecret && (
                   <button
                     type="button"
                     onClick={() => toggleSecret(field.key)}
+                    aria-label={showSecrets[field.key] ? `Hide ${field.label}` : `Show ${field.label}`}
                     className="text-xs text-zinc-500 hover:text-zinc-300 px-1"
                   >
                     {showSecrets[field.key] ? "Hide" : "Show"}
@@ -370,7 +387,8 @@ function IntegrationCard({
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Environment toggle */}

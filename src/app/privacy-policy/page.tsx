@@ -126,7 +126,7 @@ export default function PrivacyPolicyPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-sm text-[#666]">2024 Route Commerce. All rights reserved.</span>
+              <span className="text-sm text-[#666]">&copy; {new Date().getFullYear()} Route Commerce. All rights reserved.</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-[#888]">
               <Link href="/privacy-policy" className="hover:text-[#1a4d2e] transition-colors">Privacy</Link>

@@ -100,11 +100,12 @@ export default function CartClient() {
   }, [cart, hasPickupItems, setSelectedStop]);
 
   const handleCheckoutClick = useCallback(() => {
+    if (cart.length === 0) return;
     if (stopBrandMismatch) { setSelectedStop(null); return; }
     if (hasStopPickupItems && !selectedStop) { setShowStopPicker(true); return; }
     if (incompatibleItems.length > 0) { return; }
     window.location.href = "/checkout";
-  }, [stopBrandMismatch, hasStopPickupItems, selectedStop, incompatibleItems]);
+  }, [cart.length, stopBrandMismatch, hasStopPickupItems, selectedStop, incompatibleItems]);
 
   return (
     <div className="min-h-screen relative">
@@ -384,17 +385,24 @@ export default function CartClient() {
 
               <button
                 onClick={handleCheckoutClick}
-                disabled={hasStopPickupItems && (!selectedStop || incompatibleItems.length > 0)}
+                disabled={
+                  cart.length === 0 ||
+                  (hasStopPickupItems && (!selectedStop || incompatibleItems.length > 0))
+                }
                 className="mt-6 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 px-6 py-3.5 text-base font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5"
                 aria-label={
-                  incompatibleItems.length > 0
+                  cart.length === 0
+                    ? "Your cart is empty. Add a product to continue."
+                    : incompatibleItems.length > 0
                     ? "Remove incompatible items first to proceed to checkout"
                     : !selectedStop && hasStopPickupItems
                     ? "Select pickup stop first to proceed to checkout"
                     : "Continue to checkout"
                 }
               >
-                {incompatibleItems.length > 0
+                {cart.length === 0
+                  ? "Cart is Empty"
+                  : incompatibleItems.length > 0
                   ? "Remove Incompatible Items First"
                   : !selectedStop && hasStopPickupItems
                   ? "Select Pickup Stop First"

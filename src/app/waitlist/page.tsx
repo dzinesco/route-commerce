@@ -118,7 +118,7 @@ export default function WaitlistPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-sm text-[#666]">© 2025 Route Commerce. All rights reserved.</span>
+              <span className="text-sm text-[#666]">&copy; {new Date().getFullYear()} Route Commerce. All rights reserved.</span>
             </div>
             <nav className="flex items-center gap-6 text-sm text-[#888]">
               <a href="/privacy-policy" className="hover:text-[#1a4d2e]">Privacy</a>

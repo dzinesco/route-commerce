@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { useCart } from "@/context/CartContext";
+import { motion, useInView } from "framer-motion";
 import TuxedoVideoHero from "@/components/storefront/TuxedoVideoHero";
 import CinematicShowcase from "@/components/storefront/CinematicShowcase";
 import LayoutContainer from "@/components/layout/LayoutContainer";
@@ -618,8 +617,6 @@ export default function TuxedoPage() {
     return () => ctx.revert();
   }, []);
 
-  const featuredProducts = products.slice(0, 3);
-
   return (
     <div ref={pageScopeRef} className="min-h-screen bg-stone-50">
       <BrandStylesProvider
@@ -663,19 +660,6 @@ export default function TuxedoPage() {
           secondaryButton="Our Story"
           onPrimaryClick={scrollToStops}
           onSecondaryClick={scrollToStory}
-        />
-
-        {/* ─── CINEMATIC PRODUCT SHOWCASE ────────────────────────────────── */}
-        <CinematicShowcase
-          products={featuredProducts.map((p) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description ?? "",
-            price: `$${p.price}`,
-            type: p.type,
-            imageUrl: p.image_url,
-          }))}
-          brandSlug="tuxedo"
         />
 
         <WhyTuxedoCorn />
@@ -724,8 +708,33 @@ export default function TuxedoPage() {
               </div>
               <FadeOnScroll from="up" delay={0.3}>
                 {stops.length === 0 ? (
-                  <div className="rounded-3xl bg-white p-14 text-center ring-1 ring-stone-200/60">
-                    <p className="text-stone-500">No upcoming stops scheduled. Check back soon!</p>
+                  <div className="rounded-3xl bg-white p-12 sm:p-16 text-center ring-1 ring-stone-200/60">
+                    <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100">
+                      <svg className="h-7 w-7 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-semibold text-stone-800">No stops on the calendar just yet</p>
+                    <p className="mx-auto mt-2 max-w-md text-stone-500">
+                      The harvest is right around the corner — new pickup stops go live weekly. You can still preorder below and pick a stop once they're announced.
+                    </p>
+                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                      <Link
+                        href="/tuxedo/stops"
+                        className="inline-flex items-center gap-2 rounded-2xl bg-stone-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-800 active:bg-stone-900 transition-colors"
+                      >
+                        View All Stops
+                      </Link>
+                      {showSchedulePdf && (
+                        <a
+                          href="/api/tuxedo/schedule-pdf"
+                          download
+                          className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 transition-colors"
+                        >
+                          Download Schedule
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <PaginatedStops stops={stops} brandSlug="tuxedo" brandAccent="green" />
@@ -774,8 +783,13 @@ export default function TuxedoPage() {
               price: `$${p.price}`,
               type: p.type,
               imageUrl: p.image_url,
+              brand_id: p.brand_id,
+              brand_slug: "tuxedo",
+              is_taxable: p.is_taxable,
+              pickup_type: p.pickup_type,
             }))}
             brandSlug="tuxedo"
+            brandName={brand?.name ?? "Tuxedo Corn"}
           />
 
           {/* Mobile-friendly fallback grid for smaller screens */}

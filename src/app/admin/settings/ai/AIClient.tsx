@@ -514,8 +514,9 @@ function CampaignWriterTool({ brandId, brandName }: { brandId: string; brandName
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1" style={labelStyle}>What do you want to communicate?</label>
+        <label htmlFor="ai-cw-topic" className="block text-sm font-medium mb-1" style={labelStyle}>What do you want to communicate?</label>
         <textarea
+          id="ai-cw-topic"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           rows={3}
@@ -589,20 +590,22 @@ function ProductWriterTool({ brandId }: { brandId: string }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1" style={labelStyle}>Product Name *</label>
-          <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" className={inputBaseClass} style={inputStyle} />
+          <label htmlFor="ai-pw-product-name" className="block text-sm font-medium mb-1" style={labelStyle}>
+            Product Name <span className="text-red-400 ml-0.5" aria-hidden="true">*</span>
+          </label>
+          <input id="ai-pw-product-name" type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Sweet Corn" required aria-required="true" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" style={labelStyle}>Category</label>
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetables" className={inputBaseClass} style={inputStyle} />
+          <label htmlFor="ai-pw-category" className="block text-sm font-medium mb-1" style={labelStyle}>Category</label>
+          <input id="ai-pw-category" type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Vegetables" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" style={labelStyle}>Price</label>
-          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$4.50" className={inputBaseClass} style={inputStyle} />
+          <label htmlFor="ai-pw-price" className="block text-sm font-medium mb-1" style={labelStyle}>Price</label>
+          <input id="ai-pw-price" type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$4.50" className={inputBaseClass} style={inputStyle} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" style={labelStyle}>Unit</label>
-          <input type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="per dozen" className={inputBaseClass} style={inputStyle} />
+          <label htmlFor="ai-pw-unit" className="block text-sm font-medium mb-1" style={labelStyle}>Unit</label>
+          <input id="ai-pw-unit" type="text" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="per dozen" className={inputBaseClass} style={inputStyle} />
         </div>
       </div>
       <button
@@ -694,8 +697,9 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
       </p>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1" style={labelStyle}>Report Type</label>
+          <label htmlFor="ai-rep-type" className="block text-sm font-medium mb-1" style={labelStyle}>Report Type</label>
           <select
+            id="ai-rep-type"
             value={reportType}
             onChange={(e) => setReportType(e.target.value)}
             className={inputBaseClass}
@@ -707,8 +711,9 @@ function ReportExplainerTool({ brandId }: { brandId: string }) {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" style={labelStyle}>Date Range</label>
+          <label htmlFor="ai-rep-range" className="block text-sm font-medium mb-1" style={labelStyle}>Date Range</label>
           <input
+            id="ai-rep-range"
             type="text"
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
@@ -856,12 +861,17 @@ function PricingAdvisorTool({ brandId }: { brandId: string }) {
         Enter a product name and optional price tiers or historical sales data for AI-powered pricing recommendations.
       </p>
       <div>
-        <label className="block text-sm font-medium mb-1" style={labelStyle}>Product Name *</label>
+        <label htmlFor="ai-pa-product-name" className="block text-sm font-medium mb-1" style={labelStyle}>
+          Product Name <span className="text-red-400 ml-0.5" aria-hidden="true">*</span>
+        </label>
         <input
+          id="ai-pa-product-name"
           type="text"
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
           placeholder="Sweet Corn"
+          required
+          aria-required="true"
           className={inputBaseClass}
           style={inputStyle}
         />

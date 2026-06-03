@@ -260,7 +260,7 @@ export default function BlogPage() {
       {/* Footer */}
       <footer className="border-t border-[#e5e5e5] py-8 bg-white">
         <div className="max-w-6xl mx-auto px-6 text-center text-sm text-[#888]">
-          © 2025 Route Commerce. All rights reserved.
+          © {new Date().getFullYear()} Route Commerce. All rights reserved.
         </div>
       </footer>
     </div>

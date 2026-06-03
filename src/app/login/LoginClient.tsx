@@ -325,7 +325,7 @@ function LoginForm() {
               </svg>
             </div>
             <span className="text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#b5b0a8" }}>
-              © 2025 Route Commerce
+              © {new Date().getFullYear()} Route Commerce
             </span>
           </div>
           <nav className="flex items-center gap-6">
@@ -436,7 +436,7 @@ function DemoMode() {
               </svg>
             </div>
             <span className="text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#b5b0a8" }}>
-              © 2025 Route Commerce
+              © {new Date().getFullYear()} Route Commerce
             </span>
           </div>
         </div>

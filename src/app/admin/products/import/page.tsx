@@ -106,8 +106,9 @@ Citrus Gift Box,Seasonal citrus assortment,34.99,Shipping,TRUE,
 
         {/* Brand ID */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-stone-700">Brand ID</label>
+          <label htmlFor="import-products-brand" className="block text-sm font-medium text-stone-700">Brand ID</label>
           <input
+            id="import-products-brand"
             type="text"
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
@@ -118,8 +119,9 @@ Citrus Gift Box,Seasonal citrus assortment,34.99,Shipping,TRUE,
 
         {/* File upload */}
         <div className="mb-4 rounded-2xl bg-white p-6 shadow-xl shadow-stone-200/50">
-          <label className="mb-2 block text-sm font-medium text-stone-700">Upload CSV</label>
+          <label htmlFor="import-products-csv" className="mb-2 block text-sm font-medium text-stone-700">Upload CSV</label>
           <input
+            id="import-products-csv"
             ref={fileRef}
             type="file"
             accept=".csv"
@@ -129,7 +131,9 @@ Citrus Gift Box,Seasonal citrus assortment,34.99,Shipping,TRUE,
           <p className="mt-2 text-xs text-stone-500">
             Or paste CSV content below:
           </p>
+          <label htmlFor="import-products-text" className="sr-only">CSV text</label>
           <textarea
+            id="import-products-text"
             value={csvText}
             onChange={(e) => setCsvText(e.target.value)}
             rows={6}

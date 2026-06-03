@@ -15,6 +15,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const isBrandRoute = pathname?.startsWith("/tuxedo") || pathname?.startsWith("/indian-river-direct");
   const isLandingPage = pathname === "/" || pathname === "/brands";
   const isAuthPage = pathname === "/login" || pathname === "/admin/login";
+  // Admin routes have their own AdminSidebar + design-system shell; suppress
+  // the public SiteHeader/SiteFooter to avoid a duplicate header on every
+  // admin page.
+  const isAdminRoute = pathname?.startsWith("/admin");
+  // Cart + checkout + wholesale pages render their own StorefrontHeader/Footer
+  // (or wholesale-specific layout) — skip the public chrome to avoid doubles.
+  const isStandalonePage =
+    pathname?.startsWith("/cart") ||
+    pathname?.startsWith("/checkout") ||
+    pathname?.startsWith("/wholesale") ||
+    pathname?.startsWith("/water");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -24,9 +35,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
       <CartProvider>
-        {!isBrandRoute && !isLandingPage && !isAuthPage && <SiteHeader />}
+        {!isBrandRoute && !isLandingPage && !isAuthPage && !isAdminRoute && !isStandalonePage && <SiteHeader />}
         {mounted ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
-        {!isBrandRoute && !isLandingPage && !isAuthPage && <SiteFooter />}
+        {!isBrandRoute && !isLandingPage && !isAuthPage && !isAdminRoute && !isStandalonePage && <SiteFooter />}
         <CartToast />
         <CartRestoredToast />
       </CartProvider>

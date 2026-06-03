@@ -360,10 +360,15 @@ export default function DashboardClient({
             </div>
           </div>
 
-          {/* Active Products */}
-          <div 
+          {/* Active Products — uses plan-aware usage.products so this card
+              always matches the "Products 0/25" usage bar below and the
+              billing page's invoice/usage row. Previously this came from a
+              separate query (`active=eq.true` only) and could disagree with
+              the plan limit usage, producing e.g. "1 vs 0/25" in the same
+              dashboard. */}
+          <div
             className="rounded-xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5"
-            style={{ 
+            style={{
               backgroundColor: "var(--admin-card-bg)",
               borderColor: "var(--admin-border)"
             }}
@@ -379,7 +384,11 @@ export default function DashboardClient({
                   Active Products
                 </p>
                 <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--admin-text-primary)" }}>
-                  {isLoadingStats ? "—" : stats?.activeProducts ?? 0}
+                  {/* usage.products comes from the server-rendered prop (via
+                      getBillingOverview), so it's available immediately and
+                      is guaranteed to match the "Products X/25" usage bar
+                      and the billing page. */}
+                  {usage.products}
                 </p>
               </div>
             </div>

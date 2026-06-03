@@ -618,28 +618,28 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
           <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">{editing ? "Edit Customer" : "New Customer"}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Company Name</label>
-              <input value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
+              <label htmlFor="ws-company-name" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Company Name</label>
+              <input id="ws-company-name" value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Contact Name</label>
-              <input value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
+              <label htmlFor="ws-contact-name" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Contact Name</label>
+              <input id="ws-contact-name" value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Email</label>
-              <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
+              <label htmlFor="ws-email" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Email</label>
+              <input id="ws-email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" autoComplete="email" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Phone</label>
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
+              <label htmlFor="ws-phone" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Phone</label>
+              <input id="ws-phone" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" autoComplete="tel" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Status</label>
-              <select value={form.accountStatus} onChange={e => setForm(f => ({ ...f, accountStatus: e.target.value }))}
+              <label htmlFor="ws-account-status" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Status</label>
+              <select id="ws-account-status" value={form.accountStatus} onChange={e => setForm(f => ({ ...f, accountStatus: e.target.value }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                 <option value="active">Active</option>
                 <option value="on_hold">On Hold</option>
@@ -648,8 +648,8 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Credit Limit ($)</label>
-              <input type="number" value={form.creditLimit} onChange={e => setForm(f => ({ ...f, creditLimit: Number(e.target.value) }))}
+              <label htmlFor="ws-credit-limit" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Credit Limit ($)</label>
+              <input id="ws-credit-limit" type="number" value={form.creditLimit} onChange={e => setForm(f => ({ ...f, creditLimit: Number(e.target.value) }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="0 = unlimited" />
             </div>
           </div>
@@ -665,13 +665,13 @@ function CustomersTab({ customers, products, brandId, onMsg, registrations = [],
             {form.depositsEnabled && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-[var(--admin-text-muted)] mb-1">Threshold ($ order total to trigger)</label>
-                  <input type="number" value={form.depositThreshold} onChange={e => setForm(f => ({ ...f, depositThreshold: e.target.value }))}
+                  <label htmlFor="ws-deposit-threshold" className="block text-xs text-[var(--admin-text-muted)] mb-1">Threshold ($ order total to trigger)</label>
+                  <input id="ws-deposit-threshold" type="number" value={form.depositThreshold} onChange={e => setForm(f => ({ ...f, depositThreshold: e.target.value }))}
                     className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs text-[var(--admin-text-muted)] mb-1">Deposit %</label>
-                  <input type="number" value={form.depositPercentage} onChange={e => setForm(f => ({ ...f, depositPercentage: e.target.value }))}
+                  <label htmlFor="ws-deposit-pct" className="block text-xs text-[var(--admin-text-muted)] mb-1">Deposit %</label>
+                  <input id="ws-deposit-pct" type="number" value={form.depositPercentage} onChange={e => setForm(f => ({ ...f, depositPercentage: e.target.value }))}
                     className="w-full rounded-lg border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" placeholder="20" min="1" max="100" />
                 </div>
               </div>
@@ -1008,19 +1008,22 @@ function PriceSheetModal({
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1.5">Subject</label>
+              <label htmlFor="ws-price-subject" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1.5">Subject</label>
               <input
+                id="ws-price-subject"
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 required
+                aria-required="true"
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1.5">
+              <label htmlFor="ws-price-note" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1.5">
                 Add a Note <span className="text-[var(--admin-text-muted)] font-normal">(optional)</span>
               </label>
               <textarea
+                id="ws-price-note"
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 rows={4}
@@ -1167,18 +1170,18 @@ function ProductsTab({ products, brandId, onMsg, onRefresh }: {
           <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">{editing ? "Edit Product" : "New Product"}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Product Name</label>
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              <label htmlFor="ws-prod-name" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Product Name</label>
+              <input id="ws-prod-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Description</label>
-              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              <label htmlFor="ws-prod-desc" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Description</label>
+              <textarea id="ws-prod-desc" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]" rows={2} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Unit Type</label>
-              <select value={form.unitType} onChange={e => setForm(f => ({ ...f, unitType: e.target.value }))}
+              <label htmlFor="ws-prod-unit" className="block text-sm font-medium text-[var(--admin-text-secondary)] mb-1">Unit Type</label>
+              <select id="ws-prod-unit" value={form.unitType} onChange={e => setForm(f => ({ ...f, unitType: e.target.value }))}
                 className="w-full rounded-xl border border-[var(--admin-border)] px-3 py-2 text-sm outline-none focus:border-[var(--admin-accent)]">
                 {["each", "48-count box", "bag", "pallet", "bin", "load", "custom"].map(u => (
                   <option key={u} value={u}>{u}</option>
