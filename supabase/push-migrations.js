@@ -3,19 +3,21 @@
  * push-migrations.js
  *
  * Pushes migration files to the linked Supabase project.
- * Uses the Supabase CLI if available (supabase db push),
+ * Uses the Supabase CLI (supabase db query --linked --file) if the project
+ * is linked (after `supabase login` + `supabase link --project-ref <ref>`),
  * otherwise falls back to direct PostgreSQL connection via `pg`.
  *
  * Usage:
- *   node supabase/push-migrations.js                    # push all pending migrations
- *   node supabase/push-migrations.js 082               # push only migration 082
+ *   node supabase/push-migrations.js                    # push all migration files
+ *   node supabase/push-migrations.js 148               # push only migrations matching 148_*.sql
  *
- * Prerequisites for CLI mode:
- *   brew install supabase/tap/supabase   # install CLI
- *   supabase link --project-ref <ref>   # link project once
+ * Prerequisites for CLI mode (preferred, works even without direct 5432 access):
+ *   supabase login
+ *   supabase link --project-ref wnzkhezyhnfzhkhiflrp
  *
  * Prerequisites for direct PG mode:
- *   npm install                        # pg and dotenv already in devDependencies
+ *   .env.local with NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+ *   (pg and dotenv are in devDependencies)
  */
 
 const { Client } = require("pg");
@@ -35,17 +37,25 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 async function pushWithCli(files) {
-  console.log("Using Supabase CLI (supabase db push)...\n");
-  const joined = files.map((f) => `supabase/migrations/${f}`).join(" ");
-  try {
-    execSync(
-      `supabase db push --db-url "postgresql://postgres:${serviceRoleKey}@db.wnzkhezyhnfzhkhiflrp.supabase.co:5432/postgres" ${joined}`,
-      { stdio: "inherit", cwd: path.resolve(__dirname, "..") }
-    );
-    return true;
-  } catch (err) {
-    return false;
+  console.log("Using Supabase CLI (supabase db query --linked --file)...\n");
+  for (const f of files) {
+    const filePath = `supabase/migrations/${f}`;
+    process.stdout.write(`  Applying ${f}... `);
+    try {
+      execSync(
+        `supabase db query --linked --file "${filePath}"`,
+        { stdio: "inherit", cwd: path.resolve(__dirname, "..") }
+      );
+      console.log("✓");
+    } catch (err) {
+      console.log("✗");
+      // execSync with inherit already printed stderr/stdout; surface a short message
+      const msg = (err && err.message) ? err.message.replace(/\n/g, " ").slice(0, 200) : "";
+      if (msg) console.error("    " + msg);
+      return false;
+    }
   }
+  return true;
 }
 
 async function pushWithPg(sql, migrationFile) {
@@ -102,14 +112,18 @@ async function main() {
 
   let ok = false;
 
-  // Try CLI first if supabase is linked (has .supabase/config.toml)
+  // Try CLI first if supabase is linked.
+  // Legacy link: .supabase/config.toml at project root
+  // Modern link (post `supabase link`): supabase/.temp/project-ref
   let hasSupabaseCli = false;
   try {
     hasSupabaseCli = !!execSync("which supabase", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
   } catch {
     hasSupabaseCli = false;
   }
-  const isLinked = fs.existsSync(path.resolve(__dirname, "../.supabase/config.toml"));
+  const hasLegacyLink = fs.existsSync(path.resolve(__dirname, "../.supabase/config.toml"));
+  const hasModernLink = fs.existsSync(path.resolve(__dirname, ".temp/project-ref"));
+  const isLinked = hasLegacyLink || hasModernLink;
 
   if (hasSupabaseCli && isLinked) {
     console.log("Supabase CLI detected and project is linked.\n");

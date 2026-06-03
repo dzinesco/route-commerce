@@ -103,6 +103,14 @@ CREATE TABLE IF NOT EXISTS user_activity_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- If table pre-existed from 036 (without brand_id etc), add the columns now so policies below succeed
+ALTER TABLE user_activity_logs
+  ADD COLUMN IF NOT EXISTS brand_id UUID REFERENCES brands(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS action VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS resource_type VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS resource_id UUID,
+  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
 -- =============================================================================
 -- API KEYS FOR EXTERNAL INTEGRATIONS
 -- =============================================================================

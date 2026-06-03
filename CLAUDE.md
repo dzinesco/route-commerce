@@ -26,6 +26,8 @@ npx playwright test  # Run E2E tests (Playwright)
 > For direct PG mode: `pg` and `dotenv` are already in devDependencies.
 > If `get_brand_settings` migration fails with "cannot change return type", the function signature changed — drop and recreate it first.
 
+**Recent migration work is documented in `MEMORY.md`** (Supabase login + link process, updates to `push-migrations.js` for modern CLI, specific SQL patches made to 091/145/148/200/201 so they would apply cleanly, and which migrations were pushed in the session). Cat `MEMORY.md` for details.
+
 No test suite currently exists. E2E tests use Playwright (`tests/` or `test-e2e.ts`).
 
 ---

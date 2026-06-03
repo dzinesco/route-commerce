@@ -62,7 +62,7 @@ BEGIN
 
   -- Count current usage
   SELECT COUNT(*) INTO v_user_count FROM admin_users WHERE brand_id = p_brand_id AND deleted_at IS NULL;
-  SELECT COUNT(*) INTO v_active_stops FROM stops WHERE brand_id = p_brand_id AND active = true AND date >= date_trunc('month', now()));
+  SELECT COUNT(*) INTO v_active_stops FROM stops WHERE brand_id = p_brand_id AND active = true AND date >= date_trunc('month', now());
   SELECT COUNT(*) INTO v_product_count FROM products WHERE brand_id = p_brand_id AND deleted_at IS NULL;
 
   SELECT jsonb_build_object(
