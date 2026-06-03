@@ -2,10 +2,12 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { markPickupComplete } from "@/actions/pickup";
+import { createAdminOrder, type AdminCreateOrderItem } from "@/actions/orders/create-admin-order";
 import { formatDate } from "@/lib/format-date";
 import AdminBadge from "./design-system/AdminBadge";
-import { AdminButton, AdminSearchInput, AdminFilterTabs, AdminIconButton, useToast } from "./design-system";
+import { AdminButton, AdminSearchInput, AdminFilterTabs, AdminIconButton, useToast, AdminInput, AdminTextInput, AdminSelect } from "./design-system";
 import { Skeleton } from "./design-system";
 
 type OrderItem = {
@@ -50,6 +52,7 @@ type Stop = {
 type AdminOrdersPanelProps = {
   initialOrders: Order[];
   initialStops: Stop[];
+  initialProducts?: Array<{ id: string; name: string; price: number; type?: string | null; active?: boolean }>;
   brandId: string | null;
 };
 
@@ -116,14 +119,113 @@ const Icons = {
 export default function AdminOrdersPanel({
   initialOrders,
   initialStops,
+  initialProducts = [],
   brandId,
 }: AdminOrdersPanelProps) {
   const { success: showSuccess, error: showError } = useToast();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [stops] = useState<Stop[]>(initialStops);
+  const [products] = useState(initialProducts);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<StatusTab>("all");
   const [selectedStops, setSelectedStops] = useState<string[]>([]);
+
+  // New Order modal state (triggered by ?new=true from dashboard or quick actions)
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [newOrderCustomerName, setNewOrderCustomerName] = useState("");
+  const [newOrderCustomerEmail, setNewOrderCustomerEmail] = useState("");
+  const [newOrderCustomerPhone, setNewOrderCustomerPhone] = useState("");
+  const [newOrderStopId, setNewOrderStopId] = useState<string>("");
+  const [newOrderItems, setNewOrderItems] = useState<Array<{ product_id: string; quantity: number; price: number; fulfillment: "pickup" | "ship" }>>([]);
+  const [newOrderSubmitting, setNewOrderSubmitting] = useState(false);
+  const [newOrderError, setNewOrderError] = useState<string | null>(null);
+
+  // Open the New Order modal when dashboard links here with ?new=true
+  useEffect(() => {
+    if (searchParams?.get("new") === "true") {
+      setShowNewOrderModal(true);
+    }
+  }, [searchParams]);
+
+  // --- New Order (admin manual create) helpers ---
+  function openNewOrderModal() {
+    setShowNewOrderModal(true);
+    setNewOrderError(null);
+  }
+
+  function closeNewOrderModal() {
+    setShowNewOrderModal(false);
+    // reset form
+    setNewOrderCustomerName("");
+    setNewOrderCustomerEmail("");
+    setNewOrderCustomerPhone("");
+    setNewOrderStopId("");
+    setNewOrderItems([]);
+    setNewOrderError(null);
+  }
+
+  function addNewOrderItem(productId: string) {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+    setNewOrderItems((prev) => [
+      ...prev,
+      {
+        product_id: prod.id,
+        quantity: 1,
+        price: Number(prod.price),
+        fulfillment: "pickup",
+      },
+    ]);
+  }
+
+  function updateNewOrderItem(index: number, patch: Partial<{ quantity: number; price: number; fulfillment: "pickup" | "ship" }>) {
+    setNewOrderItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+  }
+
+  function removeNewOrderItem(index: number) {
+    setNewOrderItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  const newOrderTotal = newOrderItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
+
+  async function handleCreateAdminOrder() {
+    if (!newOrderCustomerName.trim()) {
+      setNewOrderError("Customer name is required");
+      return;
+    }
+    if (newOrderItems.length === 0) {
+      setNewOrderError("Add at least one product");
+      return;
+    }
+
+    setNewOrderSubmitting(true);
+    setNewOrderError(null);
+
+    const result = await createAdminOrder(brandId, {
+      customer_name: newOrderCustomerName.trim(),
+      customer_email: newOrderCustomerEmail.trim() || null,
+      customer_phone: newOrderCustomerPhone.trim() || null,
+      stop_id: newOrderStopId || null,
+      items: newOrderItems.map((i) => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+        price: i.price,
+        fulfillment: i.fulfillment,
+      })),
+    });
+
+    setNewOrderSubmitting(false);
+
+    if (result.success) {
+      showSuccess(`Order created: ${result.orderId.slice(0, 8).toUpperCase()}`);
+      closeNewOrderModal();
+      // Navigate to clean orders list (removes ?new=true and shows the new order after refresh)
+      window.location.href = "/admin/orders";
+    } else {
+      setNewOrderError(result.error ?? "Failed to create order");
+    }
+  }
   const [showStopDropdown, setShowStopDropdown] = useState(false);
   const [pickingUp, setPickingUp] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -245,7 +347,8 @@ export default function AdminOrdersPanel({
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <>
+      <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -259,9 +362,19 @@ export default function AdminOrdersPanel({
             </p>
           </div>
         </div>
-        {brandId && (
-          <AdminBadge variant="info">Brand scoped</AdminBadge>
-        )}
+
+        <div className="flex items-center gap-2">
+          {brandId && (
+            <AdminBadge variant="info">Brand scoped</AdminBadge>
+          )}
+          <AdminButton
+            onClick={openNewOrderModal}
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            + New Order
+          </AdminButton>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -536,6 +649,151 @@ export default function AdminOrdersPanel({
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* New Order Modal (admin manual entry) - sibling to the main panel content */}
+      {showNewOrderModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-2xl rounded-2xl border border-[var(--admin-border)] bg-white shadow-2xl">
+          <div className="flex items-center justify-between border-b border-[var(--admin-border)] px-6 py-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--admin-text-primary)]">New Order (Admin)</h3>
+              <p className="text-xs text-[var(--admin-text-muted)]">Manual entry for testing / phone orders</p>
+            </div>
+            <button onClick={closeNewOrderModal} className="text-2xl leading-none text-stone-400 hover:text-stone-600">×</button>
+          </div>
+
+          <div className="p-6 space-y-5 max-h-[70vh] overflow-auto">
+            {newOrderError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{newOrderError}</div>
+            )}
+
+            {/* Customer */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <AdminInput label="Customer Name" required>
+                <AdminTextInput
+                  value={newOrderCustomerName}
+                  onChange={(e) => setNewOrderCustomerName(e.target.value)}
+                  placeholder="Jane Doe"
+                />
+              </AdminInput>
+              <AdminInput label="Email">
+                <AdminTextInput
+                  value={newOrderCustomerEmail}
+                  onChange={(e) => setNewOrderCustomerEmail(e.target.value)}
+                  placeholder="jane@example.com"
+                  type="email"
+                />
+              </AdminInput>
+              <AdminInput label="Phone">
+                <AdminTextInput
+                  value={newOrderCustomerPhone}
+                  onChange={(e) => setNewOrderCustomerPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                />
+              </AdminInput>
+            </div>
+
+            {/* Stop */}
+            <AdminInput label="Pickup Stop (leave blank for ship-only)">
+              <AdminSelect
+                value={newOrderStopId}
+                onChange={(e) => setNewOrderStopId(e.target.value)}
+                options={[
+                  { value: "", label: "— No stop (ship / manual fulfillment) —" },
+                  ...stops.map((s) => ({
+                    value: s.id,
+                    label: `${s.city}, ${s.state} — ${formatDate(s.date)}`,
+                  })),
+                ]}
+              />
+            </AdminInput>
+
+            {/* Items */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-[var(--admin-text-secondary)]">Items</label>
+                <span className="text-xs text-[var(--admin-text-muted)]">Total: ${newOrderTotal.toFixed(2)}</span>
+              </div>
+
+              {products.length > 0 ? (
+                <div className="mb-3">
+                  <AdminSelect
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) addNewOrderItem(e.target.value);
+                    }}
+                    options={[
+                      { value: "", label: "— Add a product —" },
+                      ...products.map((p) => ({ value: p.id, label: `${p.name} — $${Number(p.price).toFixed(2)}` })),
+                    ]}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-amber-600 mb-2">No products loaded for this brand. You can still enter custom items if the action supports it.</p>
+              )}
+
+              {newOrderItems.length === 0 && (
+                <p className="text-xs text-[var(--admin-text-muted)]">No items yet. Use the selector above.</p>
+              )}
+
+              {newOrderItems.length > 0 && (
+                <div className="space-y-2 border border-[var(--admin-border)] rounded-xl p-3 bg-[var(--admin-bg)]">
+                  {newOrderItems.map((item, idx) => {
+                    const prod = products.find((p) => p.id === item.product_id);
+                    return (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center text-sm">
+                        <div className="col-span-5 font-medium truncate">{prod?.name ?? item.product_id}</div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) => updateNewOrderItem(idx, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                            className="w-full rounded border px-2 py-1 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.price}
+                            onChange={(e) => updateNewOrderItem(idx, { price: parseFloat(e.target.value) || 0 })}
+                            className="w-full rounded border px-2 py-1 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <select
+                            value={item.fulfillment}
+                            onChange={(e) => updateNewOrderItem(idx, { fulfillment: e.target.value as any })}
+                            className="w-full rounded border px-2 py-1 text-sm"
+                          >
+                            <option value="pickup">pickup</option>
+                            <option value="ship">ship</option>
+                          </select>
+                        </div>
+                        <div className="col-span-1 text-right">
+                          <button type="button" onClick={() => removeNewOrderItem(idx)} className="text-red-500 text-xs hover:underline">remove</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-[var(--admin-border)] px-6 py-4 bg-stone-50 rounded-b-2xl">
+            <AdminButton variant="secondary" onClick={closeNewOrderModal} disabled={newOrderSubmitting}>
+              Cancel
+            </AdminButton>
+            <AdminButton onClick={handleCreateAdminOrder} disabled={newOrderSubmitting || newOrderItems.length === 0}>
+              {newOrderSubmitting ? "Creating..." : `Create Order — $${newOrderTotal.toFixed(2)}`}
+            </AdminButton>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

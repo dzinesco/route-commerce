@@ -505,7 +505,7 @@ export default function DashboardClient({
                     No recent orders
                   </p>
                   <Link 
-                    href="/admin/orders/new" 
+                    href="/admin/orders?new=true" 
                     className="inline-block mt-3 text-xs font-medium hover:underline"
                     style={{ color: "var(--admin-accent)" }}
                   >

@@ -293,7 +293,7 @@ function IntegrationCard({
           >
             <div className="relative">
               <AdminTextInput
-                type={showSecrets[field.key] ? "text" : "password"}
+                type={field.isSecret && !showSecrets[field.key] ? "password" : "text"}
                 value={credentials[field.key] ?? ""}
                 onChange={(e) => updateCredential(field.key, e.target.value)}
                 placeholder={field.placeholder}

@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 type AdminInputProps = {
   label?: string;
   error?: string;
@@ -15,19 +17,44 @@ export function AdminInput({
   helpText, 
   required,
   className = "",
-  children 
-}: AdminInputProps) {
+  children,
+  id,
+}: AdminInputProps & { id?: string }) {
+  // Generate a stable id for label association when label is provided
+  const generatedId = id || (label ? `admin-input-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}` : undefined);
+
+  // Clone child to inject id + aria props if it's a valid element (input/textarea/select)
+  const enhancedChildren = React.isValidElement(children)
+    ? React.cloneElement(children as React.ReactElement<any>, {
+        id: (children as any).props?.id || generatedId,
+        "aria-required": required ? "true" : undefined,
+        required: required ? true : undefined,
+        "aria-describedby": error ? `${generatedId}-error` : helpText ? `${generatedId}-help` : undefined,
+      })
+    : children;
+
   return (
     <div className={className}>
       {label && (
-        <label className="block text-xs font-semibold text-[var(--admin-text-secondary)] mb-1.5">
+        <label 
+          htmlFor={generatedId} 
+          className="block text-xs font-semibold text-[var(--admin-text-secondary)] mb-1.5 cursor-pointer"
+        >
           {label}
-          {required && <span className="text-[var(--admin-danger)] ml-1">*</span>}
+          {required && <span className="text-[var(--admin-danger)] ml-1" aria-hidden="true">*</span>}
         </label>
       )}
-      {children}
-      {helpText && !error && <p className="mt-1 text-[10px] text-[var(--admin-text-muted)]">{helpText}</p>}
-      {error && <p className="mt-1 text-xs text-[var(--admin-danger)]">{error}</p>}
+      {enhancedChildren}
+      {helpText && !error && (
+        <p id={generatedId ? `${generatedId}-help` : undefined} className="mt-1 text-[10px] text-[var(--admin-text-muted)]">
+          {helpText}
+        </p>
+      )}
+      {error && (
+        <p id={generatedId ? `${generatedId}-error` : undefined} className="mt-1 text-xs text-[var(--admin-danger)]" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

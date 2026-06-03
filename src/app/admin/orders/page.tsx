@@ -4,6 +4,7 @@ import { getAdminOrders } from "@/actions/orders";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { PageHeader } from "@/components/admin/design-system";
 import { redirect } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,33 @@ export default async function AdminOrdersPage() {
       )
     : orders;
 
+  // Fetch active products for this brand (for admin "New Order" item picker)
+  let brandProducts: Array<{ id: string; name: string; price: number; type?: string | null; active?: boolean }> = [];
+  try {
+    let prodQuery = supabase
+      .from("products")
+      .select("id, name, price, type, active")
+      .eq("active", true)
+      .is("deleted_at", null)
+      .order("name")
+      .limit(200);
+
+    if (adminUser?.brand_id) {
+      prodQuery = prodQuery.eq("brand_id", adminUser.brand_id);
+    }
+
+    const { data: prods } = await prodQuery;
+    brandProducts = (prods ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      type: p.type ?? null,
+      active: p.active ?? true,
+    }));
+  } catch {
+    // non-fatal for the orders list
+  }
+
   return (
     <div className="min-h-screen bg-[var(--admin-bg)]">
       <div className="px-4 sm:px-6 md:px-8 pt-4 sm:pt-6">
@@ -51,6 +79,7 @@ export default async function AdminOrdersPage() {
           <AdminOrdersPanel
             initialOrders={brandOrders}
             initialStops={brandStops}
+            initialProducts={brandProducts}
             brandId={adminUser?.brand_id ?? null}
           />
         </div>

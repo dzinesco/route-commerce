@@ -156,3 +156,60 @@ Verification queries (post-apply) confirmed:
 (See `git status --short` and `git diff` for full picture. Includes stop-related action + RPC fixes, various debug scripts in `scripts/`, `supabase/ADMIN_CREATE_STOP_FIX.sql`, a pricing assessment doc, etc.)
 
 This MEMORY.md focuses on the Supabase login / link / migration tooling + SQL repair work from the immediate request.
+
+---
+
+## Admin Functionality Pass (Codex Review Fixes) — 2026-06-03
+
+**Source:** Codex AI review of admin "apps" + explicit user request for a full admin functions pass (testing for functionality across orders, products, stops, communications/Harvest Reach, wholesale, water-log, time-tracking, route-trace, settings/billing/integrations/ai, import, reports, etc.).
+
+**Key fixes implemented in this pass (prioritized from review blockers):**
+- **Order creation restored** (biggest blocker):
+  - New server action `src/actions/orders/create-admin-order.ts` — wraps the existing `create_order_with_items` RPC with full adminUser + can_manage_orders + brand scoping.
+  - Updated `AdminOrdersPanel` (and orders server page) to support `?new=true` (from dashboard quick actions): opens a functional modal with customer fields, stop selector (or ship-only), dynamic product item picker (qty/price/fulfillment), live total, and submit.
+  - Fixed "Create your first order" link and added `/admin/orders/new` redirect page for legacy links.
+  - Success: toast + redirect to clean list (new order visible after refresh).
+- **Product edit** made reliable: confirmed flow through `ProductEditForm` + `updateProduct` + router.refresh(). The list client (`ProductsClient`) also has its own edit paths; save now has clear success state.
+- **Form accessibility & validation foundation** (cross-cutting, affects dozens of admin forms):
+  - Enhanced `AdminInput` + inputs in `src/components/admin/design-system/AdminFormElements.tsx`: proper `htmlFor`/`id` generation + association, forwards `required` + `aria-required` + `aria-describedby` (for help/error).
+  - Consumers now get real programmatic labels and required semantics (visual * was already there).
+- **Integrations fields no longer wrongly masked**:
+  - `IntegrationsClientPage.tsx`: non-secret fields (From Email, From Name, Phone Number for Resend/Twilio) now render as plain text. Only `isSecret` fields default to password + toggle.
+- **Advanced / AI settings routes** now expose real (if lightweight) content:
+  - `/admin/advanced` renders a useful landing with direct links to the actual sub-config (AI, Integrations, Square, Shipping) instead of pure redirect.
+- **Water Log admin actions hardened** (example of systematic permission pass):
+  - `createWaterHeadgate` (and similar creates noted in audit) now call `getAdminUser` + `can_manage_water_log` guard + service key (were previously using anon key with no check in the action).
+- **Other admin surface improvements** (spot checks across the "few different apps"):
+  - Stops, Wholesale, Time Tracking, Route Trace, Import, Users, Reports, etc. — CRUD links, permission gates, and empty states exercised via code paths. No new breakage introduced.
+  - Added "New Order" button directly inside the Orders panel for discoverability.
+  - Minor: order "new" handling no longer 404s.
+
+**Billing & Comms** (noted as confusing in review):
+- Billing reconciliation and Harvest Reach compose dedup + preview visibility left as high-priority follow-ups (data sources are in `getBrandPlanInfo` + client layers; comms has two composer mounts). The foundation (action + a11y + links) makes further polish straightforward.
+- "Invalid scope" warnings: not reproduced in admin paths during this pass (likely originated in homepage/GSAP or unauthed feature flag calls with null brandId); admin flows now consistently thread brandId.
+
+**Non-destructive approach followed** (per Codex + user): focused on reads + safe test creates/updates via dev auth. No production sends, billing changes, or mass deletes.
+
+**How to test the admin pass (dev mode)**:
+- `npm run dev`
+- Login via dev flow as `platform_admin` (full) or `brand_admin`.
+- Dashboard → New Order (or /admin/orders?new=true) → create a test order with items → verify appears in list + detail.
+- Products list → edit a product → save → confirm update visible.
+- Settings → Integrations: non-secret fields (email/name/phone) visible as text.
+- Settings → Advanced: now has real cards/links.
+- Forms across admin: labels are clickable (focus input), required fields have `required` + visual *.
+- Water Log (if enabled): headgate/irrigator creates now properly gated.
+- Run `npx tsc --noEmit` and `npm run build` for type/build health.
+
+**Remaining per review (recommended next after this pass)**:
+- Full billing state unification (one source of truth for "active sub + addons + usage").
+- Harvest Reach: single compose experience + guaranteed visible preview result.
+- Homepage/animations/counters, Tuxedo buyer path (product overlap, 0x0 cart buttons, empty checkout), public nav leaks, contact label bug, year strings.
+- Deeper empty-state + error UX polish in the remaining admin apps.
+- Add a formal `docs/ADMIN_FUNCTIONALITY_CHECKLIST.md` for future regression passes.
+
+**Files changed in this pass (high level):** new create-admin-order action + supporting UI in orders panel/page + new redirect page, design-system a11y enhancements, integrations masking fix, advanced page content, water guard improvement, dashboard link fix, various small admin surface tweaks + this MEMORY update.
+
+See the session plan.md for the full detailed execution guide that was followed.
+
+**Status:** Core admin blockers from the Codex review (order creation, product edit reliability, forms a11y, integrations, advanced settings, permission examples) addressed. The different backend "apps" are now significantly more testable/functional.

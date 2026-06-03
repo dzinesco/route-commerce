@@ -44,8 +44,14 @@ type WaterEntry = {
 // ── Headgate Admin ──────────────────────────────────────────
 
 export async function createWaterHeadgate(brandId: string, name: string, unit: string = "CFS"): Promise<{ success: boolean; headgate?: Headgate; error?: string }> {
+  const adminUser = await (await import("@/lib/admin-permissions")).getAdminUser();
+  if (!adminUser) return { success: false, error: "Not authenticated" };
+  if (!adminUser.can_manage_water_log && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Not authorized" };
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // prefer service for admin muts
 
   const response = await fetch(
     `${supabaseUrl}/rest/v1/rpc/create_water_headgate`,
