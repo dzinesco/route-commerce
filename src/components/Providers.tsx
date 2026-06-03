@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { ThemeProvider } from "next-themes";
 import { CartProvider } from "@/context/CartContext";

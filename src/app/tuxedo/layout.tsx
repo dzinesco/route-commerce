@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   },
   description: "Premium sweet corn and seasonal produce delivered fresh from the farm to pickup stops near you. Shop wholesale pricing on Tuxedo Corn.",
   keywords: ["sweet corn", "Olathe Sweet", "Colorado produce", "wholesale corn", "farm fresh", "pickup stops", "wholesale produce"],
+  authors: [{ name: "Tuxedo Corn" }],
+  creator: "Tuxedo Corn",
+  publisher: "Tuxedo Corn",
   openGraph: {
     title: "Tuxedo Corn | Olathe Sweet Sweet Corn",
     description: "Premium sweet corn and seasonal produce, delivered fresh from our Colorado farm to pickup stops near you.",
@@ -50,6 +53,7 @@ export const metadata: Metadata = {
     title: "Tuxedo Corn | Fresh Produce Wholesale",
     description: "Premium sweet corn and seasonal produce delivered fresh from our Colorado farm to pickup stops near you.",
     site: "@TuxedoCorn",
+    creator: "@TuxedoCorn",
     images: ["/og-tuxedo.jpg"],
   },
   alternates: {
@@ -58,10 +62,20 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
   other: {
     "application/ld+json": JSON.stringify(tuxedoBreadcrumbSchema),
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function TuxedoLayout({ children }: { children: React.ReactNode }) {

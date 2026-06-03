@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 
-type AIProvider = "openai" | "anthropic" | "google" | "xai" | "custom";
+type AIProvider = "openai" | "anthropic" | "google" | "xai" | "minimax" | "custom";
 
 const PROVIDER_MODELS: Record<Exclude<AIProvider, "custom">, string[]> = {
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
-  anthropic: ["claude-3-5-sonnet-20241002", "claude-3-5-sonnet-20250611", "claude-3-opus-20240229", "claude-3-haiku-20240307"],
+  anthropic: ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-opus-4-1", "claude-opus-4-20250514", "claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
   google: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
   xai: ["grok-2", "grok-2-mini", "grok-1.5"],
+  minimax: ["MiniMax-M3", "MiniMax-M3-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed", "MiniMax-M2.7", "MiniMax-M2.1", "MiniMax-M2"],
 };
 
 // Icons
@@ -87,6 +88,7 @@ const PROVIDERS: { id: AIProvider; name: string; icon: React.ReactNode; descript
   { id: "anthropic", name: "Anthropic", icon: <BrainIcon className="h-5 w-5" />, description: "Claude 3.5 Sonnet, Claude 3 Opus. Best for reasoning.", website: "anthropic.com", color: "bg-amber-500" },
   { id: "google", name: "Google", icon: <CircleIcon className="h-5 w-5" />, description: "Gemini 2.0 Flash, 1.5 Pro. Fast, cost-effective.", website: "ai.google", color: "bg-blue-500" },
   { id: "xai", name: "xAI", icon: <TornadoIcon className="h-5 w-5" />, description: "Grok-2, Grok-1.5. Real-time data, humor.", website: "x.ai", color: "bg-orange-500" },
+  { id: "minimax", name: "MiniMax", icon: <SparkleIcon className="h-5 w-5" />, description: "MiniMax-M3, M2.5, M2. OpenAI-compatible.", website: "minimax.io", color: "bg-violet-500" },
   { id: "custom", name: "Custom", icon: <WrenchIcon className="h-5 w-5" />, description: "Any OpenAI-compatible API endpoint.", website: "", color: "bg-stone-500" },
 ];
 
@@ -232,7 +234,7 @@ export default function AIProviderPanel({ brandId }: Props) {
                   type={showKey ? "text" : "password"}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={provider === "anthropic" ? "sk-ant-..." : provider === "google" ? "AIza..." : provider === "xai" ? "xai-..." : "sk-..."}
+                  placeholder={provider === "anthropic" ? "sk-ant-..." : provider === "google" ? "AIza..." : provider === "xai" ? "xai-..." : provider === "minimax" ? "ey..." : "sk-..."}
                   className="w-full rounded-lg border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] placeholder:text-stone-400 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
                 <button

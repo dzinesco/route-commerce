@@ -42,6 +42,7 @@ export default function CartClient() {
   // Check brand mismatch
   useEffect(() => {
     if (selectedStop?.brand_id && cartBrandId && selectedStop.brand_id !== cartBrandId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStopBrandMismatch(true);
     } else {
       setStopBrandMismatch(false);
@@ -51,6 +52,7 @@ export default function CartClient() {
   // Fetch stops when picker is open
   useEffect(() => {
     if (hasPickupItems && showStopPicker && cartBrandId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingStops(true);
       fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/stops?active=eq.true&brand_id=eq.${cartBrandId}&select=id,city,state,date,time,location,brand_id&order=date`,

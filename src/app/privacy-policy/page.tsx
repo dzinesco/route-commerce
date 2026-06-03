@@ -1,9 +1,36 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Route Commerce",
-  description: "Privacy Policy for Route Commerce platform.",
+  description: "Privacy Policy for Route Commerce platform. Learn how we collect, use, and protect your personal information.",
+  keywords: ["privacy policy", "data protection", "GDPR", "CCPA", "Route Commerce privacy", "personal information"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
+  openGraph: {
+    title: "Privacy Policy — Route Commerce",
+    description: "Learn how Route Commerce collects, uses, and protects your personal information.",
+    url: `${BASE_URL}/privacy-policy`,
+    siteName: "Route Commerce",
+    locale: "en_US",
+    type: "website",
+  },
+  alternates: {
+    canonical: `${BASE_URL}/privacy-policy`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function PrivacyPolicyPage() {

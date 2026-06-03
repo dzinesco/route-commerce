@@ -63,24 +63,69 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cartRestored, setCartRestored] = useState(false);  // shown once per session
   const [restoredDismissed, setRestoredDismissed] = useState(false);
 
+  // ── Single mount-only effect: hydrate from localStorage + validate ────────
+  // Reads cart + stop from localStorage, then repairs stale state:
+  //   - empty cart with stale stop → drop stop
+  //   - cart items missing brand_id (legacy pre-fix data) → clear everything
+  //   - stop brand != cart brand → drop stop, keep cart
+  //
+  // This MUST run in useEffect (not in useState's lazy initializer) because
+  // localStorage isn't available during SSR, and reading it on the first
+  // client render would cause a hydration mismatch vs. the server-rendered
+  // empty cart. The setState calls are intentional post-hydration setup.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- legitimate browser-storage hydration on mount */
+    let storedCart: CartItem[] = [];
+    let storedStop: StopInfo | null = null;
     try {
-      const storedCart = localStorage.getItem(CART_KEY);
-      if (storedCart) {
-        const parsed = JSON.parse(storedCart);
-        if (Array.isArray(parsed)) setCart(parsed);
+      const rawCart = localStorage.getItem(CART_KEY);
+      if (rawCart) {
+        const parsed = JSON.parse(rawCart);
+        if (Array.isArray(parsed)) storedCart = parsed;
       }
-      const storedStop = localStorage.getItem(STOP_KEY);
-      if (storedStop) {
-        const parsed = JSON.parse(storedStop);
-        if (parsed && typeof parsed === "object" && parsed.id) {
-          setSelectedStopState(parsed);
-        }
+      const rawStop = localStorage.getItem(STOP_KEY);
+      if (rawStop) {
+        const parsed = JSON.parse(rawStop);
+        if (parsed && typeof parsed === "object" && parsed.id) storedStop = parsed;
       }
     } catch {
-      // ignore
+      // ignore — fall through with empty values
     }
+
+    const cartBrandId = storedCart[0]?.brand_id;
+
+    if (storedCart.length === 0) {
+      // Empty cart — keep it empty, but clear any stale stop
+      setCart([]);
+      if (storedStop) setSelectedStopState(null);
+    } else if (!cartBrandId) {
+      // Legacy cart without brand_id — nuke both to avoid cross-brand pollution
+      try {
+        localStorage.removeItem(CART_KEY);
+        localStorage.removeItem(STOP_KEY);
+      } catch {
+        // ignore
+      }
+      setCart([]);
+      setSelectedStopState(null);
+    } else {
+      // Healthy cart — apply it
+      setCart(storedCart);
+      if (storedStop?.brand_id && storedStop.brand_id !== cartBrandId) {
+        // Stop belongs to a different brand — drop it
+        try {
+          localStorage.removeItem(STOP_KEY);
+        } catch {
+          // ignore
+        }
+        setSelectedStopState(null);
+      } else if (storedStop) {
+        setSelectedStopState(storedStop);
+      }
+    }
+
     setHydrated(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {
@@ -120,47 +165,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [hydrated]);
 
-  // ── Validate / repair stale session data on hydration ─────────────────
-  useEffect(() => {
-    if (!hydrated) return;
-
-    // Retrieve current cart and stop from localStorage
-    let storedCart: CartItem[] = [];
-    let storedStop: StopInfo | null = null;
-    try {
-      const rawCart = localStorage.getItem(CART_KEY);
-      if (rawCart) storedCart = JSON.parse(rawCart);
-      const rawStop = localStorage.getItem(STOP_KEY);
-      if (rawStop) storedStop = JSON.parse(rawStop);
-    } catch {
-      // ignore — treat as empty
-    }
-
-    if (storedCart.length === 0) {
-      // Empty cart — ensure no stale stop either
-      if (storedStop) setSelectedStop(null);
-      return;
-    }
-
-    const cartBrandId = storedCart[0]?.brand_id;
-
-    // Cart items from before the fix lack brand_id — clear everything
-    if (!cartBrandId) {
-      localStorage.removeItem(CART_KEY);
-      localStorage.removeItem(STOP_KEY);
-      setCart([]);
-      setSelectedStop(null);
-      return;
-    }
-
-    // Stop exists but brand doesn't match cart brand — clear stop
-    if (storedStop?.brand_id && storedStop.brand_id !== cartBrandId) {
-      localStorage.removeItem(STOP_KEY);
-      setSelectedStop(null);
-    }
-  }, [hydrated]);
-
-  function setSelectedStop(stop: StopInfo | null) {
+  const setSelectedStop = useCallback((stop: StopInfo | null) => {
     setSelectedStopState(stop);
     try {
       if (stop) {
@@ -171,9 +176,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-  }
-
-  const setSelectedStopStable = useCallback(setSelectedStop, []);
+  }, []);
 
   function addToCart(item: Omit<CartItem, "quantity">, fulfillment?: "pickup" | "ship") {
     setCart((prev) => {
@@ -286,7 +289,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cartBrandSlug,
         justAdded,
         cartRestored: showRestoredToast,
-        setSelectedStop: setSelectedStopStable,
+        setSelectedStop: setSelectedStop,
         addToCart,
         increaseQuantity,
         decreaseQuantity,

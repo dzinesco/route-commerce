@@ -1,9 +1,37 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Check, Clock, TrendingUp, Lightbulb } from "lucide-react";
+import Link from "next/link";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
-  title: "Roadmap — Route Commerce",
-  description: "See what&apos;s coming next to Route Commerce. Vote on features, suggest ideas, and track our progress.",
+  title: "Product Roadmap — Route Commerce",
+  description: "See what's coming next to Route Commerce. Vote on features, suggest ideas, and track our progress building the best produce wholesale platform.",
+  keywords: ["product roadmap", "feature requests", "Route Commerce features", "wholesale platform updates", "upcoming features"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
+  openGraph: {
+    title: "Product Roadmap — Route Commerce",
+    description: "See what's coming next to Route Commerce. Vote on features and suggest ideas.",
+    url: `${BASE_URL}/roadmap`,
+    siteName: "Route Commerce",
+    locale: "en_US",
+    type: "website",
+  },
+  alternates: {
+    canonical: `${BASE_URL}/roadmap`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 const ROADMAP_ITEMS = {
@@ -34,42 +62,42 @@ export default function RoadmapPage() {
       {/* Header */}
       <header className="border-b border-[#e5e5e5] bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <span className="text-lg font-bold text-[#1a1a1a]">Route Commerce</span>
-          </a>
-          <a href="/changelog" className="text-sm text-[#666] hover:text-[#1a4d2e] transition-colors">
+          </Link>
+          <Link href="/changelog" className="text-sm text-[#666] hover:text-[#1a4d2e] transition-colors">
             View Changelog →
-          </a>
+          </Link>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-b from-white to-[#faf8f5] py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold text-[#1a1a1a] mb-4" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+      <section className="bg-gradient-to-b from-white to-[#faf8f5] py-12 sm:py-16 md:py-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#1a1a1a] mb-4" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
             Product Roadmap
           </h1>
-          <p className="text-xl text-[#6b8f71] max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-[#6b8f71] max-w-2xl mx-auto">
             See what we&apos;re building next. Vote for features you want most, or suggest new ideas.
           </p>
-          <div className="flex justify-center gap-4 mt-8">
-            <a href="/roadmap#suggest" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#1a4d2e] to-[#2d6a4f] text-white rounded-xl font-medium hover:from-[#2d6a4f] hover:to-[#1a4d2e] transition-all">
+          <div className="flex justify-center gap-4 mt-6 sm:mt-8">
+            <Link href="/roadmap#suggest" className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#1a4d2e] to-[#2d6a4f] text-white rounded-xl text-sm font-medium hover:from-[#2d6a4f] hover:to-[#1a4d2e] transition-all">
               <Lightbulb className="w-4 h-4" />
               Suggest a Feature
-            </a>
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Roadmap Columns */}
-      <section className="py-16">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid lg:grid-cols-3 gap-8">
+      <section className="py-12 sm:py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid lg:grid-cols-3 gap-8 lg:gap-8">
             {/* Shipped */}
             <div>
               <div className="flex items-center gap-2 mb-6">

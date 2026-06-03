@@ -4,6 +4,7 @@ import StopProductAssignment from "@/components/admin/StopProductAssignment";
 import { getAdminUser } from "@/lib/admin-permissions";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 type Stop = {
   city: string;
@@ -54,12 +55,12 @@ export default async function NewStopPage({
     <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
         <div className="mb-8">
-          <a
+          <Link
             href="/admin/stops"
             className="text-sm text-stone-500 hover:text-stone-700"
           >
             ← Back to Stops
-          </a>
+          </Link>
         </div>
 
         <div className="rounded-2xl bg-white p-8 border border-stone-200 shadow-lg">

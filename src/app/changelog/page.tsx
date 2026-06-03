@@ -1,9 +1,37 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { FileText, Zap, Bug, Shield } from "lucide-react";
+import Link from "next/link";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
   title: "Changelog — Route Commerce",
-  description: "See what&apos;s new in Route Commerce. Track our progress, new features, and improvements.",
+  description: "See what's new in Route Commerce. Track our progress, new features, and improvements to the produce wholesale platform.",
+  keywords: ["changelog", "product updates", "new features", "Route Commerce release notes", "software updates"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
+  openGraph: {
+    title: "Changelog — Route Commerce",
+    description: "See what's new in Route Commerce. Track our progress and new features.",
+    url: `${BASE_URL}/changelog`,
+    siteName: "Route Commerce",
+    locale: "en_US",
+    type: "website",
+  },
+  alternates: {
+    canonical: `${BASE_URL}/changelog`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 const CHANGELOG = [
@@ -86,17 +114,17 @@ export default function ChangelogPage() {
       {/* Header */}
       <header className="border-b border-[#e5e5e5] bg-white">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <span className="text-lg font-bold text-[#1a1a1a]">Route Commerce</span>
-          </a>
-          <a href="/admin" className="text-sm text-[#666] hover:text-[#1a4d2e] transition-colors">
+          </Link>
+          <Link href="/admin" className="text-sm text-[#666] hover:text-[#1a4d2e] transition-colors">
             ← Back to Admin
-          </a>
+          </Link>
         </div>
       </header>
 

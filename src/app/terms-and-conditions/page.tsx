@@ -1,9 +1,36 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions — Route Commerce",
-  description: "Terms and Conditions for Route Commerce platform.",
+  description: "Terms and Conditions for Route Commerce platform. Read our terms of service, account registration, and order policies.",
+  keywords: ["terms and conditions", "terms of service", "user agreement", "Route Commerce terms", "legal"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
+  openGraph: {
+    title: "Terms & Conditions — Route Commerce",
+    description: "Read our terms of service, account registration, and order policies.",
+    url: `${BASE_URL}/terms-and-conditions`,
+    siteName: "Route Commerce",
+    locale: "en_US",
+    type: "website",
+  },
+  alternates: {
+    canonical: `${BASE_URL}/terms-and-conditions`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function TermsPage() {

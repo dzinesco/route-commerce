@@ -72,7 +72,7 @@ function FAQAccordion({ items, searchQuery }: { items: FAQItem[]; searchQuery: s
   if (filtered.length === 0) {
     return (
       <div className="rounded-2xl bg-white border-2 border-stone-200 p-8 text-center shadow-lg">
-        <p className="text-stone-500 text-base">No results for "{searchQuery}"</p>
+        <p className="text-stone-500 text-base">No results for &quot;{searchQuery}&quot;</p>
         <p className="mt-1 text-stone-400 text-sm">Try a different term or browse all categories below.</p>
       </div>
     );
@@ -208,7 +208,7 @@ export default function IndianRiverFAQPage() {
               </div>
               <div className="relative">
                 <p className="text-2xl font-black text-white tracking-tight">Still have questions?</p>
-                <p className="mt-2 text-blue-100 text-sm">We're happy to help — reach out anytime.</p>
+                <p className="mt-2 text-blue-100 text-sm">We&apos;re happy to help — reach out anytime.</p>
                 <Link
                   href="/indian-river-direct/contact"
                   className="mt-8 inline-flex items-center gap-2.5 rounded-full bg-white px-8 py-4 font-bold text-blue-700 hover:bg-blue-50 transition-all text-sm tracking-wider shadow-lg hover:shadow-xl"

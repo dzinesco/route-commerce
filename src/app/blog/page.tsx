@@ -1,9 +1,51 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
   title: "Blog & Resources — Route Commerce",
-  description: "Guides, case studies, and resources for produce wholesale businesses.",
+  description: "Guides, case studies, and resources for produce wholesale businesses. Learn how to optimize your operations and grow your business.",
+  keywords: ["produce wholesale blog", "farm business resources", "agriculture tips", "wholesale distribution guides", "Route Commerce blog"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
+  openGraph: {
+    title: "Blog & Resources — Route Commerce",
+    description: "Guides, case studies, and resources for produce wholesale businesses.",
+    url: `${BASE_URL}/blog`,
+    siteName: "Route Commerce",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/og-default.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Route Commerce Blog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Blog & Resources — Route Commerce",
+    description: "Guides, case studies, and resources for produce wholesale businesses.",
+    site: "@RouteCommerce",
+    creator: "@RouteCommerce",
+  },
+  alternates: {
+    canonical: `${BASE_URL}/blog`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 const BLOG_POSTS = [
@@ -69,14 +111,14 @@ export default function BlogPage() {
       {/* Header */}
       <header className="border-b border-[#e5e5e5] bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <span className="text-lg font-bold text-[#1a1a1a]">Route Commerce</span>
-          </a>
+          </Link>
           <nav className="flex items-center gap-6 text-sm">
             <Link href="/blog" className="font-medium text-[#1a4d2e]">Blog</Link>
             <Link href="/resources" className="text-[#888] hover:text-[#1a1a1a]">Resources</Link>
@@ -86,12 +128,12 @@ export default function BlogPage() {
       </header>
 
       {/* Hero */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold text-[#1a1a1a] mb-4" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+      <section className="py-12 sm:py-16 md:py-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#1a1a1a] mb-4" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
             Blog & Resources
           </h1>
-          <p className="text-xl text-[#6b8f71]">
+          <p className="text-lg sm:text-xl text-[#6b8f71]">
             Guides, tips, and resources to help you grow your wholesale produce business.
           </p>
         </div>

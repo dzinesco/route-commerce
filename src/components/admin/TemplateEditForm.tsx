@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Template, TemplateType, CampaignType } from "@/actions/communications/templates";
 import { formatDate } from "@/lib/format-date";
 import { upsertTemplate } from "@/actions/communications/templates";
@@ -597,9 +598,9 @@ export function TemplateEditForm({
             >
               {saving ? "Saving..." : "Save Template"}
             </button>
-            <a href="/admin/communications/templates" className="text-xs sm:text-sm text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] ml-4">
+            <Link href="/admin/communications/templates" className="text-xs sm:text-sm text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] ml-4">
               Cancel
-            </a>
+            </Link>
           </div>
         </div>
       ) : (

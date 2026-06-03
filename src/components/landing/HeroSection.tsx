@@ -250,19 +250,19 @@ export default function HeroSection() {
         {/* ─── HERO CONTENT ────────────────────────────────────────────────────── */}
         <div
           ref={contentRef}
-          className="container mx-auto px-6 lg:px-16 py-32 relative z-10"
+          className="container mx-auto px-4 sm:px-6 lg:px-16 py-16 sm:py-24 lg:py-32 relative z-10"
         >
-          <div className="grid lg:grid-cols-2 gap-16 items-center min-h-[80vh]">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center min-h-[70vh] lg:min-h-[80vh]">
 
             {/* Left Column - Animated Content */}
-            <div className="space-y-10">
+            <div className="space-y-6 sm:space-y-8 lg:space-y-10 order-2 lg:order-1">
               {/* Animated Badge */}
-              <div className="hero-reveal hero-badge inline-flex items-center gap-3 px-6 py-3 rounded-full border" style={{
+              <div className="hero-reveal hero-badge inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3 rounded-full border text-xs sm:text-sm" style={{
                 borderColor: "#c97a3e",
                 background: "rgba(201, 122, 62, 0.08)",
               }}>
-                <span className="w-3 h-3 rounded-full animate-pulse-glow" style={{ backgroundColor: "#c97a3e" }} />
-                <span className="text-sm font-semibold tracking-wide" style={{ color: "#c97a3e" }}>
+                <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full animate-pulse-glow" style={{ backgroundColor: "#c97a3e" }} />
+                <span className="text-xs sm:text-sm font-semibold tracking-wide" style={{ color: "#c97a3e" }}>
                   Farm-Fresh Delivery Platform
                 </span>
               </div>
@@ -270,7 +270,7 @@ export default function HeroSection() {
               {/* Main Headline - Apple-style reveal */}
               <div className="hero-reveal hero-title space-y-2">
                 <h1
-                  className="text-6xl sm:text-7xl lg:text-8xl xl:text-9xl font-bold leading-[0.9] tracking-tighter"
+                  className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold leading-[0.9] tracking-tighter"
                   style={{
                     fontFamily: "'Playfair Display', 'Georgia', serif",
                     color: "#1a1a1a",
@@ -283,7 +283,7 @@ export default function HeroSection() {
 
               {/* Subtext */}
               <p
-                className="hero-reveal hero-subtitle text-xl sm:text-2xl max-w-xl leading-relaxed"
+                className="hero-reveal hero-subtitle text-lg sm:text-xl md:text-2xl max-w-xl leading-relaxed"
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
                   color: "#4a6d56",
@@ -295,10 +295,10 @@ export default function HeroSection() {
               </p>
 
               {/* CTAs */}
-              <div className="hero-reveal hero-cta flex flex-wrap gap-5">
+              <div className="hero-reveal hero-cta flex flex-col sm:flex-row flex-wrap gap-4 sm:gap-5">
                 <Link
                   href="/login"
-                  className="group relative inline-flex items-center gap-3 px-8 py-5 rounded-2xl font-semibold text-lg overflow-hidden"
+                  className="group relative inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-4 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg overflow-hidden"
                   style={{
                     background: "linear-gradient(135deg, #1a4d2e 0%, #166534 100%)",
                     color: "white",
@@ -321,7 +321,7 @@ export default function HeroSection() {
                 </Link>
                 <Link
                   href="/brands"
-                  className="group inline-flex items-center gap-3 px-8 py-5 rounded-2xl font-semibold text-lg border-2"
+                  className="group inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-4 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg border-2"
                   style={{
                     color: "#1a4d2e",
                     borderColor: "#1a4d2e",
@@ -345,7 +345,7 @@ export default function HeroSection() {
               </div>
 
               {/* Stats */}
-              <div className="hero-reveal hero-stats flex flex-wrap gap-8 pt-8">
+              <div className="hero-reveal hero-stats flex flex-wrap gap-6 sm:gap-8 pt-6 sm:pt-8">
                 {[
                   { stat: "500+", label: "Farm Brands" },
                   { stat: "98%", label: "On-Time" },
@@ -353,7 +353,7 @@ export default function HeroSection() {
                 ].map((item, i) => (
                   <div key={i} className="text-center">
                     <div
-                      className="text-3xl sm:text-4xl font-bold"
+                      className="text-2xl sm:text-3xl lg:text-4xl font-bold"
                       style={{
                         fontFamily: "'Playfair Display', serif",
                         color: "#1a4d2e",
@@ -361,7 +361,7 @@ export default function HeroSection() {
                     >
                       {item.stat}
                     </div>
-                    <div className="text-sm font-medium" style={{ color: "#6b8f71" }}>
+                    <div className="text-xs sm:text-sm font-medium" style={{ color: "#6b8f71" }}>
                       {item.label}
                     </div>
                   </div>
@@ -370,12 +370,12 @@ export default function HeroSection() {
             </div>
 
             {/* Right Column - Hero Visual */}
-            <div className="hero-visual relative lg:h-[700px]">
+            <div className="hero-visual relative lg:h-[500px] xl:h-[700px]">
               {/* SVG Route Map Visual */}
               <svg
                 viewBox="0 0 500 500"
                 className="w-full h-full"
-                style={{ maxHeight: "700px", filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.08))" }}
+                style={{ maxHeight: "500px", maxWidth: "100%", filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.08))" }}
               >
                 <defs>
                   <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -477,45 +477,45 @@ export default function HeroSection() {
               </svg>
 
               {/* Floating Cards */}
-              <div className="absolute top-12 -left-8 parallax-float" style={{ animation: "float 8s ease-in-out infinite" }}>
+              <div className="absolute top-4 sm:top-12 -left-2 sm:-left-8 parallax-float hidden sm:block" style={{ animation: "float 8s ease-in-out infinite" }}>
                 <div
-                  className="rounded-2xl p-5 shadow-2xl border"
+                  className="rounded-2xl p-4 sm:p-5 shadow-2xl border"
                   style={{
                     background: "linear-gradient(135deg, rgba(201, 122, 62, 0.95) 0%, rgba(247, 129, 130, 0.9) 100%)",
                     borderColor: "rgba(247, 129, 130, 0.5)",
                     boxShadow: "0 12px 40px rgba(232, 168, 124, 0.4), 0 0 30px rgba(247, 129, 130, 0.2)",
                   }}
                 >
-                  <div className="text-3xl font-bold text-white">2.4T</div>
-                  <div className="text-sm text-white/90">Miles Saved</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-white">2.4T</div>
+                  <div className="text-xs sm:text-sm text-white/90">Miles Saved</div>
                 </div>
               </div>
 
-              <div className="absolute bottom-24 -right-4 parallax-float" style={{ animation: "float-delayed 10s ease-in-out infinite" }}>
+              <div className="absolute bottom-16 sm:bottom-24 -right-2 sm:-right-4 parallax-float hidden sm:block" style={{ animation: "float-delayed 10s ease-in-out infinite" }}>
                 <div
-                  className="rounded-2xl p-5 shadow-2xl border"
+                  className="rounded-2xl p-4 sm:p-5 shadow-2xl border"
                   style={{
                     background: "linear-gradient(135deg, rgba(107, 185, 165, 0.95) 0%, rgba(133, 210, 197, 0.9) 100%)",
                     borderColor: "rgba(133, 210, 197, 0.5)",
                     boxShadow: "0 12px 40px rgba(107, 185, 165, 0.4), 0 0 30px rgba(133, 210, 197, 0.2)",
                   }}
                 >
-                  <div className="text-3xl font-bold text-white">12hrs</div>
-                  <div className="text-sm text-white/90">Avg Delivery</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-white">12hrs</div>
+                  <div className="text-xs sm:text-sm text-white/90">Avg Delivery</div>
                 </div>
               </div>
 
-              <div className="absolute top-1/2 -right-12 parallax-float" style={{ animation: "float 9s ease-in-out infinite 1s" }}>
+              <div className="absolute top-1/3 sm:top-1/2 -right-4 sm:-right-12 parallax-float hidden sm:block" style={{ animation: "float 9s ease-in-out infinite 1s" }}>
                 <div
-                  className="rounded-2xl p-4 shadow-xl border flex items-center gap-3"
+                  className="rounded-2xl p-3 sm:p-4 shadow-xl border flex items-center gap-2 sm:gap-3"
                   style={{
                     background: "linear-gradient(135deg, rgba(245, 199, 126, 0.95) 0%, rgba(201, 162, 80, 0.9) 100%)",
                     borderColor: "rgba(245, 199, 126, 0.6)",
                     boxShadow: "0 8px 32px rgba(245, 199, 126, 0.4)",
                   }}
                 >
-                  <span className="w-4 h-4 rounded-full bg-white animate-pulse" />
-                  <span className="text-sm font-bold text-white/90">Live Tracking</span>
+                  <span className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white animate-pulse" />
+                  <span className="text-xs sm:text-sm font-bold text-white/90">Live Tracking</span>
                 </div>
               </div>
             </div>

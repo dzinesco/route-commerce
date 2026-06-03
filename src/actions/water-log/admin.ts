@@ -268,11 +268,35 @@ export async function deleteWaterHeadgate(headgateId: string): Promise<{ success
     }
   );
 
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to delete headgate" };
+  // The RPC returns JSONB on success: { success: true } or { success: false, error: "..." }.
+  // On failure (HTTP non-2xx) Supabase returns { message: "...", code: "...", details: ... }.
+  // We try to extract the most useful message in both cases.
+  let data: { success?: boolean; error?: string; message?: string } | null = null;
+  try {
+    data = await response.json();
+  } catch {
+    // Non-JSON body — leave data as null, fall through to default error
   }
-  return { success: true };
+
+  if (response.ok && data?.success) {
+    return { success: true };
+  }
+
+  // Prefer the RPC's own error if it set one
+  const errorMessage =
+    data?.error ??
+    data?.message ??
+    (response.ok ? "Unknown error" : `HTTP ${response.status}: ${response.statusText || "request failed"}`);
+
+  if (process.env.NODE_ENV !== "production") {
+    console.error("[deleteWaterHeadgate] failed", {
+      headgateId,
+      status: response.status,
+      data,
+    });
+  }
+
+  return { success: false, error: errorMessage };
 }
 
 // ── Entries ────────────────────────────────────────────────

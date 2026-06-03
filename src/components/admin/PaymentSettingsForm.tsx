@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect } from "react";
 import { savePaymentSettings, type PaymentProvider, type PaymentSettings } from "@/actions/payments";

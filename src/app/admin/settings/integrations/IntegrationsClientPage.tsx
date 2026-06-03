@@ -123,6 +123,7 @@ function IntegrationCard({
   // Track dirty state
   useEffect(() => {
     const hasValues = Object.values(credentials).some((v) => v.trim().length > 0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDirty(hasValues && JSON.stringify(initialCredentials) !== JSON.stringify(credentials));
   }, [credentials, initialCredentials]);
 

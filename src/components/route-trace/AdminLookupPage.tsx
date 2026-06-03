@@ -114,7 +114,7 @@ export default function AdminLookupPage({ brandId }: { brandId: string }) {
           {results.length === 0 ? (
             <div className="p-10 text-center">
               <div className="text-stone-300 mb-3">{Icons.search("h-10 w-10")}</div>
-              <p className="text-sm text-stone-500">No lots found for "{query}"</p>
+              <p className="text-sm text-stone-500">No lots found for &quot;{query}&quot;</p>
             </div>
           ) : (
             <>

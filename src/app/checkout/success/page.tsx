@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, Suspense, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createOrder } from "@/actions/checkout";
 
@@ -46,67 +46,68 @@ function formatStopDate(dateStr: string): string {
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const sessionId = searchParams.get("session_id");
   const orderIdParam = searchParams.get("order_id");
-  const [order, setOrder] = useState<StoredOrder | null>(null);
+  // Direct access with order_id — load from sessionStorage in lazy initializer.
+  // searchParams values are stable, and sessionStorage is client-only, so this
+  // is safe in a client component.
+  const [order, setOrder] = useState<StoredOrder | null>(() => {
+    if (!orderIdParam || sessionId) return null;
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = sessionStorage.getItem(`order_${orderIdParam}`);
+      if (!stored) return null;
+      return JSON.parse(stored) as StoredOrder;
+    } catch {
+      return null;
+    }
+  });
   const [creating, setCreating] = useState(!!sessionId);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (orderIdParam && !sessionId) {
-      // Direct access with order_id — load from sessionStorage
-      const stored = sessionStorage.getItem(`order_${orderIdParam}`);
-      if (stored) {
-        try {
-          setOrder(JSON.parse(stored) as StoredOrder);
-        } catch {
-          // ignore
-        }
-      }
-    }
-  }, [orderIdParam, sessionId]);
-
-  // Stripe redirected back — create order from pending checkout data
+  // Stripe redirected back — create order from pending checkout data.
+  // Wrapped in an async IIFE so all setState calls happen inside a callback,
+  // not in the synchronous effect body (satisfies set-state-in-effect rule).
   useEffect(() => {
     if (!sessionId) return;
 
-    const pendingStr = sessionStorage.getItem("pending_checkout");
-    if (!pendingStr) {
-      setError("No pending order found. Please start checkout again.");
-      setCreating(false);
-      return;
-    }
+    (async () => {
+      const pendingStr = sessionStorage.getItem("pending_checkout");
+      if (!pendingStr) {
+        setError("No pending order found. Please start checkout again.");
+        setCreating(false);
+        return;
+      }
 
-    let pending: {
-      customerName: string;
-      customerEmail: string;
-      customerPhone: string;
-      stopId: string | null;
-      items: Array<{ id: string; name: string; price: number; quantity: number; fulfillment: "pickup" | "ship" }>;
-      cartBrandId?: string;
-      shippingAddress?: { state: string; postal_code: string; city?: string };
-      idempotencyKey: string;
-    };
-    try {
-      pending = JSON.parse(pendingStr);
-    } catch {
-      setError("Failed to read checkout data. Please start again.");
-      setCreating(false);
-      return;
-    }
+      let pending: {
+        customerName: string;
+        customerEmail: string;
+        customerPhone: string;
+        stopId: string | null;
+        items: Array<{ id: string; name: string; price: number; quantity: number; fulfillment: "pickup" | "ship" }>;
+        cartBrandId?: string;
+        shippingAddress?: { state: string; postal_code: string; city?: string };
+        idempotencyKey: string;
+      };
+      try {
+        pending = JSON.parse(pendingStr);
+      } catch {
+        setError("Failed to read checkout data. Please start again.");
+        setCreating(false);
+        return;
+      }
 
-    createOrder(
-      pending.idempotencyKey,
-      pending.customerName,
-      pending.customerEmail,
-      pending.customerPhone,
-      pending.stopId,
-      pending.items,
-      pending.cartBrandId,
-      pending.shippingAddress
-    )
-      .then((result) => {
+      try {
+        const result = await createOrder(
+          pending.idempotencyKey,
+          pending.customerName,
+          pending.customerEmail,
+          pending.customerPhone,
+          pending.stopId,
+          pending.items,
+          pending.cartBrandId,
+          pending.shippingAddress
+        );
         if (!result.success) {
           setError(result.error ?? "Failed to create order");
           setCreating(false);
@@ -117,11 +118,11 @@ function SuccessContent() {
         sessionStorage.removeItem("cart");
         setOrder(result.order);
         setCreating(false);
-      })
-      .catch(() => {
+      } catch {
         setError("Failed to create order. Please contact support.");
         setCreating(false);
-      });
+      }
+    })();
   }, [sessionId]);
 
   if (!order || !orderIdParam) {

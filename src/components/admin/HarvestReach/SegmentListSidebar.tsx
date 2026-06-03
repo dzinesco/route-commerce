@@ -67,7 +67,7 @@ export default function SegmentListSidebar({ segments, activeSegmentId, onSelect
           <div key={segment.id} className="group relative">
             {confirmDelete === segment.id ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 flex flex-col gap-2">
-                <p className="text-xs text-red-600 font-medium">Delete "{segment.name}"?</p>
+                <p className="text-xs text-red-600 font-medium">Delete &quot;{segment.name}&quot;?</p>
                 <div className="flex gap-2">
                   <AdminButton
                     variant="danger"

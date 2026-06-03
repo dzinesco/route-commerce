@@ -1,9 +1,36 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
   title: "Security — Route Commerce",
-  description: "Learn about Route Commerce security practices, data protection, and compliance.",
+  description: "Learn about Route Commerce security practices, data protection, and compliance. Enterprise-grade encryption and SOC 2 compliance.",
+  keywords: ["security", "data protection", "encryption", "SOC 2", "GDPR", "CCPA", "Route Commerce security", "compliance"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
+  openGraph: {
+    title: "Security — Route Commerce",
+    description: "Learn about Route Commerce security practices, data protection, and compliance.",
+    url: `${BASE_URL}/security`,
+    siteName: "Route Commerce",
+    locale: "en_US",
+    type: "website",
+  },
+  alternates: {
+    canonical: `${BASE_URL}/security`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 const SECURITY_FEATURES = [
@@ -52,14 +79,14 @@ export default function SecurityPage() {
       {/* Header */}
       <header className="border-b border-[#e5e5e5] bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1a4d2e] to-[#2d6a4f] flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <span className="text-lg font-bold text-[#1a1a1a]">Route Commerce</span>
-          </a>
+          </Link>
           <Link href="/pricing" className="px-5 py-2 bg-[#1a4d2e] text-white rounded-xl text-sm font-medium hover:bg-[#2d6a4f] transition-colors">
             Get Started
           </Link>

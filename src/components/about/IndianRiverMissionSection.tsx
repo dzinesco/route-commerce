@@ -20,10 +20,10 @@ export default function IndianRiverMissionSection() {
             <h2 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 mb-8 leading-tight">From Farm to Family</h2>
             <div className="space-y-6 text-stone-700 leading-relaxed text-lg">
               <p>
-                At Indian River Direct, quality and freshness are more than just goals — they're the foundation of everything we do. We're not just a company that delivers exceptional fruit; we're also the farmers behind the scenes. By acquiring Fort B Groves, the owner of Indian River Direct created a direct and reliable source of premium citrus for our customers.
+                At Indian River Direct, quality and freshness are more than just goals — they&apos;re the foundation of everything we do. We&apos;re not just a company that delivers exceptional fruit; we&apos;re also the farmers behind the scenes. By acquiring Fort B Groves, the owner of Indian River Direct created a direct and reliable source of premium citrus for our customers.
               </p>
               <p>
-                Owning and managing our own grove allows us to oversee every step of the process — from responsible farming practices and careful harvesting to strict quality control — ensuring each fruit box meets our highest standards. With direct access to the farm, we're able to reduce dependence on outside growers and deliver fruit that's consistently fresh, flavorful, and farm-to-table fast.
+                Owning and managing our own grove allows us to oversee every step of the process — from responsible farming practices and careful harvesting to strict quality control — ensuring each fruit box meets our highest standards. With direct access to the farm, we&apos;re able to reduce dependence on outside growers and deliver fruit that&apos;s consistently fresh, flavorful, and farm-to-table fast.
               </p>
             </div>
           </motion.div>
@@ -55,7 +55,7 @@ export default function IndianRiverMissionSection() {
                 Our journey began with a simple passion: growing the finest citrus fruits and delivering them straight from our groves to your table with care, speed, and integrity.
               </p>
               <p>
-                We believe in minimizing the time between harvest and delivery, ensuring that our citrus is hand-picked at peak ripeness and arrives to you bursting with flavor and nutrition. This direct-to-you approach means you enjoy fruit that's fresher, juicier, and more vibrant than anything sitting on store shelves.
+                We believe in minimizing the time between harvest and delivery, ensuring that our citrus is hand-picked at peak ripeness and arrives to you bursting with flavor and nutrition. This direct-to-you approach means you enjoy fruit that&apos;s fresher, juicier, and more vibrant than anything sitting on store shelves.
               </p>
             </div>
 

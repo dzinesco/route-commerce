@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { createRetailStripeCheckoutSession } from "@/actions/billing/retail-checkout";
 import StorefrontHeader from "@/components/storefront/StorefrontHeader";
@@ -134,12 +135,12 @@ export default function CheckoutClient() {
             <h1 className="text-3xl font-bold text-stone-900">
               Your cart is empty
             </h1>
-            <a
+            <Link
               href="/"
               className="mt-4 inline-block text-stone-600 hover:text-stone-900"
             >
               ← Back to storefront
-            </a>
+            </Link>
           </div>
         </main>
       </div>

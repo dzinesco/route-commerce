@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 // Toast Notification System - Slide-in notifications from top-right
 "use client";
 

@@ -2,10 +2,11 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { svcHeaders } from "@/lib/svc-headers";
+import { DEFAULT_MODELS, type AIProvider as AIProviderType } from "@/lib/ai-provider-models";
 
 // ── Types ────────────────────────────────────────────────────────────────────────
 
-export type AIProvider = "openai" | "anthropic" | "google" | "xai" | "custom";
+export type AIProvider = AIProviderType;
 
 export type AIProviderSettings = {
   provider: AIProvider;
@@ -24,6 +25,10 @@ export type CustomIntegration = {
   syncOptions: string[];
   testEndpoint?: string;
 };
+
+// MiniMax (MiniMax) is OpenAI-compatible. Default to the global endpoint; allow
+// override via MINIMAX_BASE_URL env var (e.g. https://api.minimaxi.com/v1 for CN).
+const MINIMAX_DEFAULT_BASE_URL = "https://api.minimax.io/v1";
 
 // ── Get AI provider settings ─────────────────────────────────────────────────────
 
@@ -111,9 +116,26 @@ export async function getAIClient(brandId: string): Promise<{
   const settings = await getAIProviderSettings(brandId);
 
   if (!settings.apiKey) {
-    // Fall back to env var
-    const envKey = process.env.OPENAI_API_KEY;
-    if (!envKey) return { provider: "openai", model: "gpt-4o-mini", client: null, error: "No API key configured" };
+    // Fall back to env var. Check the saved provider first, then universal env keys.
+    const envKey =
+      process.env.MINIMAX_API_KEY ||
+      process.env.OPENAI_API_KEY ||
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.XAI_API_KEY ||
+      process.env.GOOGLE_API_KEY;
+    if (!envKey) {
+      return { provider: settings.provider || "openai", model: DEFAULT_MODELS[settings.provider as Exclude<AIProvider, "custom">] ?? "gpt-4o-mini", client: null, error: "No API key configured" };
+    }
+    // If the saved provider is minimax, use MiniMax even from env
+    if (settings.provider === "minimax" || process.env.MINIMAX_API_KEY) {
+      const { OpenAI } = await import("openai");
+      const baseURL = process.env.MINIMAX_BASE_URL || MINIMAX_DEFAULT_BASE_URL;
+      return {
+        provider: "minimax",
+        model: settings.model || DEFAULT_MODELS.minimax,
+        client: new OpenAI({ apiKey: process.env.MINIMAX_API_KEY ?? envKey, baseURL }),
+      };
+    }
     const { OpenAI } = await import("openai");
     return {
       provider: "openai",
@@ -145,6 +167,16 @@ export async function getAIClient(brandId: string): Promise<{
         provider: "xai",
         model: settings.model || "grok-2",
         client: new XAIOpenAI({ apiKey: settings.apiKey, baseURL: "https://api.x.ai/v1" }),
+      };
+    }
+    case "minimax": {
+      // MiniMax (MiniMax) is OpenAI-compatible — swap baseURL
+      const { OpenAI } = await import("openai");
+      const baseURL = process.env.MINIMAX_BASE_URL || MINIMAX_DEFAULT_BASE_URL;
+      return {
+        provider: "minimax",
+        model: settings.model || DEFAULT_MODELS.minimax,
+        client: new OpenAI({ apiKey: settings.apiKey, baseURL }),
       };
     }
     case "custom": {

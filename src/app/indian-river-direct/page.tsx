@@ -435,7 +435,7 @@ export default function IndianRiverDirectPage() {
                     ))}
                   </div>
                   <blockquote className="text-stone-600 text-sm leading-relaxed mb-4">
-                    "{t.text}"
+                    &quot;{t.text}&quot;
                   </blockquote>
                   <p className="text-stone-950 font-bold text-sm">— {t.name}</p>
                 </div>

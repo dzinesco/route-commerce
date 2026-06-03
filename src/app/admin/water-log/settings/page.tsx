@@ -207,7 +207,7 @@ export default function WaterLogSettingsPage() {
               {/* High/Low Alerts */}
               <div className="rounded-xl bg-zinc-900 shadow-black/20 ring-1 ring-zinc-700 p-5 space-y-4">
                 <p className="font-semibold text-zinc-100">High/Low Alerts</p>
-                <p className="text-xs text-zinc-500">Receive an SMS when a reading exceeds a headgate's thresholds.</p>
+                <p className="text-xs text-zinc-500">Receive an SMS when a reading exceeds a headgate&apos;s thresholds.</p>
 
                 <div className="flex items-center justify-between">
                   <div>

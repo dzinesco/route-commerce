@@ -7,6 +7,7 @@ import {
   createWaterHeadgate,
   regenerateHeadgateToken,
   updateWaterHeadgate,
+  deleteWaterHeadgate,
 } from "@/actions/water-log/admin";
 import { AdminButton } from "@/components/admin/design-system";
 
@@ -116,6 +117,24 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
     } else {
       showToast(res.error ?? "Failed", false);
     }
+  }
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(hg: Headgate) {
+    if (!window.confirm(`Delete headgate "${hg.name}"? Existing log entries will be preserved.`)) return;
+    setDeletingId(hg.id);
+    const res = await deleteWaterHeadgate(hg.id);
+    if (res.success) {
+      // Optimistic update + refresh
+      setHeadgates((prev) => prev.filter((h) => h.id !== hg.id));
+      const refreshed = await getWaterHeadgatesAdmin(brandId);
+      setHeadgates(refreshed);
+      showToast("Headgate deleted");
+    } else {
+      showToast(res.error ?? "Failed to delete headgate", false);
+    }
+    setDeletingId(null);
   }
 
   function toggleSelect(id: string) {
@@ -311,6 +330,15 @@ export default function HeadgatesManager({ initialHeadgates, brandId }: Props) {
                         </button>
                         <AdminButton variant="secondary" size="sm" onClick={() => setQrModal(hg)}>
                           Print
+                        </AdminButton>
+                        <AdminButton
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDelete(hg)}
+                          disabled={deletingId === hg.id}
+                          isLoading={deletingId === hg.id}
+                        >
+                          Delete
                         </AdminButton>
                       </div>
                     </td>

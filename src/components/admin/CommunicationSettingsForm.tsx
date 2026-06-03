@@ -77,7 +77,7 @@ export default function CommunicationSettingsForm({
         </div>
         <div>
           <h2 className="text-lg font-bold text-[var(--admin-text-primary)]">Sender Settings</h2>
-          <p className="text-xs text-[var(--admin-text-muted)]">Configure the default sender identity for this brand's email campaigns</p>
+          <p className="text-xs text-[var(--admin-text-muted)]">Configure the default sender identity for this brand&apos;s email campaigns</p>
         </div>
       </div>
 

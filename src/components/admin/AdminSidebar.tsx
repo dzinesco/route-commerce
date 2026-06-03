@@ -382,7 +382,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
 
         {/* Back to site link */}
         <div className="px-5 py-3 border-b flex-shrink-0" style={{ borderColor: "rgba(208, 203, 180, 0.2)" }}>
-          <a
+          <Link
             href="/"
             className="text-xs transition-colors flex items-center gap-1.5 hover:text-white"
             style={{ color: "var(--admin-sidebar-text)" }}
@@ -391,7 +391,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
             Back to Site
-          </a>
+          </Link>
         </div>
 
         {/* Nav links with keyboard navigation */}

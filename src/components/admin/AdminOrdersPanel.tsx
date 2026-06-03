@@ -134,6 +134,7 @@ export default function AdminOrdersPanel({
 
   // Simulate loading when orders change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     const timer = setTimeout(() => setIsLoading(false), 300);
     return () => clearTimeout(timer);

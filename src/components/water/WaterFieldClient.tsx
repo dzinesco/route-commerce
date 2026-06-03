@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import {
   verifyWaterPin,
   submitWaterEntry,
@@ -120,8 +120,17 @@ function WaterFieldInner() {
   const searchParams = useSearchParams();
   const qrHeadgateToken = searchParams.get("h");
 
-  const [lang, setLang] = useState<Language>("en");
-  const [step, setStep] = useState<"loading" | "lang" | "role" | "pin" | "form">("loading");
+  // Read cookie preferences on first render. Component is client-only via
+  // <Suspense>, so accessing document.cookie in the lazy initializer is safe.
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof document === "undefined") return "en";
+    const saved = document.cookie.match(/wl_lang=(en|es)/)?.[1];
+    return (saved as Language) || "en";
+  });
+  const [step, setStep] = useState<"loading" | "lang" | "role" | "pin" | "form">(() => {
+    if (typeof document === "undefined") return "loading";
+    return document.cookie.match(/wl_session=([^;]+)/) ? "form" : "lang";
+  });
   const [pin, setPin] = useState("");
   const [irrigatorName, setIrrigatorName] = useState("");
   const [selectedRole, setSelectedRole] = useState<"irrigator" | "water_admin" | null>(null);
@@ -146,31 +155,29 @@ function WaterFieldInner() {
 
   const t = LABELS[lang];
 
-  // Detect saved language preference + check session
+  // Restore headgates on first render if user is already logged in
+  // (wl_session cookie present). Done in an effect so the initial step
+  // state can be set synchronously and headgates load asynchronously.
   useEffect(() => {
-    const saved = document.cookie.match(/wl_lang=(en|es)/)?.[1] as Language | undefined;
-    if (saved) setLang(saved);
-
-    const match = document.cookie.match(/wl_session=([^;]+)/);
-    if (match) {
-      // Already logged in
+    if (step === "form" && headgates.length === 0) {
       loadHeadgates();
-      setStep("form");
-    } else {
-      setStep("lang");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle QR-locked headgate after headgates load
-  useEffect(() => {
-    if (qrHeadgateToken && headgates.length > 0) {
-      const matched = headgates.find((hg) => hg.id === qrHeadgateToken || hg.name === qrHeadgateToken);
-      if (matched) {
-        setSelectedHeadgate(matched.id);
-        setHeadgateLocked(true);
-      }
-    }
+  // QR-locked headgate: derive during render instead of syncing in an effect.
+  // When qrHeadgateToken matches a loaded headgate, override the user's
+  // selection and lock the dropdown. Otherwise fall back to whatever the
+  // user picked (or none).
+  const qrMatchedHeadgate = useMemo(() => {
+    if (!qrHeadgateToken || headgates.length === 0) return null;
+    return (
+      headgates.find((hg) => hg.id === qrHeadgateToken || hg.name === qrHeadgateToken) ?? null
+    );
   }, [qrHeadgateToken, headgates]);
+
+  const effectiveSelectedHeadgate = qrMatchedHeadgate?.id ?? selectedHeadgate;
+  const isHeadgateLocked = qrMatchedHeadgate ? true : headgateLocked;
 
   async function loadHeadgates() {
     const hgs = await getWaterHeadgates(TUXEDO_BRAND_ID, true);
@@ -260,7 +267,7 @@ function WaterFieldInner() {
 
   async function handleSubmitEntry(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedHeadgate || !measurement) return;
+    if (!effectiveSelectedHeadgate || !measurement) return;
     setLoading(true);
     setError("");
 
@@ -284,14 +291,14 @@ function WaterFieldInner() {
     }
 
     const result = await submitWaterEntry(
-      selectedHeadgate,
+      effectiveSelectedHeadgate,
       parseFloat(measurement),
       unit,
       notes,
       photoUrl,
       latitude ?? undefined,
       longitude ?? undefined,
-      headgateLocked
+      isHeadgateLocked
     );
 
     if (!result.success) {
@@ -450,7 +457,7 @@ function WaterFieldInner() {
   }
 
   // Main log form
-  const selectedHg = headgates.find((hg) => hg.id === selectedHeadgate);
+  const selectedHg = headgates.find((hg) => hg.id === effectiveSelectedHeadgate);
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -509,13 +516,13 @@ function WaterFieldInner() {
           <label className="block text-base font-semibold text-stone-700 mb-2">
             {t.selectHeadgate}
           </label>
-          {headgateLocked ? (
+          {isHeadgateLocked ? (
             <div className="w-full rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-4 text-lg font-bold text-stone-900">
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
-                {selectedHg?.name ?? selectedHeadgate}
+                {selectedHg?.name ?? effectiveSelectedHeadgate}
                 <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">
                   🔒 {t.locked}
                 </span>
@@ -531,7 +538,7 @@ function WaterFieldInner() {
             </div>
           ) : (
             <select
-              value={selectedHeadgate}
+              value={effectiveSelectedHeadgate}
               onChange={(e) => setSelectedHeadgate(e.target.value)}
               required
               className="w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-4 text-lg outline-none focus:border-stone-900 min-h-[56px] appearance-none"
@@ -548,7 +555,7 @@ function WaterFieldInner() {
               ))}
             </select>
           )}
-          {selectedHg && !headgateLocked && (
+          {selectedHg && !isHeadgateLocked && (
             <ThresholdBadge high={selectedHg.high_threshold} low={selectedHg.low_threshold} t={t} />
           )}
         </div>
@@ -661,7 +668,7 @@ function WaterFieldInner() {
         {/* Submit */}
         <button
           type="submit"
-          disabled={!selectedHeadgate || !measurement || loading}
+          disabled={!effectiveSelectedHeadgate || !measurement || loading}
           className="w-full rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white disabled:opacity-50 active:bg-green-700 min-h-[64px] shadow-lg shadow-green-900/20 flex items-center justify-center gap-2"
         >
           {loading ? (

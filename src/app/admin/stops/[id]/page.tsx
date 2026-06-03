@@ -5,6 +5,7 @@ import MessageCustomersSection from "@/components/admin/MessageCustomersSection"
 import { getAdminUser } from "@/lib/admin-permissions";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 type StopDetailPageProps = {
   params: Promise<{
@@ -44,12 +45,12 @@ export default async function StopDetailPage({ params }: StopDetailPageProps) {
           <pre className="mt-4 rounded-xl bg-white border border-stone-200 p-4 text-sm text-stone-600">
             {error?.message ?? "Stop not found"}
           </pre>
-          <a
+          <Link
             href="/admin/stops"
             className="mt-4 inline-block text-stone-500 hover:text-stone-700"
           >
             ← Back to Stops
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -74,12 +75,12 @@ export default async function StopDetailPage({ params }: StopDetailPageProps) {
   return (
     <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
-        <a
+        <Link
           href="/admin/stops"
           className="text-sm text-stone-500 hover:text-stone-700"
         >
           ← Back to Stops
-        </a>
+        </Link>
 
         <div className="mt-6 rounded-2xl bg-white p-8 border border-stone-200 shadow-lg">
           <div className="flex items-start justify-between">

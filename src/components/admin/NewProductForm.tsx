@@ -1,13 +1,20 @@
 "use client";
 
 import NextImage from "next/image";
+import Link from "next/link";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { uploadProductImage } from "@/actions/products/upload-image";
 import { createProduct } from "@/actions/products/create-product";
 import { AdminInput, AdminTextInput, AdminTextarea, AdminSelect } from "./design-system";
 
-export default function NewProductForm() {
+type Props = {
+  defaultBrandId?: string;
+  brands?: { id: string; name: string }[];
+  lockBrand?: boolean;
+};
+
+export default function NewProductForm({ defaultBrandId = "", brands = [], lockBrand = false }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,10 +29,21 @@ export default function NewProductForm() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [type, setType] = useState("Pickup");
-  const [brandId, setBrandId] = useState("");
+  const [brandId, setBrandId] = useState(defaultBrandId);
   const [isTaxable, setIsTaxable] = useState("true");
   const [pickupType, setPickupType] = useState("scheduled_stop");
   const [active, setActive] = useState("true");
+
+  // Build the brand options. If the server provided a list, use it; otherwise
+  // fall back to the historical hardcoded list so the form still works in
+  // environments where getBrands() failed or returned empty.
+  const brandOptions = brands.length > 0
+    ? brands
+    : [
+        { id: "64294306-5f42-463d-a5e8-2ad6c81a96de", name: "Tuxedo Corn" },
+        { id: "b1cb7a96-d82b-40b1-80b1-d6dd26c56e28", name: "Indian River Direct" },
+      ];
+  const brandSelectOptions = brandOptions.map((b) => ({ value: b.id, label: b.name }));
 
   async function handleFileSelect(file: File) {
     const validTypes = ["image/png", "image/jpeg", "image/webp"];
@@ -162,15 +180,27 @@ export default function NewProductForm() {
       </div>
 
       <AdminInput label="Brand" required>
-        <AdminSelect
-          value={brandId}
-          onChange={(e) => setBrandId(e.target.value)}
-          options={[
-            { value: "", label: "Select brand..." },
-            { value: "64294306-5f42-463d-a5e8-2ad6c81a96de", label: "Tuxedo Corn" },
-            { value: "b1cb7a96-d82b-40b1-80b1-d6dd26c56e28", label: "Indian River Direct" },
-          ]}
-        />
+        {lockBrand ? (
+          // brand_admin / store_employee — brand is fixed by their admin_users record
+          <div className="w-full rounded-lg border border-[var(--admin-border)] bg-stone-50 px-3 py-2.5 text-sm text-[var(--admin-text-primary)]">
+            {brandOptions.find((b) => b.id === brandId)?.name ?? brandId}
+          </div>
+        ) : (
+          <AdminSelect
+            value={brandId}
+            onChange={(e) => setBrandId(e.target.value)}
+            options={[
+              { value: "", label: brands.length > 0 ? "Select brand..." : "Loading brands..." },
+              ...brandSelectOptions,
+            ]}
+            disabled={brands.length === 0 && defaultBrandId === ""}
+          />
+        )}
+        {!lockBrand && brands.length === 0 && (
+          <p className="mt-1 text-xs text-stone-500">
+            Loading available brands — if this persists, check the admin Brands settings.
+          </p>
+        )}
       </AdminInput>
 
       <AdminInput label="Taxable" helpText="Tax applied at checkout for shipping orders in nexus states. Disable for non-taxable items like apparel or cooler boxes.">
@@ -278,12 +308,12 @@ export default function NewProductForm() {
           {loading ? "Creating..." : "Create Product"}
         </button>
 
-        <a
+        <Link
           href="/admin/products"
           className="rounded-xl border border-zinc-600 px-6 py-3 font-medium text-zinc-300"
         >
           Cancel
-        </a>
+        </Link>
       </div>
     </form>
   );

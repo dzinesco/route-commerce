@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { svcHeaders } from "@/lib/svc-headers";
 
@@ -30,35 +31,36 @@ export async function createStopsBatch(
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  // Use anon key — admin_create_stops_batch is SECURITY DEFINER so RLS is
+  // bypassed. This fixes the prior 42501 RLS violation that came from doing
+  // direct REST inserts against the RLS-blocked `stops` table.
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  const rows = stops.map((s) => {
-    const slug = `${s.city.toLowerCase().replace(/\s+/g, "-")}-${s.date || new Date().toISOString().slice(0, 10)}`;
-    return {
-      city: s.city,
-      state: s.state,
-      location: s.location,
-      date: s.date || "",
-      time: s.time || "",
-      address: s.address || null,
-      zip: s.zip || null,
-      brand_id: effectiveBrandId,
-      slug,
-      status: "draft",
-      active: false,
-    };
-  });
+  const rows = stops.map((s) => ({
+    city: s.city,
+    state: s.state,
+    location: s.location,
+    date: s.date || "",
+    time: s.time || "",
+    address: s.address || null,
+    zip: s.zip || null,
+    cutoff_time: null,
+    active: false,
+  }));
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/stops`, {
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/admin_create_stops_batch`, {
     method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify(rows),
+    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+    body: JSON.stringify({ p_brand_id: effectiveBrandId, p_stops: rows }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: "Request failed" }));
     return { success: false, created: 0, error: (err as { message?: string }).message ?? "Insert failed" };
   }
+
+  revalidateTag("stops", "default");
+  revalidateTag(`brand:${effectiveBrandId}:stops`, "default");
 
   const inserted = await res.json();
   return { success: true, created: Array.isArray(inserted) ? inserted.length : stops.length };
@@ -85,6 +87,9 @@ export async function publishStop(
     const err = await res.json().catch(() => ({ message: "Patch failed" }));
     return { success: false, error: (err as { message?: string }).message ?? "Publish failed" };
   }
+
+  revalidateTag("stops", "default");
+  revalidateTag(`brand:${brandId}:stops`, "default");
 
   return { success: true };
 }
@@ -116,4 +121,53 @@ export async function getActiveStopsForSitemap(): Promise<StopForSitemap[]> {
 
   const stops = await response.json();
   return Array.isArray(stops) ? stops : [];
+}
+
+/**
+ * Fetch active stops for a brand by slug.
+ * Public action used by the storefront stop pages (e.g. /tuxedo/stops,
+ * /indian-river-direct/stops) — replaces the previous client-side
+ * `supabase.from("stops")` query so supabase-js no longer ships to
+ * the browser for those routes.
+ *
+ * Cached at the edge for 5 minutes; invalidated by `revalidateTag('stops')`
+ * from any stop mutation (see createStopsBatch, publishStop, etc.).
+ */
+export type PublicStop = {
+  id: string;
+  city: string;
+  state: string;
+  date: string;
+  time: string;
+  location: string;
+  address: string | null;
+  slug: string;
+  cutoff_time: string | null;
+};
+
+export async function getPublicStopsForBrand(
+  brandSlug: string
+): Promise<PublicStop[]> {
+  if (!brandSlug) return [];
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/get_public_stops_for_brand`,
+    {
+      method: "POST",
+      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+      body: JSON.stringify({ p_brand_slug: brandSlug }),
+      next: {
+        revalidate: 300,
+        tags: ["stops", `brand:${brandSlug}:stops`],
+      },
+    }
+  );
+
+  if (!response.ok) return [];
+
+  const stops = await response.json();
+  return Array.isArray(stops) ? (stops as PublicStop[]) : [];
 }

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { wholesaleLoginAction } from "@/actions/wholesale-auth";
 import { useRouter } from "next/navigation";
 import WholesaleBenefits from "@/components/wholesale/WholesaleBenefits";
 import Link from "next/link";
+
+// SEO meta tags injected via client-side head management
+// Page should be robots: noindex as it's an auth page
 
 const BRANDS = [
   { id: "b1cb7a96-d82b-40b1-80b1-d6dd26c56e28", name: "Indian River Direct", slug: "indian-river-direct" },
@@ -50,26 +53,29 @@ export default function WholesaleLoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "", brandId: BRANDS[1].id });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [selectedBrand, setSelectedBrand] = useState(BRANDS[1]);
-
-  useEffect(() => {
-    const found = BRANDS.find(b => b.id === form.brandId);
-    if (found) setSelectedBrand(found);
-  }, [form.brandId]);
-
-  useEffect(() => {
+  // Read ?error=... from the URL in the lazy initializer. Safe in a client
+  // component since window is always defined here, and avoids a
+  // set-state-in-effect on mount.
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
     if (err === "portal_disabled") {
-      setError("The wholesale portal is currently disabled. Contact us for assistance.");
-    } else if (err === "account_not_active") {
-      setError("Your account is not active. Please contact support or register for a new account.");
-    } else if (err === "invalid_credentials") {
-      setError("Invalid email or password. Please try again.");
+      return "The wholesale portal is currently disabled. Contact us for assistance.";
     }
-  }, []);
+    if (err === "account_not_active") {
+      return "Your account is not active. Please contact support or register for a new account.";
+    }
+    if (err === "invalid_credentials") {
+      return "Invalid email or password. Please try again.";
+    }
+    return null;
+  });
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  // Derive selectedBrand from form.brandId during render — no effect needed.
+  // form.brandId is always a valid BRANDS id, so this lookup is O(n) over a 2-item array.
+  const selectedBrand = BRANDS.find(b => b.id === form.brandId) ?? BRANDS[1];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -75,7 +75,7 @@ export default function IndianRiverContactPage() {
               <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-4">Get in Touch</p>
               <h1 className="text-5xl md:text-6xl font-black tracking-tight text-stone-950 leading-tight">Contact Us</h1>
               <p className="mt-5 text-lg text-stone-600 max-w-xl mx-auto leading-relaxed">
-                Questions about citrus, your order, or becoming a wholesale partner? We'd love to hear from you.
+                Questions about citrus, your order, or becoming a wholesale partner? We&apos;d love to hear from you.
               </p>
             </motion.div>
 

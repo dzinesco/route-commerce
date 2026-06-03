@@ -6,6 +6,7 @@ import OrderPickupAction from "@/components/admin/OrderPickupAction";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { formatDate } from "@/lib/format-date";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 type OrderDetailPageProps = {
   params: Promise<{
@@ -26,12 +27,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     return (
       <main className="min-h-screen px-6 py-10">
         <div className="mx-auto max-w-4xl">
-          <a
+          <Link
             href="/admin/orders"
             className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700"
           >
             ← Back to Orders
-          </a>
+          </Link>
           <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
             <p className="text-lg font-semibold text-red-700">Order not found</p>
           </div>
@@ -62,14 +63,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <a
+            <Link
               href="/admin/orders"
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
-            </a>
+            </Link>
             <div>
               <h1 className="text-2xl font-bold text-stone-950 tracking-tight">Order Details</h1>
               <p className="text-sm text-stone-500">{formatDate(order.created_at)}</p>

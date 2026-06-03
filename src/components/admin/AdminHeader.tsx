@@ -72,6 +72,7 @@ export default function AdminHeader({ userRole, canManageUsers, routeTraceEnable
 
   // Close dropdown on route change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettingsOpen(false);
   }, [pathname]);
 

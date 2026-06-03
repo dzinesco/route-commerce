@@ -180,7 +180,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
                 {/* Brand row */}
                 <div className="flex items-center justify-between">
                   <span className="text-[6px] font-bold uppercase tracking-widest text-stone-400">Route Trace</span>
-                  <span className="text-[5px] text-stone-300">{stickerSize}"</span>
+                  <span className="text-[5px] text-stone-300">{stickerSize}&quot;</span>
                 </div>
 
                 {/* Lot number — dominant */}
@@ -273,7 +273,7 @@ export default function StickerPreviewModal({ lot, onClose }: { lot: LotDetail; 
           {/* Print specs */}
           <div className="rounded-xl bg-stone-50 border border-stone-200 px-4 py-2.5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-stone-700">Direct Thermal · {stickerSize}" · Black on White · Large QR</p>
+              <p className="text-xs font-semibold text-stone-700">Direct Thermal · {stickerSize}&quot; · Black on White · Large QR</p>
               <p className="text-[10px] text-stone-400 mt-0.5">Helvetica Bold · High-contrast QR · No margins · 2 per sheet</p>
             </div>
             <div className="text-right">

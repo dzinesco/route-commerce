@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createStop } from "@/actions/stops/create-stop";
 import { AdminInput, AdminTextInput, AdminSelect, AdminButton, useToast } from "./design-system";
 
@@ -336,12 +337,12 @@ export default function NewStopForm({ duplicateFrom }: Props) {
           {loading ? "Creating..." : "Create Stop"}
         </AdminButton>
 
-        <a
+        <Link
           href="/admin/stops"
           className="rounded-xl border border-[var(--admin-border)] px-6 py-3 font-medium text-stone-600 hover:bg-stone-50 transition-colors"
         >
           Cancel
-        </a>
+        </Link>
       </div>
     </form>
   );

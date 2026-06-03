@@ -38,26 +38,25 @@ export async function createStop(
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  // Use anon key — the RPC is SECURITY DEFINER so it bypasses RLS regardless
+  // of caller. This also means a missing SUPABASE_SERVICE_ROLE_KEY in
+  // production no longer breaks stop creation.
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  const slug = `${data.city.toLowerCase().replace(/\s+/g, "-")}-${data.date || new Date().toISOString().slice(0, 10)}`;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/stops`, {
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/admin_create_stop`, {
     method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
+    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
     body: JSON.stringify({
-      city: data.city,
-      state: data.state,
-      location: data.location,
-      date: data.date,
-      time: data.time,
-      slug,
-      brand_id: brandId,
-      active: data.active ?? false,
-      address: data.address ?? null,
-      zip: data.zip ?? null,
-      cutoff_time: data.cutoff_time ?? null,
-      status: "draft",
+      p_brand_id: brandId,
+      p_city: data.city,
+      p_state: data.state,
+      p_location: data.location,
+      p_date: data.date,
+      p_time: data.time,
+      p_address: data.address ?? null,
+      p_zip: data.zip ?? null,
+      p_cutoff_time: data.cutoff_time ?? null,
+      p_active: data.active ?? false,
     }),
   });
 
@@ -67,5 +66,5 @@ export async function createStop(
   }
 
   const inserted = await res.json();
-  return { success: true, id: inserted[0]?.id ?? "" };
+  return { success: true, id: inserted?.id ?? "" };
 }

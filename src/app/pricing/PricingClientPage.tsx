@@ -84,27 +84,27 @@ export default function PricingClientPage() {
       </header>
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-b from-slate-50 to-white px-6 py-20 text-center" aria-labelledby="pricing-heading">
+      <section className="bg-gradient-to-b from-slate-50 to-white px-4 sm:px-6 py-16 sm:py-20 text-center" aria-labelledby="pricing-heading">
         <div className="mx-auto max-w-3xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium text-emerald-700">
             <span className="text-xs" aria-hidden="true">✦</span>
             Built for produce wholesale operations
           </div>
-          <h1 id="pricing-heading" className="text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl">
+          <h1 id="pricing-heading" className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-slate-900">
             Pricing that scales<br className="hidden sm:block" /> with your operation
           </h1>
-          <p className="mt-6 text-xl text-slate-500">
+          <p className="mt-4 sm:mt-6 text-lg sm:text-xl text-slate-500">
             From small farms to enterprise distributors — everything you need to manage orders, stops, communications, and billing in one platform.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-4">
+          <div className="mt-6 sm:mt-8 flex items-center justify-center gap-4 flex-wrap">
             <BillingToggle cycle={billingCycle} onChange={setBillingCycle} />
-            <span className="text-sm text-emerald-600 font-medium">Save 25% with annual</span>
+            <span className="text-xs sm:text-sm text-emerald-600 font-medium">Save 25% with annual</span>
           </div>
         </div>
       </section>
 
       {/* ── Plan cards ───────────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-6" aria-labelledby="plans-heading">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-6" aria-labelledby="plans-heading">
         <h2 id="plans-heading" className="sr-only">Available Plans</h2>
         <div className="grid gap-6 lg:grid-cols-3">
           {(Object.entries(PLAN_TIERS) as [keyof typeof PLAN_TIERS, typeof PLAN_TIERS[keyof typeof PLAN_TIERS]][]).map(([key, plan]) => {
@@ -115,25 +115,25 @@ export default function PricingClientPage() {
             return (
               <article 
                 key={key} 
-                className={`relative flex flex-col rounded-2xl border-2 p-6 transition-transform hover:-translate-y-1 ${
+                className={`relative flex flex-col rounded-2xl border-2 p-5 sm:p-6 transition-transform hover:-translate-y-1 ${
                   isMostPopular ? "border-emerald-500 shadow-lg shadow-emerald-100" : "border-slate-200 shadow-sm"
                 }`}
               >
                 {isMostPopular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-1 text-xs font-bold text-white uppercase tracking-wide shadow-md">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 px-3 sm:px-4 py-1 text-xs font-bold text-white uppercase tracking-wide shadow-md">
                     Most Popular
                   </div>
                 )}
-                <div className="mb-5">
-                  <h3 className="text-lg font-bold text-slate-900">{plan.label}</h3>
-                  <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
+                <div className="mb-4 sm:mb-5">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">{plan.label}</h3>
+                  <p className="mt-1 text-xs sm:text-sm text-slate-500">{plan.description}</p>
                 </div>
                 <div className="mb-1">
-                  <span className="text-4xl font-bold text-slate-900">${price}</span>
-                  <span className="ml-1 text-slate-400">/{billingCycle === "annual" ? "yr" : "mo"}</span>
+                  <span className="text-3xl sm:text-4xl font-bold text-slate-900">${price}</span>
+                  <span className="ml-1 text-slate-400 text-sm">/{billingCycle === "annual" ? "yr" : "mo"}</span>
                 </div>
                 {monthlyEquivalent !== null && (
-                  <p className="mb-4 text-xs text-slate-400">${monthlyEquivalent}/mo equivalent</p>
+                  <p className="mb-3 sm:mb-4 text-xs text-slate-400">${monthlyEquivalent}/mo equivalent</p>
                 )}
                 <Link
                   href="/admin"

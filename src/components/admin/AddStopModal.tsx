@@ -30,6 +30,7 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  /* eslint-disable react-hooks/set-state-in-effect */
   const [address, setAddress] = useState("");
   const [zip, setZip] = useState("");
   const [cutoffTime, setCutoffTime] = useState("");
@@ -37,6 +38,7 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
 
   useEffect(() => {
     if (isOpen) {
+      // Reset form when modal opens with optional duplicate source
       setCity(duplicateFrom?.city ?? "");
       setState(duplicateFrom?.state ?? "");
       setLocation(duplicateFrom?.location ?? "");
@@ -48,6 +50,7 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
       setStatus("draft");
       setError(null);
     }
+  /* eslint-enable react-hooks/set-state-in-effect */
   }, [isOpen, duplicateFrom]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {

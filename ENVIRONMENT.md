@@ -91,6 +91,8 @@ Signing secret for Resend webhook payloads.
 
 ### AI
 
+The platform supports five AI providers. Each brand can override per-provider keys in the admin AI Provider panel (`/admin/settings/ai`). Env vars here are fallbacks for when no per-brand key is configured.
+
 #### `OPENAI_API_KEY`
 OpenAI API key for AI features (AI Intelligence Pack add-on).
 - **Where to get:** [OpenAI Platform](https://platform.openai.com) → API Keys → Create secret key
@@ -100,6 +102,20 @@ OpenAI API key for AI features (AI Intelligence Pack add-on).
 OpenAI organization ID (optional — for workspace-level usage tracking).
 - **Where to get:** OpenAI Platform → Settings → Organization ID
 - **Format:** `org-...`
+
+#### `MINIMAX_API_KEY`
+MiniMax (MiniMax) API key — OpenAI-compatible. **Pre-launch default provider.**
+- **Where to get:** [MiniMax Platform](https://platform.minimax.io) → API Keys
+- **Format:** `ey...` (JWT-style)
+- **Used by:** `getAIClient()` falls back to this when no per-brand key is set. `ai-import.ts` Import Center also prefers this over `OPENAI_API_KEY` when both are set.
+
+#### `MINIMAX_BASE_URL` (optional)
+Override the MiniMax API base URL.
+- **Default:** `https://api.minimax.io/v1` (global)
+- **China:** `https://api.minimaxi.com/v1` (mainland endpoint, lower latency inside China)
+
+#### Other providers
+The admin panel also accepts per-brand keys for **Anthropic** (`sk-ant-...`), **Google Gemini** (`AIza...`), **xAI** (`xai-...`), and **custom** OpenAI-compatible endpoints. These can also be set globally via `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`.
 
 ### Square
 

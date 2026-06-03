@@ -1,12 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import ContactClientPage from "./ContactClientPage";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
 
 export const metadata: Metadata = {
-  title: "Contact Us",
+  title: "Contact Us — Route Commerce",
   description: "Get in touch with Route Commerce. Questions about produce, wholesale accounts, or becoming a partner? We'd love to hear from you.",
-  keywords: ["Route Commerce contact", "produce wholesale inquiry", "partnership questions", "agriculture platform support"],
+  keywords: ["Route Commerce contact", "produce wholesale inquiry", "partnership questions", "agriculture platform support", "contact form", "support"],
+  authors: [{ name: "Route Commerce" }],
+  creator: "Route Commerce",
+  publisher: "Route Commerce",
   openGraph: {
     title: "Contact Us — Route Commerce",
     description: "Get in touch with Route Commerce. Questions about produce, wholesale accounts, or becoming a partner.",
@@ -26,8 +29,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Contact Us — Route Commerce",
-    description: "Get in touch with Route Commerce. Questions about produce, wholesale accounts, or becoming a partner.",
+    description: "Get in touch with Route Commerce.",
     site: "@RouteCommerce",
+    creator: "@RouteCommerce",
     images: ["/og-default.jpg"],
   },
   alternates: {
@@ -37,6 +41,12 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function ContactPage() {

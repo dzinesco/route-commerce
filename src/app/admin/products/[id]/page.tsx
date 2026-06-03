@@ -3,6 +3,7 @@ import ProductEditForm from "@/components/admin/ProductEditForm";
 import { getAdminUser } from "@/lib/admin-permissions";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 type ProductDetailPageProps = {
   params: Promise<{
@@ -36,12 +37,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           <pre className="mt-4 rounded-xl bg-white p-4 text-sm text-stone-600">
             {error?.message ?? "Product not found"}
           </pre>
-          <a
+          <Link
             href="/admin/products"
             className="mt-4 inline-block text-stone-500 hover:text-stone-700"
           >
             ← Back to Products
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -50,12 +51,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   return (
     <main className="min-h-screen px-6 py-12" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-4xl">
-        <a
+        <Link
           href="/admin/products"
           className="text-sm text-stone-500 hover:text-stone-700"
         >
           ← Back to Products
-        </a>
+        </Link>
 
         <div className="mt-6 rounded-2xl bg-white p-8 shadow-xl shadow-stone-200/50">
           <div className="flex items-start justify-between">

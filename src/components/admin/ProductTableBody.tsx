@@ -206,7 +206,7 @@ export default function ProductTableBody({
                       />
                       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-80 rounded-xl bg-zinc-900 shadow-xl ring-1 ring-zinc-700 p-6">
                         <p className="text-sm font-semibold text-zinc-100">
-                          Delete "{product.name}"?
+                          Delete &quot;{product.name}&quot;?
                         </p>
                         <p className="mt-2 text-xs text-zinc-500">
                           This will remove the product. If it is attached to any

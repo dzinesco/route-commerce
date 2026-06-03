@@ -36,7 +36,7 @@ export default function ErrorPage({
 
         <h1 className="text-4xl font-black text-white mb-4">Our Story Unavailable</h1>
         <p className="text-blue-100 mb-8 leading-relaxed">
-          We couldn't load our story page. Please try again.
+          We couldn&apos;t load our story page. Please try again.
         </p>
 
         {process.env.NODE_ENV === "development" && (

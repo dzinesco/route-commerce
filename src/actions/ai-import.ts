@@ -119,7 +119,14 @@ async function callAIAnalysis(
   rows: string[][],
   brandId: string
 ): Promise<ImportAnalysis> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  // Prefer MiniMax (env-level) — the team is using it pre-launch. Fall back to OpenAI.
+  const provider: "minimax" | "openai" =
+    process.env.MINIMAX_API_KEY ? "minimax" : process.env.OPENAI_API_KEY ? "openai" : "openai";
+  const apiKey = provider === "minimax" ? process.env.MINIMAX_API_KEY! : process.env.OPENAI_API_KEY!;
+  const baseURL = provider === "minimax"
+    ? (process.env.MINIMAX_BASE_URL || "https://api.minimax.io/v1")
+    : "https://api.openai.com/v1";
+  const model = provider === "minimax" ? "MiniMax-M3" : "gpt-4o-mini";
 
   // Build sample rows (first 30 for token economy)
   const sampleRows = rows.slice(0, 30);
@@ -174,21 +181,23 @@ Rules:
 - Do NOT add __entity_type to cleanedRows — only in columnMappings output`;
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${baseURL}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Headers: ${headers.join(", ")}\n\nData (first 30 rows):\n${sampleText.slice(0, 6000)}` },
         ],
-        response_format: { type: "json_object" },
+        // Note: response_format is OpenAI-specific. MiniMax /v1/chat/completions supports
+        // JSON-style prompting but may not honor `json_object`. We omit it for MiniMax.
+        ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
         temperature: 0.1,
       }),
     });
 
-    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+    if (!res.ok) throw new Error(`${provider} error: ${res.status}`);
 
     const data = await res.json();
     const parsed = JSON.parse(data.choices[0].message.content as string);

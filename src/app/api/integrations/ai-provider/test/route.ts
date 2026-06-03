@@ -87,8 +87,20 @@ export async function POST(req: NextRequest) {
       model,
     });
   } catch (err) {
-    return NextResponse.json({
-      error: "Connection test failed. Check your API key and endpoint.",
-    }, { status: 500 });
+    // Surface the actual SDK/API error so users can tell whether the
+    // failure is a bad key, a retired model, a quota issue, or a network
+    // problem — not a generic "check your key" message.
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+        ? err
+        : "Connection test failed. Check your API key and endpoint.";
+    // Some SDKs throw non-Error objects with a .status / .error property
+    const status =
+      (typeof err === "object" && err && "status" in err && typeof (err as { status?: unknown }).status === "number"
+        ? (err as { status: number }).status
+        : undefined) ?? 500;
+    return NextResponse.json({ error: message }, { status: status >= 400 && status < 600 ? status : 500 });
   }
 }

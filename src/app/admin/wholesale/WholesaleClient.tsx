@@ -1950,7 +1950,7 @@ function SettingsTab({ settings, brandId, onMsg, onRefresh, canManageSettings }:
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-[var(--admin-text-primary)]">Wholesale Portal</p>
-              <p className="text-sm text-[var(--admin-text-muted)]">Show the Wholesale Portal card on this brand's storefront page.</p>
+              <p className="text-sm text-[var(--admin-text-muted)]">Show the Wholesale Portal card on this brand&apos;s storefront page.</p>
             </div>
             <button
               onClick={() => setForm(f => ({ ...f, wholesaleEnabled: !f.wholesaleEnabled }))}

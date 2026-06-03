@@ -5,6 +5,7 @@ import { isFeatureEnabled } from "@/lib/feature-flags";
 import { getRouteTraceLotDetail, getLotOrders } from "@/actions/route-trace/lots";
 import LotDetailPanel from "@/components/route-trace/LotDetailPanel";
 import RouteTraceNav from "@/components/route-trace/RouteTraceNav";
+import Link from "next/link";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -45,7 +46,7 @@ export default async function LotDetailPage({ params }: { params: Promise<{ id: 
         <div className="mx-auto max-w-2xl">
           <div className="rounded-xl border border-red-200 bg-white p-6 text-center">
             <p className="text-red-600">Lot not found</p>
-            <a href="/admin/route-trace/lots" className="mt-3 inline-block text-sm text-stone-500 hover:text-stone-700">← Back to Lots</a>
+            <Link href="/admin/route-trace/lots" className="mt-3 inline-block text-sm text-stone-500 hover:text-stone-700">← Back to Lots</Link>
           </div>
         </div>
       </div>
@@ -56,7 +57,7 @@ export default async function LotDetailPage({ params }: { params: Promise<{ id: 
     <div className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
-          <a href="/admin/route-trace/lots" className="text-sm text-stone-500 hover:text-stone-700">← Back to Lots</a>
+          <Link href="/admin/route-trace/lots" className="text-sm text-stone-500 hover:text-stone-700">← Back to Lots</Link>
         </div>
         <RouteTraceNav activeTab="lots" />
         <LotDetailPanel

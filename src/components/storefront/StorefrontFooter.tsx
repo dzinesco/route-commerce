@@ -180,7 +180,7 @@ export default function StorefrontFooter({
                   Our Farm
                 </Link>
                 <Link href={`/${brandSlug}#products`} className="block text-sm text-stone-500 hover:text-stone-900 transition-colors">
-                  What's in Season
+                  What&apos;s in Season
                 </Link>
                 <Link href={`/${brandSlug}/contact`} className="block text-sm text-stone-500 hover:text-stone-900 transition-colors">
                   Visit Us
