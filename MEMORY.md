@@ -213,3 +213,35 @@ This MEMORY.md focuses on the Supabase login / link / migration tooling + SQL re
 See the session plan.md for the full detailed execution guide that was followed.
 
 **Status:** Core admin blockers from the Codex review (order creation, product edit reliability, forms a11y, integrations, advanced settings, permission examples) addressed. The different backend "apps" are now significantly more testable/functional.
+
+---
+
+## Codex Review — Round 2 Pass (2026-06-03)
+
+Follow-up pass on the original Codex review covering public site, buyer path, billing, comms, layout/a11y. Five sub-agents + one manual fix.
+
+### Round 2 commits
+
+1. `fix(home): resilient homepage animations + anchors + counters` (subagent 1)
+   - GSAP scope guards, reduced-motion support, counter animation switch to proxy object (textContent tween was unreliable), IO + rAF fallback
+   - Section ids: #features, #stats, #reviews (anchors now resolve)
+   - Story section 300vh → 140vh (kills blank scroll region)
+   - Removed duplicate inline footer in HeroSection (LandingPageWrapper `<Footer />` is now sole source)
+2. `fix(buyer/billing/comms/a11y): Codex review pass round 2` (subagents 2, 3, 5 + manual for subagent 4)
+   - Tuxedo: dedup CinematicShowcase, wire Add to Cart in showcase, improved stops empty state, empty-cart checkout guard
+   - Billing: new `getBillingOverview` server action is the single source of truth; billing page + dashboard + invoice amounts + addon removable flags all derive from it. Migration `203_plan_usage_active_products.sql` aligns `get_brand_plan_info` product count with the dashboard.
+   - Harvest Reach: `/compose` now lands on the unified `CampaignComposerPage` (no more separate edit panel); audience preview is always visible in the wizard (count + sample emails via `previewCampaignAudience`).
+   - Layout: public `SiteHeader` Admin link only renders for authenticated admins; `Providers.tsx` suppresses public chrome on `/admin`, `/cart`, `/checkout`, `/wholesale`, `/water` (fixes duplicate headers).
+   - Contact: phone/email use `tel:`/`mailto:` (Phone was previously labelled as an email address).
+   - Years: `2024`/`2025`/`2026` strings replaced with `new Date().getFullYear()` across public + admin pages.
+   - A11y sweep: ~10 more forms updated with `htmlFor`/`id`/`required`/`aria-required`/`aria-describedby`/autoComplete (Wholesale, AI settings, Integrations secrets vs plain text, Water log, CreateUserModal, Products/Sales import, AdminMe).
+
+### Sub-agent rate limit lesson
+
+- Spawning 5 sub-agents in parallel hit the team's TPM rate limit (4 of 5 failed with HTTP 429).
+- Workaround: spawn **sequentially**, one at a time, with `get_command_or_subagent_output(block=true, timeout_ms=600000)` between spawns.
+- Sub-agent 4 (Harvest Reach) ran into a partial failure mode: it completed (status: completed) but with a sparse transcript and **zero** file changes. Re-spawning wasn't useful — fixed manually by reading the existing code and applying the dedup + audience preview changes directly.
+
+### Migration 203 — applied via Supabase CLI
+
+`203_plan_usage_active_products.sql` updates `get_brand_plan_info` to count `products` where `active = true AND deleted_at IS NULL`, matching the dashboard's "Active Products" stat. The `NOTIFY pgrst, 'reload schema'` ensures PostgREST picks up the change without restart.
