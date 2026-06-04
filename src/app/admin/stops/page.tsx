@@ -1,10 +1,13 @@
 import StopTableClient from "@/components/admin/StopTableClient";
+import LocationsTab from "@/components/admin/LocationsTab";
 import StopsHeaderActions from "@/components/admin/StopsHeaderActions";
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { adminListLocations } from "@/actions/locations";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { PageHeader } from "@/components/admin/design-system";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 const StopIcon = () => (
   <svg className="h-5 w-5 sm:h-6 sm:w-6 text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -13,45 +16,52 @@ const StopIcon = () => (
   </svg>
 );
 
-export default async function AdminStopsPage() {
+const TABS = [
+  { value: "stops", label: "Stops" },
+  { value: "locations", label: "Locations" },
+] as const;
+type TabValue = (typeof TABS)[number]["value"];
+
+function isTab(v: string | undefined): v is TabValue {
+  return v === "stops" || v === "locations";
+}
+
+type PageProps = {
+  searchParams: Promise<{ tab?: string }>;
+};
+
+export default async function AdminStopsPage({ searchParams }: PageProps) {
   const adminUser = await getAdminUser();
 
   if (!adminUser) return <AdminAccessDenied />;
+  if (!adminUser.can_manage_stops) redirect("/admin/pickup");
 
-  if (!adminUser.can_manage_stops) {
-    redirect("/admin/pickup");
-  }
+  const params = await searchParams;
+  const tab: TabValue = isTab(params.tab) ? params.tab : "stops";
 
-  let query = supabase
+  // Always fetch stops + locations; the page is fast and a server component can
+  // hand both to the client. The Locations tab only needs the array — it does
+  // its own filtering in JS. Stops tab uses the existing client table.
+  const stopsQuery = supabase
     .from("stops")
     .select(`
-      id,
-      city,
-      state,
-      date,
-      time,
-      location,
-      active,
-      deleted_at,
-      brand_id,
-      address,
-      zip,
-      cutoff_time,
-      status,
-      brands (
-        name
-      )
+      id, city, state, date, time, location, active, deleted_at, brand_id,
+      address, zip, cutoff_time, status,
+      brands ( name )
     `)
     .is("deleted_at", null)
     .order("date", { ascending: true });
 
   if (adminUser?.brand_id) {
-    query = query.eq("brand_id", adminUser.brand_id);
+    stopsQuery.eq("brand_id", adminUser.brand_id);
   }
 
-  const { data: stops, error } = await query;
+  const [{ data: stops, error: stopsError }, locations] = await Promise.all([
+    stopsQuery,
+    adminListLocations(adminUser.brand_id ?? ""),
+  ]);
 
-  if (error) {
+  if (stopsError) {
     return (
       <main className="min-h-screen bg-[var(--admin-bg)]">
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
@@ -65,13 +75,20 @@ export default async function AdminStopsPage() {
               Error loading stops
             </h1>
             <pre className="mt-4 rounded-xl bg-white border border-[var(--admin-border)] p-4 text-sm text-[var(--admin-text-secondary)]">
-              {error.message}
+              {stopsError.message}
             </pre>
           </div>
         </div>
       </main>
     );
   }
+
+  const subtitle =
+    tab === "locations"
+      ? "Reusable venues. Each stop links to one venue, so editing here updates every stop using it."
+      : adminUser?.brand_id
+        ? "Managing stops for your brand."
+        : "Manage routes, pickup locations, dates, and cutoff times.";
 
   return (
     <main className="min-h-screen bg-[var(--admin-bg)]">
@@ -83,15 +100,57 @@ export default async function AdminStopsPage() {
           ]}
           icon={<StopIcon />}
           title="Stops & Routes"
-          subtitle={adminUser?.brand_id ? "Managing stops for your brand." : "Manage routes, pickup locations, dates, and cutoff times."}
-          actions={<StopsHeaderActions brandId={adminUser?.brand_id ?? ""} />}
+          subtitle={subtitle}
+          actions={<StopsHeaderActions brandId={adminUser?.brand_id ?? ""} tab={tab} />}
         />
+      </div>
+
+      {/* Tabs */}
+      <div className="px-4 sm:px-6 md:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div
+            className="flex gap-1 border-b border-[var(--admin-border)]"
+            role="tablist"
+            aria-label="Stops and Locations tabs"
+          >
+            {TABS.map((t) => {
+              const active = t.value === tab;
+              return (
+                <Link
+                  key={t.value}
+                  href={t.value === "stops" ? "/admin/stops" : "/admin/stops?tab=locations"}
+                  role="tab"
+                  aria-selected={active}
+                  className="relative px-4 py-2.5 text-sm font-semibold transition-colors"
+                  style={{
+                    color: active ? "var(--admin-text-primary)" : "var(--admin-text-muted)",
+                  }}
+                >
+                  {t.label}
+                  {active && (
+                    <span
+                      className="absolute left-0 right-0 -bottom-px h-0.5"
+                      style={{ background: "var(--admin-accent)" }}
+                      aria-hidden
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Content */}
       <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-        <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-white shadow-sm">
-          <StopTableClient stops={stops ?? []} />
+        <div className="max-w-6xl mx-auto">
+          <div className="overflow-hidden rounded-b-2xl rounded-t-none border border-t-0 border-[var(--admin-border)] bg-white shadow-sm">
+            {tab === "stops" ? (
+              <StopTableClient stops={stops ?? []} />
+            ) : (
+              <LocationsTab locations={locations} brandId={adminUser?.brand_id ?? ""} />
+            )}
+          </div>
         </div>
       </div>
     </main>

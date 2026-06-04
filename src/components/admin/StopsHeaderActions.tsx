@@ -8,12 +8,16 @@ import { AdminButton } from "@/components/admin/design-system";
 
 type Props = {
   brandId: string;
+  /** Hide on the Locations tab — actions belong to the Stops tab only. */
+  tab?: "stops" | "locations";
 };
 
-export default function StopsHeaderActions({ brandId }: Props) {
+export default function StopsHeaderActions({ brandId, tab = "stops" }: Props) {
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const router = useRouter();
+
+  if (tab !== "stops") return null;
 
   function handleImportComplete(count: number) {
     router.refresh();
