@@ -27,9 +27,11 @@ type StopEditFormProps = {
     cutoff_time?: string | null;
   };
   brands: Brand[];
+  /** Optional callback fired after a successful save. */
+  onSaved?: () => void;
 };
 
-export default function StopEditForm({ stop, brands }: StopEditFormProps) {
+export default function StopEditForm({ stop, brands, onSaved }: StopEditFormProps) {
   const router = useRouter();
   const { success: showSuccess, error: showError } = useToast();
   const [saving, setSaving] = useState(false);
@@ -99,6 +101,7 @@ export default function StopEditForm({ stop, brands }: StopEditFormProps) {
     showSuccess("Stop updated", `${city}, ${state} has been saved`);
     setSaved(true);
     setSaving(false);
+    onSaved?.();
     router.refresh();
   }
 

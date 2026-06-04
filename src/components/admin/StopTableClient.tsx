@@ -15,6 +15,7 @@ import {
 } from "@/components/admin/design-system";
 import ScheduleImportModal from "@/components/admin/ScheduleImportModal";
 import AddStopModal from "@/components/admin/AddStopModal";
+import StopDetailModal from "@/components/admin/StopDetailModal";
 
 type Stop = {
   id: string;
@@ -55,6 +56,7 @@ export default function StopTableClient({ stops }: Props) {
   const [bulkPublishing, setBulkPublishing] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [openStopId, setOpenStopId] = useState<string | null>(null);
   const PAGE_SIZE = 50;
 
   useEffect(() => {
@@ -349,6 +351,7 @@ export default function StopTableClient({ stops }: Props) {
                   e.stopPropagation();
                   toggleStopSelection(stop.id);
                 }}
+                onOpen={() => setOpenStopId(stop.id)}
               />
             ))
           )}
@@ -369,6 +372,13 @@ export default function StopTableClient({ stops }: Props) {
         brandId={stops[0]?.brand_id ?? ""}
         onSuccess={refresh}
       />
+
+      {openStopId && (
+        <StopDetailModal
+          stopId={openStopId}
+          onClose={() => setOpenStopId(null)}
+        />
+      )}
     </>
   );
 }
@@ -400,16 +410,16 @@ function StopRowBase({
   onDeleteError,
   isSelected,
   onToggleSelect,
+  onOpen,
 }: {
   stop: Stop;
   onDeleted: () => void;
   onDeleteError: (msg: string) => void;
   isSelected: boolean;
   onToggleSelect: (e: React.MouseEvent) => void;
+  onOpen: () => void;
 }) {
-  const router = useRouter();
   const { success: showSuccess, error: showError } = useToast();
-  const [, startTransition] = useTransition();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -417,10 +427,6 @@ function StopRowBase({
 
   const { date, weekday } = formatDate(stop.date);
   const time = formatTime(stop.time);
-
-  function goToEdit() {
-    startTransition(() => router.push(`/admin/stops/${stop.id}`));
-  }
 
   async function handlePublish() {
     setPublishingId(stop.id);
@@ -461,7 +467,7 @@ function StopRowBase({
 
   return (
     <tr
-      onClick={goToEdit}
+      onClick={onOpen}
       className={`group cursor-pointer transition-colors ${isSelected ? "bg-emerald-50/60" : "hover:bg-[var(--admin-bg-subtle)]/60"}`}
     >
       <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
