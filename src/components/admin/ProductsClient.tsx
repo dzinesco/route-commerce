@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef, useTransition } from "react";
+import { useState, useCallback, useTransition, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createProduct } from "@/actions/products/create-product";
 import { updateProduct } from "@/actions/products/update-product";
 import { deleteProduct } from "@/actions/products";
 import { uploadProductImage } from "@/actions/products/upload-image";
-import GlassModal from "@/components/admin/GlassModal";
+import ProductFormModal, { type ProductFormValues } from "@/components/admin/ProductFormModal";
 import { PageHeader, AdminButton, AdminIconButton, AdminSearchInput, AdminFilterTabs, AdminViewModeTabs, useToast, Skeleton } from "@/components/admin/design-system";
 
 type Product = {
@@ -19,16 +20,6 @@ type Product = {
   active: boolean;
   image_url?: string | null;
   brand_id: string;
-  is_taxable: boolean;
-};
-
-type FormData = {
-  name: string;
-  description: string;
-  price: string;
-  type: string;
-  active: boolean;
-  image_url: string;
   is_taxable: boolean;
 };
 
@@ -74,7 +65,17 @@ const PackageIconHeader = () => (
   </svg>
 );
 
-export default function ProductsClient({ products, brandId }: { products: Product[]; brandId?: string }) {
+export default function ProductsClient({
+  products,
+  brandId,
+  brands = [],
+  isPlatformAdmin = false,
+}: {
+  products: Product[];
+  brandId?: string;
+  brands?: { id: string; name: string }[];
+  isPlatformAdmin?: boolean;
+}) {
   const router = useRouter();
   const { success: showSuccess, error: showError } = useToast();
   const [, startTransition] = useTransition();
@@ -83,27 +84,9 @@ export default function ProductsClient({ products, brandId }: { products: Produc
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    description: "",
-    price: "",
-    type: "pickup",
-    active: true,
-    image_url: "",
-    is_taxable: true,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Image upload states
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = products.filter((p) => {
     const matchesSearch =
@@ -147,165 +130,104 @@ export default function ProductsClient({ products, brandId }: { products: Produc
     });
   }
 
-  async function handleFileSelect(file: File) {
-    const validTypes = ["image/png", "image/jpeg", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      setUploadError("Only PNG, JPEG, and WebP images are allowed.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("Image must be under 5MB.");
-      return;
-    }
+  const handleUploadImage = useCallback(
+    async (file: File): Promise<{ success: boolean; imageUrl?: string; error?: string }> => {
+      const validTypes = ["image/png", "image/jpeg", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        return { success: false, error: "Only PNG, JPEG, and WebP images are allowed." };
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        return { success: false, error: "Image must be under 5MB." };
+      }
 
-    setUploadError(null);
-    setUploading(true);
+      const resizedBuffer = await resizeImage(file, 1200);
+      const resizedFile = new File([resizedBuffer], file.name, { type: "image/jpeg" });
 
-    const resizedBuffer = await resizeImage(file, 1200);
-    const resizedFile = new File([resizedBuffer], file.name, { type: "image/jpeg" });
-
-    const productIdForUpload = editingProduct ? editingProduct.id : "__NEW__";
-    const result = await uploadProductImage(productIdForUpload, resizedFile);
-
-    setUploading(false);
-
-    if (result.success) {
-      setPendingImageUrl(result.imageUrl);
-      setImagePreview(result.imageUrl);
-      setFormData({ ...formData, image_url: result.imageUrl });
-    } else {
-      setUploadError(result.error ?? "Upload failed.");
-    }
-  }
+      const productIdForUpload = editingProduct ? editingProduct.id : "__NEW__";
+      const result = await uploadProductImage(productIdForUpload, resizedFile);
+      if (result.success) {
+        return { success: true, imageUrl: result.imageUrl };
+      }
+      return { success: false, error: result.error };
+    },
+    [editingProduct]
+  );
 
   const openAddModal = useCallback(() => {
     setEditingProduct(null);
-    setFormData({
-      name: "",
-      description: "",
-      price: "",
-      type: "pickup",
-      active: true,
-      image_url: "",
-      is_taxable: true,
-    });
-    setImagePreview(null);
-    setPendingImageUrl(null);
-    setUploadError(null);
-    setError(null);
     setShowModal(true);
   }, []);
 
   const openEditModal = useCallback((product: Product) => {
     setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      description: product.description || "",
-      price: String(product.price),
-      type: product.type,
-      active: product.active,
-      image_url: product.image_url || "",
-      is_taxable: product.is_taxable,
-    });
-    setImagePreview(product.image_url || null);
-    setPendingImageUrl(null);
-    setUploadError(null);
-    setError(null);
     setShowModal(true);
   }, []);
 
   const closeModal = useCallback(() => {
     setShowModal(false);
     setEditingProduct(null);
-    setImagePreview(null);
-    setPendingImageUrl(null);
-    setUploadError(null);
-    setError(null);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSaving(true);
-    setIsLoading(true);
-
-    const price = parseFloat(formData.price);
-    if (isNaN(price) || price < 0) {
-      setError("Please enter a valid price");
-      setSaving(false);
-      setIsLoading(false);
-      return;
-    }
-
-    if (!formData.name.trim()) {
-      setError("Product name is required");
-      setSaving(false);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const imageUrl = pendingImageUrl || formData.image_url || null;
-
-      let result;
-      if (editingProduct) {
-        // Edits: scope to the product's own brand. The page-level brandId
-        // prop can be undefined for platform_admins viewing all brands, but
-        // the product record always carries its own brand_id.
-        const productBrandId = editingProduct.brand_id;
-        if (!productBrandId) {
-          setError("This product is missing a brand assignment");
-          setSaving(false);
-          setIsLoading(false);
-          return;
+  const handleModalSubmit = useCallback(
+    async (values: ProductFormValues): Promise<{ success: boolean; error?: string }> => {
+      setIsLoading(true);
+      try {
+        const price = parseFloat(values.price);
+        if (isNaN(price) || price < 0) {
+          return { success: false, error: "Please enter a valid price" };
         }
-        result = await updateProduct(editingProduct.id, productBrandId, {
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          price,
-          type: formData.type,
-          active: formData.active,
-          image_url: imageUrl,
-          is_taxable: formData.is_taxable,
-        });
-      } else {
-        // Creates: require the page-level brandId prop (no product to pull from).
-        if (!brandId) {
-          setError("Brand ID is required");
-          setSaving(false);
-          setIsLoading(false);
-          return;
+        if (!values.name.trim()) {
+          return { success: false, error: "Product name is required" };
         }
-        result = await createProduct(brandId, {
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          price,
-          type: formData.type,
-          active: formData.active,
-          image_url: imageUrl,
-          is_taxable: formData.is_taxable,
-        });
-      }
 
-      if (!result.success) {
-        setError(result.error ?? "Failed to save product");
-        showError("Failed to save product", result.error ?? "Please try again");
-        setSaving(false);
+        // Platform admins pick a brand in the modal; everyone else is locked.
+        const effectiveBrandId = isPlatformAdmin ? values.brand_id : brandId;
+        if (!effectiveBrandId) {
+          return { success: false, error: "Please choose a brand for this product." };
+        }
+
+        let result;
+        if (editingProduct) {
+          result = await updateProduct(editingProduct.id, effectiveBrandId, {
+            name: values.name.trim(),
+            description: values.description.trim(),
+            price,
+            type: values.type,
+            active: values.active,
+            image_url: values.image_url,
+            is_taxable: values.is_taxable,
+          });
+        } else {
+          result = await createProduct(effectiveBrandId, {
+            name: values.name.trim(),
+            description: values.description.trim(),
+            price,
+            type: values.type,
+            active: values.active,
+            image_url: values.image_url,
+            is_taxable: values.is_taxable,
+          });
+        }
+
+        if (!result.success) {
+          showError("Failed to save product", result.error ?? "Please try again");
+          return { success: false, error: result.error };
+        }
+
+        showSuccess(
+          editingProduct ? "Product updated" : "Product created",
+          `${values.name} has been saved`
+        );
+        startTransition(() => router.refresh());
+        return { success: true };
+      } catch {
+        return { success: false, error: "Network error. Please try again." };
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      showSuccess(editingProduct ? "Product updated" : "Product created", `${formData.name} has been saved`);
-      closeModal();
-      setIsLoading(false);
-      startTransition(() => router.refresh());
-    } catch {
-      setError("Network error. Please try again.");
-      showError("Network error", "Please check your connection and try again");
-      setSaving(false);
-      setIsLoading(false);
-    }
-  };
+    },
+    [editingProduct, brandId, isPlatformAdmin, router, showError, showSuccess]
+  );
 
   const handleDelete = async (productId: string) => {
     setDeletingId(productId);
@@ -409,202 +331,35 @@ export default function ProductsClient({ products, brandId }: { products: Produc
         />
       )}
 
-      {/* Modal */}
-      {showModal && (
-        <GlassModal
-          title={editingProduct ? "Edit Product" : "Add Product"}
-          subtitle={editingProduct ? `Editing ${editingProduct.name}` : "Create a new product"}
-          onClose={closeModal}
-        >
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 flex items-start gap-3">
-                <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Product name"
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] transition-colors ${
-                  error && !formData.name.trim()
-                    ? "border-red-400 bg-red-50"
-                    : "border-[var(--admin-border)] bg-white focus:border-[var(--admin-accent)]"
-                }`}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Product description"
-                rows={2}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20 placeholder:text-[var(--admin-text-muted)] resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                  Price <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0.00"
-                    className={`w-full rounded-xl border pl-8 pr-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 ${
-                      error && (!formData.price || parseFloat(formData.price) < 0)
-                        ? "border-red-400 bg-red-50"
-                        : "border-[var(--admin-border)] bg-white focus:border-[var(--admin-accent)]"
-                    }`}
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1.5">Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full rounded-xl border border-[var(--admin-border)] bg-white px-3 py-2.5 text-sm text-[var(--admin-text-primary)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/20"
-                >
-                  <option value="pickup">Pickup</option>
-                  <option value="wholesale">Wholesale</option>
-                  <option value="subscription">Subscription</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">Product Image</label>
-              <p className="text-[10px] text-stone-500 mb-2">JPG, PNG, WebP · 1200px max width · max 5MB</p>
-
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files[0];
-                  if (file) handleFileSelect(file);
-                }}
-                onClick={() => !uploading && fileInputRef.current?.click()}
-                className={`
-                  flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-colors
-                  ${uploadError ? "border-red-400" : "border-[var(--admin-border)] hover:border-[var(--admin-accent)] hover:bg-[var(--admin-accent)]/5"}
-                  ${uploading ? "opacity-50 pointer-events-none" : ""}
-                `}
-              >
-                {uploading ? (
-                  <>
-                    <div className="h-5 w-5 rounded-full border-2 border-[var(--admin-accent)] border-t-transparent animate-spin" />
-                    <span className="text-sm text-stone-500">Uploading...</span>
-                  </>
-                ) : imagePreview ? (
-                  <div className="relative">
-                    <div className="relative h-32 sm:h-40 w-auto">
-                      <Image src={imagePreview} alt="Product preview" fill style={{ objectFit: "contain" }} className="rounded-lg" />
-                    </div>
-                    <span className="block text-center text-xs text-stone-500 mt-2">Click or drop to replace</span>
-                  </div>
-                ) : (
-                  <>
-                    {Icons.upload("h-8 w-8 text-stone-400")}
-                    <span className="text-sm text-stone-500">Drag & drop or click to upload</span>
-                  </>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect(file);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
-
-              {uploadError && (
-                <p className="mt-1 text-xs text-red-500">{uploadError}</p>
-              )}
-
-              {(imagePreview || formData.image_url) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImagePreview(null);
-                    setPendingImageUrl(null);
-                    setFormData({ ...formData, image_url: "" });
-                  }}
-                  className="mt-2 text-xs text-red-500 hover:underline"
-                >
-                  Remove image
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.active}
-                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/30 focus:ring-offset-1 cursor-pointer"
-                />
-                <span className="text-sm font-medium text-stone-700">Active</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.is_taxable}
-                  onChange={(e) => setFormData({ ...formData, is_taxable: e.target.checked })}
-                  className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent)]/30 focus:ring-offset-1 cursor-pointer"
-                />
-                <span className="text-sm font-medium text-stone-700">Taxable</span>
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
-              <AdminButton
-                type="button"
-                variant="secondary"
-                onClick={closeModal}
-              >
-                Cancel
-              </AdminButton>
-              <AdminButton
-                type="submit"
-                variant="primary"
-                isLoading={saving}
-                disabled={!formData.name.trim() || !formData.price}
-              >
-                {editingProduct ? "Save Changes" : "Create Product"}
-              </AdminButton>
-            </div>
-          </form>
-        </GlassModal>
-      )}
+      {/* Modal — Atelier des Récoltes (editorial product form) */}
+      <ProductFormModal
+        open={showModal}
+        mode={editingProduct ? "edit" : "add"}
+        onClose={closeModal}
+        onSubmit={handleModalSubmit}
+        onUploadImage={handleUploadImage}
+        brands={brands}
+        lockBrand={!isPlatformAdmin}
+        lockedBrandId={brandId ?? ""}
+        initial={
+          editingProduct
+            ? {
+                name: editingProduct.name,
+                description: editingProduct.description || "",
+                price: String(editingProduct.price),
+                type: (editingProduct.type as "pickup" | "wholesale" | "subscription") ?? "pickup",
+                brand_id: editingProduct.brand_id,
+                active: editingProduct.active,
+                is_taxable: editingProduct.is_taxable,
+              }
+            : undefined
+        }
+        initialImageUrl={editingProduct?.image_url ?? null}
+      />
     </div>
   );
 }
+
 
 // ── Table View ─────────────────────────────────────────────────────────────────
 
@@ -625,8 +380,51 @@ function TableView({
   onDeleteCancel: () => void;
   deletingId: string | null;
 }) {
+  // Track the position of the open row's three-dots button so the popup can be
+  // rendered via portal at body level (escapes any overflow:hidden ancestors
+  // and any table-row stacking-context quirks).
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!deleteConfirm) {
+      setMenuPos(null);
+      return;
+    }
+    const btn = buttonRefs.current[deleteConfirm];
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, left: rect.right, width: rect.width });
+    }
+  }, [deleteConfirm]);
+
+  // Reposition on scroll/resize so the popup stays anchored to its button.
+  useEffect(() => {
+    if (!deleteConfirm) return;
+    const updatePos = () => {
+      const btn = buttonRefs.current[deleteConfirm];
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        setMenuPos({ top: rect.bottom + 4, left: rect.right, width: rect.width });
+      }
+    };
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [deleteConfirm]);
+
+  const openProduct = deleteConfirm ? products.find((p) => p.id === deleteConfirm) : null;
+
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--admin-border)] bg-white">
+    <div className="overflow-visible rounded-xl border border-[var(--admin-border)] bg-white">
       <table className="w-full text-sm">
         <thead className="bg-stone-50">
           <tr>
@@ -710,44 +508,15 @@ function TableView({
                       Edit
                     </AdminButton>
                     <button
+                      ref={(el) => { buttonRefs.current[product.id] = el; }}
                       onClick={() => onDelete(product.id)}
                       className="rounded-lg px-2 py-1.5 text-xs text-[var(--admin-text-muted)] hover:text-red-600 hover:bg-red-50 transition-colors"
+                      aria-label="Product actions"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                       </svg>
                     </button>
-
-                    {deleteConfirm === product.id && (
-                      <>
-                        <div className="fixed inset-0 z-30" onClick={onDeleteCancel} />
-                        <div className="absolute right-0 top-full mt-1 z-40 w-72 rounded-xl bg-white border border-[var(--admin-border)] shadow-xl p-4">
-                          <p className="text-sm font-semibold text-stone-900">
-                            Delete &quot;{product.name}&quot;?
-                          </p>
-                          <p className="mt-1 text-xs text-stone-500">
-                            This will remove the product. If attached to orders, it will be hidden.
-                          </p>
-                          <div className="mt-3 flex gap-2">
-                            <button
-                              onClick={onDeleteCancel}
-                              className="flex-1 rounded-lg border border-[var(--admin-border)] bg-white px-3 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
-                            >
-                              Cancel
-                            </button>
-                            <AdminButton
-                              onClick={() => onDeleteConfirm(product.id)}
-                              disabled={deletingId === product.id}
-                              variant="danger"
-                              size="sm"
-                              className="flex-1"
-                            >
-                              {deletingId === product.id ? "..." : "Delete"}
-                            </AdminButton>
-                          </div>
-                        </div>
-                      </>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -755,6 +524,50 @@ function TableView({
           )}
         </tbody>
       </table>
+
+      {/* Delete confirmation popup — rendered via portal at body level with
+          position: fixed so it sits above all table rows and escapes the
+          overflow-visible container. */}
+      {mounted && deleteConfirm && openProduct && menuPos &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[60]"
+              onClick={onDeleteCancel}
+            />
+            <div
+              role="dialog"
+              aria-label="Confirm delete"
+              className="fixed z-[70] w-72 rounded-xl bg-white border border-[var(--admin-border)] shadow-xl p-4"
+              style={{ top: menuPos.top, left: menuPos.left, transform: "translateX(-100%)" }}
+            >
+              <p className="text-sm font-semibold text-stone-900">
+                Delete &quot;{openProduct.name}&quot;?
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                This will remove the product. If attached to orders, it will be hidden.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={onDeleteCancel}
+                  className="flex-1 rounded-lg border border-[var(--admin-border)] bg-white px-3 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+                >
+                  Cancel
+                </button>
+                <AdminButton
+                  onClick={() => onDeleteConfirm(openProduct.id)}
+                  disabled={deletingId === openProduct.id}
+                  variant="danger"
+                  size="sm"
+                  className="flex-1"
+                >
+                  {deletingId === openProduct.id ? "..." : "Delete"}
+                </AdminButton>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }

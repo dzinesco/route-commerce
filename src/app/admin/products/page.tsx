@@ -3,6 +3,7 @@ import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId } from "@/lib/brand-scope";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import ProductsClient from "@/components/admin/ProductsClient";
+import { getBrands } from "@/actions/admin/users";
 
 // Icon for page header
 const PackageIcon = () => (
@@ -32,6 +33,14 @@ export default async function AdminProductsPage() {
 
   const activeBrandId = await getActiveBrandId(adminUser);
   const brandId = activeBrandId;
+  const isPlatformAdmin = adminUser.role === "platform_admin";
+
+  // Platform admins need a brand picker for new products
+  let brands: { id: string; name: string }[] = [];
+  if (isPlatformAdmin) {
+    const result = await getBrands();
+    brands = result.brands ?? [];
+  }
 
   let query = supabase
     .from("products")
@@ -71,7 +80,12 @@ export default async function AdminProductsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--admin-bg)]">
-      <ProductsClient products={products ?? []} brandId={brandId ?? undefined} />
+      <ProductsClient
+        products={products ?? []}
+        brandId={brandId ?? undefined}
+        brands={brands}
+        isPlatformAdmin={isPlatformAdmin}
+      />
     </div>
   );
 }
