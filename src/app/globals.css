@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 @theme {
+  /* ─── Font families (Tailwind v4 @theme) ──────────────────────────
+   * Used by the editorial product pages:
+   *   font-display → Fraunces (variable serif, set per-page via next/font)
+   *   font-mono    → JetBrains Mono (variable, set per-page via next/font)
+   * Pages that don't load these fonts fall back to the system serif/mono
+   * stacks, so the rest of the app is unaffected.
+   */
+  --font-display: var(--font-display, ui-serif, Georgia, "Times New Roman", serif);
+  --font-mono: var(--font-mono, ui-monospace, "SF Mono", "JetBrains Mono", monospace);
   /* Apple-inspired dark palette — sophisticated depth */
   --color-surface-50: #f5f5f7;
   --color-surface-100: #e8e8ed;

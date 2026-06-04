@@ -30,6 +30,12 @@ type CartContextType = {
   cartRestored: boolean;  // true when server cart was loaded (for toast)
   setSelectedStop: (stop: StopInfo | null) => void;
   addToCart: (item: Omit<CartItem, "quantity">, fulfillment?: "pickup" | "ship") => void;
+  /**
+   * Replaces the cart with a single item (clears other items + selected stop)
+   * and returns the resulting item so the caller can navigate to /checkout
+   * for a true 1-tap "Buy Now" flow.
+   */
+  buyNow: (item: Omit<CartItem, "quantity">, fulfillment?: "pickup" | "ship") => CartItem;
   increaseQuantity: (id: string) => void;
   decreaseQuantity: (id: string) => void;
   removeFromCart: (id: string) => void;
@@ -201,6 +207,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  /**
+   * Replaces the entire cart with this single item. Use for "Buy Now" /
+   * "Quick Buy" flows where the buyer wants to skip the cart step and go
+   * straight to checkout. The returned CartItem reflects the final state
+   * (existing items of the same product are merged by quantity).
+   */
+  function buyNow(item: Omit<CartItem, "quantity">, fulfillment?: "pickup" | "ship"): CartItem {
+    // Always clear selected stop on a buy-now — the buyer is bypassing the
+    // standard stop-picker flow and will pick a stop at checkout.
+    setSelectedStop(null);
+
+    const finalItem: CartItem = {
+      ...item,
+      quantity: 1,
+      fulfillment: fulfillment ?? "pickup",
+    };
+    setCart([finalItem]);
+    setJustAdded(finalItem);
+    return finalItem;
+  }
+
   function increaseQuantity(id: string) {
     setCart((prev) =>
       prev.map((item) => (item.id === id ? { ...item, quantity: item.quantity + 1 } : item))
@@ -291,6 +318,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cartRestored: showRestoredToast,
         setSelectedStop: setSelectedStop,
         addToCart,
+        buyNow,
         increaseQuantity,
         decreaseQuantity,
         removeFromCart,
