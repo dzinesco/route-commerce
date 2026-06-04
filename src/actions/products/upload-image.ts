@@ -38,7 +38,11 @@ export async function uploadProductImage(
     `${supabaseUrl}/storage/v1/object/${PRODUCT_IMAGES_BUCKET_ID}/${path}`,
     {
       method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Authorization": `Bearer ${supabaseKey}`, "Content-Type": `image/${ext}`, "x-upsert": "true" },
+      headers: { 
+        ...svcHeaders(supabaseKey), 
+        "Content-Type": `image/${ext}`, 
+        "x-upsert": "true" 
+      },
       body: buffer,
     }
   );
