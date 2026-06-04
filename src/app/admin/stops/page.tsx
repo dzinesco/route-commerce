@@ -1,4 +1,5 @@
-import StopTableClient from "@/components/admin/StopTableClient";
+import StopsViewClient from "@/components/admin/StopsViewClient";
+import StopsHeaderActions from "@/components/admin/StopsHeaderActions";
 import LocationsTab from "@/components/admin/LocationsTab";
 import StopsLocationsTabs from "@/components/admin/StopsLocationsTabs";
 import StatsStrip from "@/components/admin/StatsStrip";
@@ -133,6 +134,11 @@ export default async function AdminStopsPage({ searchParams }: PageProps) {
             icon={<StopIcon />}
             title="Stops & Routes"
             subtitle={subtitle}
+            actions={
+              <StopsHeaderActions
+                brandId={activeBrandId ?? adminUser?.brand_id ?? ""}
+              />
+            }
           />
           <div className="mt-3 ml-[52px]">
             <StatsStrip
@@ -155,7 +161,7 @@ export default async function AdminStopsPage({ searchParams }: PageProps) {
             />
             <TabSwitcher tabKey={tab}>
               {tab === "stops" ? (
-                <StopTableClient stops={safeStops} />
+                <StopsViewClient stops={safeStops} />
               ) : (
                 <LocationsTab locations={locations} brandId={adminUser?.brand_id ?? ""} />
               )}

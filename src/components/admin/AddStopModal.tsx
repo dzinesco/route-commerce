@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { createStop } from "@/actions/stops/create-stop";
 import GlassModal from "@/components/admin/GlassModal";
 
@@ -21,12 +21,20 @@ type Props = {
   onSuccess?: (stopId: string) => void;
 };
 
+/* Pin icon for the modal header */
+const PinIcon = () => (
+  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
 export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [city, setCity] = useState("");
-  const [state, setState] = useState("");
+  const [stateField, setStateField] = useState("");
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -36,11 +44,13 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
   const [cutoffTime, setCutoffTime] = useState("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
 
+  const cityRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       // Reset form when modal opens with optional duplicate source
       setCity(duplicateFrom?.city ?? "");
-      setState(duplicateFrom?.state ?? "");
+      setStateField(duplicateFrom?.state ?? "");
       setLocation(duplicateFrom?.location ?? "");
       setDate(duplicateFrom?.date ?? "");
       setTime(duplicateFrom?.time ?? "");
@@ -49,272 +59,328 @@ export default function AddStopModal({ isOpen, onClose, brandId, duplicateFrom, 
       setCutoffTime(duplicateFrom?.cutoff_time ?? "");
       setStatus("draft");
       setError(null);
+      // Auto-focus city field for fast data entry
+      requestAnimationFrame(() => cityRef.current?.focus());
     }
   /* eslint-enable react-hooks/set-state-in-effect */
   }, [isOpen, duplicateFrom]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
 
-    if (!city.trim() || !state.trim() || !location.trim() || !date) {
-      setError("City, state, location, and date are required.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await createStop(brandId, {
-        city: city.trim(),
-        state: state.trim(),
-        location: location.trim(),
-        date,
-        time: time || "08:00",
-        address: address || undefined,
-        zip: zip || undefined,
-        cutoff_time: cutoffTime || undefined,
-        active: status === "active",
-      });
-
-      if (result.success) {
-        onSuccess?.(result.id);
-        onClose();
-      } else {
-        setError(result.error ?? "Failed to create stop");
+      if (!city.trim() || !stateField.trim() || !location.trim() || !date) {
+        setError("City, state, location, and date are required.");
+        return;
       }
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [brandId, city, state, location, date, time, address, zip, cutoffTime, status, onSuccess, onClose]);
+
+      setLoading(true);
+      try {
+        const result = await createStop(brandId, {
+          city: city.trim(),
+          state: stateField.trim(),
+          location: location.trim(),
+          date,
+          time: time || "08:00",
+          address: address || undefined,
+          zip: zip || undefined,
+          cutoff_time: cutoffTime || undefined,
+          active: status === "active",
+        });
+
+        if (result.success) {
+          onSuccess?.(result.id);
+          onClose();
+        } else {
+          setError(result.error ?? "Failed to create stop");
+        }
+      } catch {
+        setError("Network error. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      brandId,
+      city,
+      stateField,
+      location,
+      date,
+      time,
+      address,
+      zip,
+      cutoffTime,
+      status,
+      onSuccess,
+      onClose,
+    ]
+  );
 
   const isDuplicate = Boolean(duplicateFrom);
-  const title = isDuplicate ? "Duplicate Stop" : "Add New Stop";
-  const subtitle = isDuplicate && duplicateFrom
+  const title = isDuplicate ? "Duplicate Stop" : "Add Stop";
+  const eyebrow = isDuplicate && duplicateFrom
     ? `From ${duplicateFrom.city}, ${duplicateFrom.state}`
-    : "Create a new tour stop for your route.";
-
-  const inputStyle = {
-    background: 'rgba(0, 0, 0, 0.02)',
-    border: '1px solid rgba(0, 0, 0, 0.06)',
-    outline: 'none',
-  };
-
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-    e.target.style.background = 'rgba(16, 185, 129, 0.04)';
-    e.target.style.border = '1px solid rgba(16, 185, 129, 0.5)';
-    e.target.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)';
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-    e.target.style.background = 'rgba(0, 0, 0, 0.02)';
-    e.target.style.border = '1px solid rgba(0, 0, 0, 0.06)';
-    e.target.style.boxShadow = 'none';
-  };
+    : "New stop on the route";
+  const submitLabel = loading
+    ? isDuplicate ? "Duplicating…" : "Creating…"
+    : isDuplicate
+      ? "Duplicate Stop"
+      : status === "active"
+        ? "Create & Publish"
+        : "Save as Draft";
 
   if (!isOpen) return null;
 
   return (
-    <GlassModal title={title} subtitle={subtitle} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <GlassModal
+      title={title}
+      eyebrow={eyebrow}
+      onClose={onClose}
+      maxWidth="max-w-xl"
+      compact
+    >
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
         {error && (
-          <div className="rounded-xl px-4 py-3 text-sm text-red-600 backdrop-blur-sm" 
-            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-            {error}
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs text-[var(--admin-danger)]"
+            style={{ background: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.15)" }}
+          >
+            <svg className="h-3.5 w-3.5 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
+            </svg>
+            <span>{error}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2 space-y-1.5">
-            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">City</label>
+        {/* Row 1 — Where: City + State */}
+        <div className="grid grid-cols-[1fr_5.5rem] gap-3">
+          <div className="ha-field">
+            <label htmlFor="stop-city" className="ha-field-label">
+              <PinIcon />
+              <span>City</span>
+              <span className="ha-field-label-required">*</span>
+            </label>
             <input
+              ref={cityRef}
+              id="stop-city"
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="Denver"
-              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
-              style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              className="ha-field-input"
               required
+              autoComplete="address-level2"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">State</label>
+          <div className="ha-field">
+            <label htmlFor="stop-state" className="ha-field-label">
+              <span>State</span>
+              <span className="ha-field-label-required">*</span>
+            </label>
             <input
+              id="stop-state"
               type="text"
-              value={state}
-              onChange={(e) => setState(e.target.value.toUpperCase())}
+              value={stateField}
+              onChange={(e) => setStateField(e.target.value.toUpperCase())}
               placeholder="CO"
               maxLength={2}
-              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
-              style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              className="ha-field-input ha-field-input-mono text-center"
+              style={{ textTransform: "uppercase" }}
               required
+              autoComplete="address-level1"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Location</label>
+        {/* Row 2 — Where at: Location (full) */}
+        <div className="ha-field">
+          <label htmlFor="stop-location" className="ha-field-label">
+            <span>Location / Venue</span>
+            <span className="ha-field-label-required">*</span>
+          </label>
           <input
+            id="stop-location"
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="Whole Foods Market"
-            className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
-            style={inputStyle}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+            placeholder="Whole Foods Market — Highlands"
+            className="ha-field-input"
             required
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Date</label>
+        {/* Row 3 — When: Date + Time (with small clock icon) */}
+        <div className="grid grid-cols-[1fr_1fr] gap-3">
+          <div className="ha-field">
+            <label htmlFor="stop-date" className="ha-field-label">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" />
+              </svg>
+              <span>Pickup Date</span>
+              <span className="ha-field-label-required">*</span>
+            </label>
             <input
+              id="stop-date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 transition-all"
-              style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              className="ha-field-input ha-field-input-mono"
               required
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Pickup Time</label>
+          <div className="ha-field">
+            <label htmlFor="stop-time" className="ha-field-label">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" strokeLinecap="round" />
+              </svg>
+              <span>Pickup Time</span>
+            </label>
             <input
+              id="stop-time"
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 transition-all"
-              style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              className="ha-field-input ha-field-input-mono"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2 space-y-1.5">
-            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Address</label>
+        {/* Row 4 — Address + ZIP + Cutoff in 3 columns */}
+        <div className="grid grid-cols-[1fr_5.5rem_6.5rem] gap-3">
+          <div className="ha-field">
+            <label htmlFor="stop-address" className="ha-field-label">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" strokeLinejoin="round" />
+                <path d="M9 22V12h6v10" strokeLinejoin="round" />
+              </svg>
+              <span>Street Address</span>
+            </label>
             <input
+              id="stop-address"
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="123 Main St"
-              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
-              style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              className="ha-field-input"
+              autoComplete="street-address"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">ZIP</label>
+          <div className="ha-field">
+            <label htmlFor="stop-zip" className="ha-field-label">
+              <span>ZIP</span>
+            </label>
             <input
+              id="stop-zip"
               type="text"
               value={zip}
               onChange={(e) => setZip(e.target.value)}
               placeholder="80202"
-              className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all"
-              style={inputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              maxLength={10}
+              className="ha-field-input ha-field-input-mono"
+              autoComplete="postal-code"
+            />
+          </div>
+          <div className="ha-field">
+            <label htmlFor="stop-cutoff" className="ha-field-label">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" strokeLinecap="round" />
+              </svg>
+              <span>Cutoff</span>
+            </label>
+            <input
+              id="stop-cutoff"
+              type="time"
+              value={cutoffTime}
+              onChange={(e) => setCutoffTime(e.target.value)}
+              className="ha-field-input ha-field-input-mono"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Cutoff Time</label>
-          <input
-            type="time"
-            value={cutoffTime}
-            onChange={(e) => setCutoffTime(e.target.value)}
-            className="w-full rounded-xl px-4 py-3 text-sm text-stone-900 transition-all"
-            style={inputStyle}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-          />
-          <p className="mt-1 text-xs text-stone-400 ml-1">Orders close this time the day before pickup</p>
-        </div>
-
-        {/* Status toggle */}
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide ml-1">Status</label>
-          <div className="flex gap-3">
+        {/* Row 5 — Status: segmented control (compact, replaces two giant buttons) */}
+        <div className="ha-field pt-0.5">
+          <div className="flex items-center justify-between">
+            <label className="ha-field-label">
+              <span>Visibility</span>
+            </label>
+            <span className="text-[10px] text-[var(--admin-text-muted)] leading-none">
+              Draft is hidden from customers
+            </span>
+          </div>
+          <div className="ha-segment mt-1" role="radiogroup" aria-label="Stop status">
             <button
               type="button"
+              role="radio"
+              aria-checked={status === "draft"}
               onClick={() => setStatus("draft")}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all"
-              style={{
-                border: status === "draft" ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(0, 0, 0, 0.08)',
-                background: status === "draft" ? 'rgba(245, 158, 11, 0.08)' : 'rgba(0, 0, 0, 0.02)',
-              }}
+              className={`ha-segment-btn ${status === "draft" ? "ha-segment-btn--active ha-segment-active-draft" : ""}`}
             >
-              <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{
-                background: status === "draft" ? 'rgba(245, 158, 11, 0.2)' : 'rgba(0, 0, 0, 0.05)',
-                color: status === "draft" ? '#b45309' : 'rgba(0, 0, 0, 0.4)',
-              }}>Draft</span>
-              <span className="text-sm font-medium" style={{ color: status === "draft" ? '#92400e' : 'rgba(0, 0, 0, 0.4)' }}>Save as draft</span>
+              <span className="ha-segment-dot" />
+              <span>Save as Draft</span>
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={status === "active"}
               onClick={() => setStatus("active")}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all"
-              style={{
-                border: status === "active" ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(0, 0, 0, 0.08)',
-                background: status === "active" ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.02)',
-              }}
+              className={`ha-segment-btn ${status === "active" ? "ha-segment-btn--active ha-segment-active-active" : ""}`}
             >
-              <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{
-                background: status === "active" ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 0, 0, 0.05)',
-                color: status === "active" ? '#047857' : 'rgba(0, 0, 0, 0.4)',
-              }}>Active</span>
-              <span className="text-sm font-medium" style={{ color: status === "active" ? '#065f46' : 'rgba(0, 0, 0, 0.4)' }}>Publish now</span>
+              <span className="ha-segment-dot" />
+              <span>Publish Now</span>
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 pt-4" style={{ borderTop: '1px solid rgba(0, 0, 0, 0.04)' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl px-5 py-2.5 text-sm font-medium text-stone-500 hover:text-stone-700 transition-all hover:bg-stone-100"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all"
-            style={{ 
-              background: loading 
-                ? 'rgba(16, 185, 129, 0.4)' 
-                : 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
-              boxShadow: loading 
-                ? 'none' 
-                : '0 4px 12px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Creating...
-              </span>
-            ) : (
-              isDuplicate ? "Duplicate Stop" : "Create Stop"
-            )}
-          </button>
+        <div className="ha-modal-footer">
+          <span className="ha-modal-footer-hint">
+            <kbd>Esc</kbd>
+            to close
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="ha-btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="ha-btn-primary"
+            >
+              {loading ? (
+                <>
+                  <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+                    <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  <span>{submitLabel}</span>
+                </>
+              ) : (
+                <>
+                  {status === "active" ? (
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" strokeLinejoin="round" />
+                      <path d="M17 21v-8H7v8M7 3v5h8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                  <span>{submitLabel}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </GlassModal>

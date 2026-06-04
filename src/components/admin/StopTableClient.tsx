@@ -34,6 +34,11 @@ type Stop = {
 
 type Props = {
   stops: Stop[];
+  /**
+   * Hide the internal search/filter bar at the top of the table. Use when
+   * the parent component already renders shared filters (e.g. StopsViewClient).
+   */
+  hideInternalFilterBar?: boolean;
 };
 
 const TAB_NUMERIC: Record<"all" | "active" | "inactive" | "draft", "all" | "active" | "inactive" | "draft"> = {
@@ -43,7 +48,7 @@ const TAB_NUMERIC: Record<"all" | "active" | "inactive" | "draft", "all" | "acti
   draft: "draft",
 };
 
-export default function StopTableClient({ stops }: Props) {
+export default function StopTableClient({ stops, hideInternalFilterBar = false }: Props) {
   const router = useRouter();
   const { success: showSuccess, error: showError } = useToast();
   const [, startTransition] = useTransition();
@@ -162,6 +167,7 @@ export default function StopTableClient({ stops }: Props) {
   return (
     <>
       {/* Filter bar */}
+      {!hideInternalFilterBar && (
       <div className="flex flex-wrap items-center gap-2.5 px-4 py-3 border-b border-[var(--admin-border)]">
         <AdminSearchInput
           placeholder="Search by city or venue…"
@@ -246,6 +252,7 @@ export default function StopTableClient({ stops }: Props) {
           Add Stop
         </AdminButton>
       </div>
+      )}
 
       {/* Bulk actions bar */}
       {selectedStops.size > 0 && (
