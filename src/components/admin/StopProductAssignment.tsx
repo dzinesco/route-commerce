@@ -83,6 +83,9 @@ export default function StopProductAssignment({
   async function assign(productId: string) {
     if (!productId || assignedIds.has(productId) || pendingId) return;
 
+    const product = allProducts.find((p) => p.id === productId);
+    if (!product) return;
+
     setPendingId(productId);
     setError(null);
 
@@ -112,20 +115,25 @@ export default function StopProductAssignment({
         return;
       }
 
-      // Optimistic: re-fetch to keep assigned list in sync with server
-      const refreshRes = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/get_stop_products`,
-        {
-          method: "POST",
-          headers: {
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            "Content-Type": "application/json",
+      // Optimistic insert: build the entry from the product we already have
+      // locally, keyed by the row id returned from the RPC. Use functional
+      // setState so concurrent calls compose correctly.
+      setProducts((prev) => {
+        if (prev.some((p) => p.product_id === productId)) return prev;
+        return [
+          ...prev,
+          {
+            id: data.id,
+            product_id: productId,
+            products: {
+              name: product.name,
+              type: product.type,
+              price: product.price,
+              image_url: product.image_url ?? null,
+            },
           },
-          body: JSON.stringify({ p_stop_id: stopId }),
-        }
-      );
-      const refreshData = await refreshRes.json();
-      setProducts(refreshData.products ?? []);
+        ];
+      });
       setPendingId(null);
 
       logAuditEvent({
@@ -176,7 +184,7 @@ export default function StopProductAssignment({
         return;
       }
 
-      setProducts(products.filter((p) => p.product_id !== productId));
+      setProducts((prev) => prev.filter((p) => p.product_id !== productId));
       setRemovingId(null);
 
       logAuditEvent({
@@ -202,11 +210,15 @@ export default function StopProductAssignment({
   }
 
   function clearAll() {
-    if (!products.length) return;
-    // Remove sequentially to be safe
+    if (!products.length || removingId || pendingId) return;
+    // Snapshot ids at click time, then remove each one sequentially so the
+    // server sees one request at a time.
+    const idsToRemove = products.map((p) => p.product_id);
     (async () => {
-      for (const p of [...products]) {
-        await remove(p.product_id);
+      for (const id of idsToRemove) {
+        // Stop if a per-item failure already surfaced an error
+        if (error) break;
+        await remove(id);
       }
     })();
   }
@@ -301,8 +313,8 @@ export default function StopProductAssignment({
           On this stop
           <span className="ha-picker-chip-count">{counts.assigned}</span>
         </button>
-        <span className="ml-auto inline-flex items-center gap-1 text-[var(--admin-text-muted)]">
-          Press <kbd className="ha-modal-footer-hint kbd inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 font-mono text-[10px] font-semibold text-[var(--admin-text-secondary)] bg-[rgba(0,0,0,0.04)] border border-[var(--admin-border)] rounded" style={{ display: "inline-flex" }}>/</kbd> to search
+        <span className="ha-modal-footer-hint ml-auto">
+          Press <kbd>/</kbd> to search
         </span>
       </div>
 
