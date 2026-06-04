@@ -1,4 +1,4 @@
-import StopTableClient from "@/components/admin/StopTableClient";
+import StopsDashboardClient from "@/components/admin/stops/StopsDashboardClient";
 import StopsHeaderActions from "@/components/admin/StopsHeaderActions";
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
@@ -90,9 +90,7 @@ export default async function AdminStopsPage() {
 
       {/* Content */}
       <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-        <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-white shadow-sm">
-          <StopTableClient stops={stops ?? []} />
-        </div>
+        <StopsDashboardClient stops={stops ?? []} />
       </div>
     </main>
   );

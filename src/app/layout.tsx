@@ -1,10 +1,31 @@
 import type { Metadata, Viewport } from "next";
+import { Fraunces, Manrope, Fragment_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import ToastNotificationContainer from "@/components/notifications/ToastNotification";
 import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://routecommerce.com";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-fraunces",
+  axes: ["SOFT", "WONK", "opsz"],
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-manrope",
+});
+
+const fragmentMono = Fragment_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-fragment-mono",
+  weight: "400",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -50,8 +71,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html lang="en" suppressHydrationWarning className={`${fraunces.variable} ${manrope.variable} ${fragmentMono.variable}`}>
+      <body className="font-sans">
         <Providers>{children}</Providers>
         <ToastNotificationContainer />
         <CookieConsentBanner />
