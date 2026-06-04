@@ -19,6 +19,8 @@
     "@google/generative-ai": "^0.24.1",
     "@gsap/react": "^2.1.2",
     "@sentry/nextjs": "^10.55.0",
+    "@stripe/react-stripe-js": "^3.10.0",
+    "@stripe/stripe-js": "^5.10.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.3",
     "@upstash/ratelimit": "^2.0.8",

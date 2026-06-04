@@ -20,6 +20,8 @@ type StopInfo = {
   brand_id: string;
 };
 
+export type { StopInfo };
+
 type CartContextType = {
   cart: CartItem[];
   subtotal: number;
@@ -334,7 +336,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCart() {
+export function useCart(): CartContextType {
   const context = useContext(CartContext);
   if (!context) throw new Error("useCart must be used inside CartProvider");
   return context;

@@ -47,12 +47,16 @@ function formatStopDate(dateStr: string): string {
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  // Embedded Stripe Elements path — we navigated here programmatically
+  // with ?payment_intent=pi_... after `stripe.confirmPayment` resolved.
+  const paymentIntentId = searchParams.get("payment_intent");
+  const redirectStatus = searchParams.get("redirect_status");
   const orderIdParam = searchParams.get("order_id");
   // Direct access with order_id — load from sessionStorage in lazy initializer.
   // searchParams values are stable, and sessionStorage is client-only, so this
   // is safe in a client component.
   const [order, setOrder] = useState<StoredOrder | null>(() => {
-    if (!orderIdParam || sessionId) return null;
+    if (!orderIdParam || sessionId || paymentIntentId) return null;
     if (typeof window === "undefined") return null;
     try {
       const stored = sessionStorage.getItem(`order_${orderIdParam}`);
@@ -62,14 +66,20 @@ function SuccessContent() {
       return null;
     }
   });
-  const [creating, setCreating] = useState(!!sessionId);
+  const [creating, setCreating] = useState(Boolean(sessionId || (paymentIntentId && redirectStatus === "succeeded")));
   const [error, setError] = useState<string | null>(null);
 
-  // Stripe redirected back — create order from pending checkout data.
-  // Wrapped in an async IIFE so all setState calls happen inside a callback,
-  // not in the synchronous effect body (satisfies set-state-in-effect rule).
+  // Create the order from the pending-checkout payload, regardless of
+  // whether the user paid via hosted Stripe Checkout (?session_id=...) or
+  // embedded Stripe Elements (?payment_intent=...). Both paths store the
+  // same payload in `pending_checkout` before payment is initiated.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId && !paymentIntentId) return;
+    if (paymentIntentId && redirectStatus && redirectStatus !== "succeeded") {
+      setError("Payment was not completed. Please try again.");
+      setCreating(false);
+      return;
+    }
 
     (async () => {
       const pendingStr = sessionStorage.getItem("pending_checkout");
@@ -88,6 +98,7 @@ function SuccessContent() {
         cartBrandId?: string;
         shippingAddress?: { state: string; postal_code: string; city?: string };
         idempotencyKey: string;
+        paymentIntentId?: string;
       };
       try {
         pending = JSON.parse(pendingStr);
@@ -123,7 +134,7 @@ function SuccessContent() {
         setCreating(false);
       }
     })();
-  }, [sessionId]);
+  }, [sessionId, paymentIntentId, redirectStatus]);
 
   if (!order || !orderIdParam) {
     return (

@@ -312,7 +312,10 @@ function SheetContent({
 
       {/* Footer — sticky CTA + express */}
       <div className="border-t border-stone-900/10 bg-[#F5EFD9] px-6 sm:px-8 pt-5 pb-7 space-y-3">
-        {/* Express checkout row */}
+        {/* Express checkout row — the buttons are visual shortcuts.
+            /checkout auto-renders Stripe's <ExpressCheckoutElement> for
+            Apple Pay / Google Pay / Link + <PaymentElement> for card via
+            StripeExpressCheckout. The `?express=` query is decorative. */}
         <div>
           <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-stone-500 mb-2 text-center">
             Express checkout
