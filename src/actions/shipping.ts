@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type UpdateShippingStatusResult =
@@ -28,7 +29,7 @@ export async function updateShippingStatus(
         p_order_id: orderId,
         p_shipping_status: status,
         p_tracking_number: trackingNumber ?? null,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: await getActiveBrandId(adminUser),
       }),
     }
   );
@@ -79,7 +80,7 @@ export async function getShippingOrders(): Promise<GetShippingOrdersResult> {
       method: "POST",
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: await getActiveBrandId(adminUser),
       }),
     }
   );

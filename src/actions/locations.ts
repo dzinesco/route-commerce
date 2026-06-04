@@ -2,6 +2,7 @@
 
 import { revalidateTag } from "next/cache";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type LocationInput = {
@@ -48,7 +49,11 @@ export async function createLocation(
   if (!adminUser.can_manage_stops) {
     return { success: false, error: "Not authorized to manage locations" };
   }
-  const effectiveBrandId = brandId || adminUser.brand_id;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
   if (!effectiveBrandId) return { success: false, error: "No brand selected" };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -96,7 +101,11 @@ export async function createLocationsBatch(
   if (!adminUser.can_manage_stops) {
     return { success: false, created: 0, error: "Not authorized" };
   }
-  const effectiveBrandId = brandId || adminUser.brand_id;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, created: 0, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
   if (!effectiveBrandId) return { success: false, created: 0, error: "No brand selected" };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -206,7 +215,8 @@ export async function adminListLocations(
 
   // Application-layer brand scoping: platform_admin (brand_id: null) gets all
   // brands; everyone else gets only their own brand.
-  const effectiveBrandId = brandId || adminUser.brand_id;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  const effectiveBrandId = activeBrandId;
 
   const res = await fetch(
     `${supabaseUrl}/rest/v1/rpc/admin_list_locations`,

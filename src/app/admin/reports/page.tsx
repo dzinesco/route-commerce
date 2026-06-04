@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import ReportsDashboard from "@/components/admin/ReportsDashboard";
 import { PageHeader } from "@/components/admin/design-system";
@@ -19,7 +20,7 @@ export default async function ReportsPage() {
 
   const initialBrandId = isPlatformAdmin
     ? null
-    : adminUser.brand_id ?? null;
+    : await getActiveBrandId(adminUser);
 
   return (
     <main className="min-h-screen px-6 py-10" style={{ backgroundColor: "var(--admin-bg)" }}>

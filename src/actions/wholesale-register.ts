@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { assertBrandAccess } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export async function registerWholesaleCustomer(params: {
@@ -81,7 +82,9 @@ export async function approveWholesaleRegistration(
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
-  if (adminUser.role !== "platform_admin" && adminUser.brand_id !== brandId) {
+  try {
+    assertBrandAccess(adminUser, brandId);
+  } catch {
     return { success: false, error: "Not authorized to operate on this brand" };
   }
 

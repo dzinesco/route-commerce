@@ -1,5 +1,6 @@
 import AdminOrdersPanel from "@/components/admin/AdminOrdersPanel";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { getAdminOrders } from "@/actions/orders";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { PageHeader } from "@/components/admin/design-system";
@@ -17,13 +18,19 @@ export default async function AdminOrdersPage() {
     redirect("/admin/pickup");
   }
 
+  const activeBrandId = await getActiveBrandId(adminUser);
+  // Platform admin can browse all brands' orders; everyone else must have a brand
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return <AdminAccessDenied message="You don't have access to any brand." />;
+  }
+
   const { orders, stops } = await getAdminOrders();
 
-  const brandStops = adminUser?.brand_id
-    ? stops.filter((s) => s.brand_id === adminUser.brand_id)
+  const brandStops = activeBrandId
+    ? stops.filter((s) => s.brand_id === activeBrandId)
     : stops;
 
-  const brandOrders = adminUser?.brand_id
+  const brandOrders = activeBrandId
     ? orders.filter(
         (o) =>
           o.stops && brandStops.some((s) => s.id === o.stop_id)
@@ -41,8 +48,8 @@ export default async function AdminOrdersPage() {
       .order("name")
       .limit(200);
 
-    if (adminUser?.brand_id) {
-      prodQuery = prodQuery.eq("brand_id", adminUser.brand_id);
+    if (activeBrandId) {
+      prodQuery = prodQuery.eq("brand_id", activeBrandId);
     }
 
     const { data: prods } = await prodQuery;
@@ -80,7 +87,7 @@ export default async function AdminOrdersPage() {
             initialOrders={brandOrders}
             initialStops={brandStops}
             initialProducts={brandProducts}
-            brandId={adminUser?.brand_id ?? null}
+            brandId={activeBrandId}
           />
         </div>
       </div>

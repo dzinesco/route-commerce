@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -96,7 +97,7 @@ async function brandScopedRPC<T>(
   const adminUser = await getAdminUser();
   if (!adminUser) throw new Error("Not authenticated");
 
-  const brandId = adminUser.brand_id ?? null;
+  const brandId = await getActiveBrandId(adminUser);
 
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
     method: "POST",
@@ -232,7 +233,7 @@ export async function getRecentOrders(limit: number = 10): Promise<RecentOrder[]
     const adminUser = await getAdminUser();
     if (!adminUser) throw new Error("Not authenticated");
 
-    const brandId = adminUser.brand_id ?? null;
+    const brandId = await getActiveBrandId(adminUser);
 
     const params = new URLSearchParams({
       select: "id,customer_name,subtotal,status,created_at,fulfillment",
@@ -293,7 +294,7 @@ export async function getConversionFunnel(): Promise<ConversionFunnel[]> {
     const adminUser = await getAdminUser();
     if (!adminUser) throw new Error("Not authenticated");
 
-    const brandId = adminUser.brand_id ?? null;
+    const brandId = await getActiveBrandId(adminUser);
 
     const params = new URLSearchParams({
       select: "id,status",

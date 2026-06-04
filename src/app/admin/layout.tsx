@@ -1,6 +1,8 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
+import { listBrandsForAdmin } from "@/actions/brands";
 import { redirect } from "next/navigation";
 import "@/styles/admin-design-system.css";
 import { ToastProvider } from "@/components/admin/Toast";
@@ -57,9 +59,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/change-password");
   }
 
+  // Resolve the active brand (URL > cookie > legacy > first of brand_ids)
+  const activeBrandId = await getActiveBrandId(adminUser);
+
+  // Fetch accessible brands for the sidebar BrandSelector. We do this
+  // unconditionally — `listBrandsForAdmin` is cheap and the sidebar
+  // decides whether to show the dropdown.
+  const brands = await listBrandsForAdmin();
+
   return (
     <ToastProviderWrapper>
-      <AdminSidebar userRole={adminUser.role} />
+      <AdminSidebar
+        userRole={adminUser.role}
+        brandIds={adminUser.brand_ids}
+        activeBrandId={activeBrandId}
+        brands={brands}
+      />
       <div className="min-h-screen lg:pl-60 admin-section" style={{ backgroundColor: "var(--admin-bg)" }}>
         {children}
       </div>

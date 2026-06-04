@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { getBillingOverview } from "@/actions/billing/billing-overview";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import BillingClientPage from "./BillingClientPage";
@@ -13,7 +14,11 @@ export default async function BillingPage({ params }: Props) {
   const adminUser = await getAdminUser();
   if (!adminUser) return <AdminAccessDenied />;
 
-  const effectiveBrandId = brandIdParam ?? adminUser.brand_id ?? "";
+  const activeBrandId = await getActiveBrandId(adminUser, brandIdParam);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return <AdminAccessDenied message="You don't have access to that brand." />;
+  }
+  const effectiveBrandId = activeBrandId ?? "";
   const isPlatformAdmin = adminUser.role === "platform_admin";
 
   let resolvedBrandId = effectiveBrandId;

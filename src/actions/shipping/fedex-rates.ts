@@ -11,6 +11,7 @@
  */
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { assertBrandAccess } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -177,6 +178,10 @@ export async function getFedExRates(
   const order = orders[0];
   if (!order) return { success: false, error: "Order not found" };
 
+  // The order's brand is the source of truth. Validate the admin has access.
+  if (order.brand_id) {
+    try { assertBrandAccess(adminUser, order.brand_id); } catch { return { success: false, error: "Brand access denied" }; }
+  }
   const effectiveBrandId = order.brand_id ?? adminUser.brand_id ?? null;
 
   // Fetch shipping settings for this brand

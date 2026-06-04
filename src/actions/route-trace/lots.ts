@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId, assertBrandAccess } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -153,7 +154,14 @@ export interface FieldYieldSummary {
 export async function getRouteTraceLots(brandId: string, status?: string) {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -235,7 +243,14 @@ export async function createHarvestLot(
 ) {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -298,7 +313,14 @@ export async function updateHarvestLotStatus(
 export async function getRouteTraceStats(brandId: string) {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -318,7 +340,14 @@ export async function getRouteTraceStats(brandId: string) {
 export async function searchHarvestLots(brandId: string, query: string) {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -347,7 +376,14 @@ export async function getTraceChain(lotId: string) {
 export async function getHarvestLotsReadyToHaul(brandId: string) {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -364,7 +400,14 @@ export async function getHarvestLotsReadyToHaul(brandId: string) {
 export async function getFieldYieldSummary(brandId: string) {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -405,7 +448,14 @@ export interface InventoryByCrop {
 export async function getInventoryByCrop(brandId: string): Promise<{ success: true; inventory: InventoryByCrop[] } | { success: false; error: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {
@@ -451,7 +501,14 @@ export async function getRecentLotEvents(
 ): Promise<{ success: true; events: RecentLotEvent[] } | { success: false; error: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? undefined;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  if (activeBrandId) {
+    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+  }
+  const effectiveBrandId = activeBrandId ?? undefined;
   if (!effectiveBrandId) return { success: false, error: "No brand" };
 
   try {

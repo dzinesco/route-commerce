@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { getBillingOverview } from "@/actions/billing/billing-overview";
 import DashboardClient from "@/components/admin/DashboardClient";
@@ -23,12 +24,11 @@ export default async function AdminPage() {
   let limits = { max_users: 1, max_stops_monthly: 10, max_products: 25 };
   let brandDisplayName = "Admin";
 
-  // For platform_admin in dev mode, adminUser.brand_id is null. To keep
-  // the dashboard's "Active Products" stat in sync with the billing page,
-  // we need to pick a brand and use the same getBillingOverview action
-  // the billing page does. Otherwise the dashboard falls back to default
-  // (0/0/0) usage values and contradicts the billing page's "Products 1/25".
-  let dashboardBrandId: string | null = adminUser?.brand_id ?? null;
+  // Resolve active brand via the canonical resolver (URL > cookie > legacy brand_id
+  // > first of brand_ids). For platform_admin in dev mode this is null, so we
+  // fall back to the first brand in the brands table to keep the dashboard's
+  // "Active Products" stat in sync with the billing page.
+  let dashboardBrandId: string | null = adminUser ? await getActiveBrandId(adminUser) : null;
   if (!dashboardBrandId && adminUser?.role === "platform_admin") {
     const { data: firstBrand } = await supabase
       .from("brands")

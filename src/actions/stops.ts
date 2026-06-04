@@ -2,6 +2,7 @@
 
 import { revalidateTag } from "next/cache";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type StopImportRow = {
@@ -25,7 +26,11 @@ export async function createStopsBatch(
     return { success: false, created: 0, error: "Not authorized to manage stops" };
   }
 
-  const effectiveBrandId = brandId || adminUser.brand_id;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, created: 0, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
   if (!effectiveBrandId) {
     return { success: false, created: 0, error: "No brand selected" };
   }

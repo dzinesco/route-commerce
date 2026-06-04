@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import ProductsClient from "@/components/admin/ProductsClient";
 
@@ -29,7 +30,8 @@ export default async function AdminProductsPage() {
     );
   }
 
-  const brandId = adminUser.brand_id;
+  const activeBrandId = await getActiveBrandId(adminUser);
+  const brandId = activeBrandId;
 
   let query = supabase
     .from("products")
@@ -48,8 +50,8 @@ export default async function AdminProductsPage() {
     .is("deleted_at", null)
     .order("name");
 
-  if (adminUser.brand_id) {
-    query = query.eq("brand_id", adminUser.brand_id);
+  if (brandId) {
+    query = query.eq("brand_id", brandId);
   }
 
   const { data: products, error } = await query;

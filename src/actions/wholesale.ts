@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type WholesaleOrder = {
@@ -129,15 +130,16 @@ export type WholesaleDashboardStats = {
  * platform_admin  → null (means "all brands" — passes to RPC unchanged)
  * brand_admin    → their own brand_id only; rejects attempts to operate on other brands
  * store_employee → their own brand_id
+ * multi_brand_admin → active brand from cookie/URL/legacy, must be in brand_ids
  * unauthenticated → null (actions should already bail out earlier)
  *
  * This prevents brand_admin from seeing or modifying another brand's data
  * even if they manually pass a different brandId to the action.
  */
-function resolveBrandId(
+async function resolveBrandId(
   adminUser: Awaited<ReturnType<typeof getAdminUser>>,
   requestedBrandId?: string
-): string | null {
+): Promise<string | null> {
   if (!adminUser) return null;
 
   if (adminUser.role === "platform_admin") {
@@ -145,15 +147,15 @@ function resolveBrandId(
     return null;
   }
 
-  // brand_admin and store_employee are scoped to their own brand
-  const userBrand = adminUser.brand_id ?? null;
+  // For non-platform-admin: resolve the active brand (validates against brand_ids)
+  const activeBrandId = await getActiveBrandId(adminUser, requestedBrandId);
 
-  if (requestedBrandId && requestedBrandId !== userBrand) {
+  if (requestedBrandId && activeBrandId !== requestedBrandId) {
     // Brand admin trying to operate on another brand's data — block it
     return null; // caller should check and return unauthorized
   }
 
-  return userBrand;
+  return activeBrandId;
 }
 
 /**
@@ -161,23 +163,24 @@ function resolveBrandId(
  * if a brand_admin tries to operate outside their brand.
  * Use for mutating actions (save, delete, fulfill) where cross-brand access must be blocked.
  */
-function enforceBrandScope(
+async function enforceBrandScope(
   adminUser: Awaited<ReturnType<typeof getAdminUser>>,
   requestedBrandId?: string
-): { brandId: string | null; error?: string } {
+): Promise<{ brandId: string | null; error?: string }> {
   if (!adminUser) return { brandId: null, error: "Not authenticated" };
 
   if (adminUser.role === "platform_admin") {
     return { brandId: null }; // unrestricted
   }
 
-  const userBrand = adminUser.brand_id ?? null;
+  // For non-platform-admin: resolve the active brand (validates against brand_ids)
+  const activeBrandId = await getActiveBrandId(adminUser, requestedBrandId);
 
-  if (requestedBrandId && requestedBrandId !== userBrand) {
+  if (requestedBrandId && activeBrandId !== requestedBrandId) {
     return { brandId: null, error: "Not authorized to operate on this brand" };
   }
 
-  return { brandId: userBrand };
+  return { brandId: activeBrandId };
 }
 
 // ── Orders ──────────────────────────────────────────────────────────────────
@@ -185,7 +188,7 @@ function enforceBrandScope(
 export async function getWholesaleOrders(brandId?: string): Promise<WholesaleOrder[]> {
   const adminUser = await getAdminUser();
   if (!adminUser) return [];
-  const bid = resolveBrandId(adminUser, brandId);
+  const bid = await resolveBrandId(adminUser, brandId);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -209,7 +212,7 @@ export async function getWholesaleOrders(brandId?: string): Promise<WholesaleOrd
 export async function getWholesalePickupOrders(brandId?: string): Promise<WholesaleOrder[]> {
   const adminUser = await getAdminUser();
   if (!adminUser) return [];
-  const bid = resolveBrandId(adminUser, brandId);
+  const bid = await resolveBrandId(adminUser, brandId);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -256,7 +259,7 @@ export async function markWholesaleOrderFulfilled(orderId: string, brandId?: str
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const { brandId: resolved, error } = enforceBrandScope(adminUser, brandId);
+  const { brandId: resolved, error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -305,7 +308,7 @@ export async function updateWholesaleOrderStatus(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const { error } = enforceBrandScope(adminUser, brandId);
+  const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -332,7 +335,7 @@ export async function deleteWholesaleOrder(orderId: string, brandId?: string): P
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const { error } = enforceBrandScope(adminUser, brandId);
+  const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -359,7 +362,7 @@ export async function deleteWholesaleCustomer(customerId: string, brandId?: stri
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const { error } = enforceBrandScope(adminUser, brandId);
+  const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -388,7 +391,7 @@ export async function deleteWholesaleProduct(productId: string, brandId?: string
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_products) return { success: false, error: "Not authorized" };
 
-  const { error } = enforceBrandScope(adminUser, brandId);
+  const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -417,7 +420,7 @@ export async function deleteWholesaleProduct(productId: string, brandId?: string
 export async function getWholesaleCustomers(brandId?: string): Promise<WholesaleCustomer[]> {
   const adminUser = await getAdminUser();
   if (!adminUser) return [];
-  const bid = resolveBrandId(adminUser, brandId);
+  const bid = await resolveBrandId(adminUser, brandId);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -458,7 +461,7 @@ export async function saveWholesaleCustomer(params: {
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const { error } = enforceBrandScope(adminUser, params.brandId);
+  const { error } = await enforceBrandScope(adminUser, params.brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -501,7 +504,7 @@ export async function saveWholesaleCustomer(params: {
 export async function getWholesaleProducts(brandId?: string): Promise<WholesaleProduct[]> {
   const adminUser = await getAdminUser();
   if (!adminUser) return [];
-  const bid = resolveBrandId(adminUser, brandId);
+  const bid = await resolveBrandId(adminUser, brandId);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -545,7 +548,7 @@ export async function saveWholesaleProduct(params: {
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_products) return { success: false, error: "Not authorized" };
 
-  const { error } = enforceBrandScope(adminUser, params.brandId);
+  const { error } = await enforceBrandScope(adminUser, params.brandId);
   if (error) return { success: false, error };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -591,7 +594,10 @@ export async function saveWholesaleProduct(params: {
 export async function getWholesaleSettings(brandId?: string): Promise<WholesaleSettings | null> {
   const adminUser = await getAdminUser();
   if (!adminUser) return null;
-  const bid = brandId ?? adminUser.brand_id ?? null;
+  const bid = await getActiveBrandId(adminUser, brandId);
+  if (!bid && adminUser.role !== "platform_admin") {
+    return null;
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -700,7 +706,7 @@ export async function recordWholesaleDeposit(
         p_method: method,
         p_reference: reference ?? null,
         p_recorded_by: adminUser.user_id,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: await getActiveBrandId(adminUser),
       }),
     }
   );
@@ -710,7 +716,7 @@ export async function recordWholesaleDeposit(
   if (!data?.success) return { success: false, error: data?.error ?? "Failed to record deposit" };
 
   // Fire webhook — fire-and-forget
-  enqueueWholesaleWebhookForDepositRecorded(orderId, amount, adminUser.brand_id ?? undefined).catch(() => {});
+  enqueueWholesaleWebhookForDepositRecorded(orderId, amount, (await getActiveBrandId(adminUser)) ?? undefined).catch(() => {});
 
   return { success: true };
 }
@@ -753,7 +759,7 @@ export async function bulkFulfillWholesaleOrders(
       body: JSON.stringify({
         p_order_ids: orderIds,
         p_by: adminUser.user_id,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: await getActiveBrandId(adminUser),
       }),
     }
   );
@@ -791,7 +797,7 @@ export async function bulkRecordWholesaleDeposit(
         p_method: method,
         p_reference: reference ?? null,
         p_recorded_by: adminUser.user_id,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: await getActiveBrandId(adminUser),
       }),
     }
   );

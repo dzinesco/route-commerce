@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import WholesaleClient from "./WholesaleClient";
 
 export default async function WholesalePage() {
@@ -11,10 +13,10 @@ export default async function WholesalePage() {
     devSession === "store_employee";
 
   if (!isDevMode) {
-    const { getAdminUser } = await import("@/lib/admin-permissions");
     const adminUser = await getAdminUser();
     if (!adminUser) redirect("/login");
-    return <WholesaleClient brandId={adminUser.brand_id ?? ""} />;
+    const activeBrandId = await getActiveBrandId(adminUser);
+    return <WholesaleClient brandId={activeBrandId ?? ""} />;
   }
 
   // Dev mode: platform_admin sees all brands, use first brand as default

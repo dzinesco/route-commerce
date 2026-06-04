@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 type Irrigator = {
@@ -94,7 +95,7 @@ export async function updateWaterHeadgate(
         p_name: name,
         p_active: active,
         p_unit: unit ?? null,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
         p_high_threshold: highThreshold ?? null,
         p_low_threshold: lowThreshold ?? null,
       }),
@@ -186,7 +187,7 @@ export async function updateWaterIrrigator(
         p_active: active,
         p_lang: lang,
         p_role: role,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
       }),
     }
   );
@@ -215,7 +216,7 @@ export async function resetWaterIrrigatorPin(
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_user_id: irrigatorId,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
       }),
     }
   );
@@ -242,7 +243,7 @@ export async function deleteWaterUser(userId: string): Promise<{ success: boolea
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_user_id: userId,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
       }),
     }
   );
@@ -269,7 +270,7 @@ export async function deleteWaterHeadgate(headgateId: string): Promise<{ success
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_headgate_id: headgateId,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
       }),
     }
   );
@@ -356,7 +357,7 @@ export async function regenerateHeadgateToken(headgateId: string): Promise<{ suc
     {
       method: "POST",
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_headgate_id: headgateId, p_brand_id: adminUser.brand_id ?? null }),
+      body: JSON.stringify({ p_headgate_id: headgateId, p_brand_id: (await getActiveBrandId(adminUser)) ?? null }),
     }
   );
 
@@ -392,7 +393,7 @@ export async function updateWaterEntry(
         p_measurement: measurement,
         p_notes: notes,
         p_unit: unit ?? null,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
       }),
     }
   );
@@ -421,7 +422,7 @@ export async function deleteWaterEntry(
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_entry_id: entryId,
-        p_brand_id: adminUser.brand_id ?? null,
+        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
       }),
     }
   );

@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { assertBrandAccess } from "@/lib/brand-scope";
 import { parseExcelBuffer, parseTextBuffer } from "@/lib/excel-parser";
 import { importProductsBatch } from "@/actions/import-products";
 import { importOrdersBatch } from "@/actions/import-orders";
@@ -41,7 +42,9 @@ export async function analyzeImport(
 ): Promise<AnalyzeImportResult> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-  if (adminUser.role === "brand_admin" && adminUser.brand_id !== brandId) {
+  try {
+    assertBrandAccess(adminUser, brandId);
+  } catch {
     return { success: false, error: "Not authorized for this brand" };
   }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 import { randomUUID } from "crypto";
 
@@ -41,7 +42,11 @@ export async function createAdminOrder(
   }
 
   // Brand scoping
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? null;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
   if (adminUser.role === "brand_admin" && adminUser.brand_id && effectiveBrandId !== adminUser.brand_id) {
     return { success: false, error: "Not authorized for this brand" };
   }

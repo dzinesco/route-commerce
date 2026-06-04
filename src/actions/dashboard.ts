@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -66,7 +67,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const adminUser = await getAdminUser();
     if (!adminUser) throw new Error("Not authenticated");
 
-    const brandId = adminUser.brand_id ?? null;
+    const brandId = await getActiveBrandId(adminUser);
 
     // Get today's date range
     const today = new Date();
@@ -202,7 +203,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     const adminUser = await getAdminUser();
     if (!adminUser) throw new Error("Not authenticated");
 
-    const brandId = adminUser.brand_id ?? null;
+    const brandId = await getActiveBrandId(adminUser);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 

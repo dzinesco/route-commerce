@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export async function deleteProduct(
@@ -16,7 +17,11 @@ export async function deleteProduct(
     return { success: false, error: "Not authorized to manage products" };
   }
 
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? null;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

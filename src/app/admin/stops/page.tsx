@@ -4,6 +4,7 @@ import StopsLocationsTabs from "@/components/admin/StopsLocationsTabs";
 import StatsStrip from "@/components/admin/StatsStrip";
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { adminListLocations } from "@/actions/locations";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { PageHeader } from "@/components/admin/design-system";
@@ -39,6 +40,8 @@ export default async function AdminStopsPage({ searchParams }: PageProps) {
   // Always fetch stops + locations; the page is fast and a server component can
   // hand both to the client. The Locations tab only needs the array — it does
   // its own filtering in JS. Stops tab uses the existing client table.
+  const activeBrandId = await getActiveBrandId(adminUser);
+
   const stopsQuery = supabase
     .from("stops")
     .select(`
@@ -49,13 +52,13 @@ export default async function AdminStopsPage({ searchParams }: PageProps) {
     .is("deleted_at", null)
     .order("date", { ascending: true });
 
-  if (adminUser?.brand_id) {
-    stopsQuery.eq("brand_id", adminUser.brand_id);
+  if (activeBrandId) {
+    stopsQuery.eq("brand_id", activeBrandId);
   }
 
   const [{ data: stops, error: stopsError }, locations] = await Promise.all([
     stopsQuery,
-    adminListLocations(adminUser.brand_id ?? ""),
+    adminListLocations(activeBrandId ?? ""),
   ]);
 
   if (stopsError) {

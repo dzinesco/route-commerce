@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { assertBrandAccess } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type PaymentProvider = "stripe" | "square" | "manual";
@@ -65,10 +66,9 @@ export async function savePaymentSettings(params: {
     return { success: false, error: "Not authorized" };
   }
 
-  if (
-    adminUser.role === "brand_admin" &&
-    adminUser.brand_id !== params.brandId
-  ) {
+  try {
+    assertBrandAccess(adminUser, params.brandId);
+  } catch {
     return { success: false, error: "Not authorized for this brand" };
   }
 

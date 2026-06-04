@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { assertBrandAccess } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type SyncLogEntry = {
@@ -29,7 +30,9 @@ export async function syncSquareNow(
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, synced: 0, errors: ["Not authenticated"] };
   if (!adminUser.can_manage_orders) return { success: false, synced: 0, errors: ["Not authorized"] };
-  if (adminUser.role === "brand_admin" && adminUser.brand_id !== brandId) {
+  try {
+    assertBrandAccess(adminUser, brandId);
+  } catch {
     return { success: false, synced: 0, errors: ["Not authorized"] };
   }
 
@@ -61,7 +64,9 @@ export async function getSyncLog(brandId: string): Promise<{
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, logs: [] };
   if (!adminUser.can_manage_orders) return { success: false, logs: [] };
-  if (adminUser.role === "brand_admin" && adminUser.brand_id !== brandId) {
+  try {
+    assertBrandAccess(adminUser, brandId);
+  } catch {
     return { success: false, logs: [] };
   }
 

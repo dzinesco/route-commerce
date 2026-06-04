@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 import type { AudienceRules } from "./campaigns";
 
@@ -120,11 +121,15 @@ export async function sendCampaign(campaignId: string, brandId?: string): Promis
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  // Resolve brand from campaign or parameter
-  const effectiveBrandId = brandId ?? adminUser.brand_id;
+  // Resolve brand from campaign or parameter (URL > cookie > legacy > first of brand_ids)
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
 
   // Brand scoping: brand_admin can only send their own brand's campaigns
-  if (adminUser.role === "brand_admin" && effectiveBrandId && adminUser.brand_id !== effectiveBrandId) {
+  if (adminUser.role === "brand_admin" && effectiveBrandId && !adminUser.brand_ids.includes(effectiveBrandId)) {
     return { success: false, error: "Not authorized to send this brand's campaigns" };
   }
 

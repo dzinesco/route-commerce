@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 import type { AudienceRules } from "./campaigns";
 
@@ -33,7 +34,11 @@ export async function getCommunicationTemplates(brandId?: string): Promise<{ suc
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? null;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
 
   // Brand scoping: brand_admin can only see their own brand's templates
   if (adminUser.role === "brand_admin" && effectiveBrandId && effectiveBrandId !== adminUser.brand_id) {
@@ -112,7 +117,7 @@ export async function getTemplateById(templateId: string): Promise<Template | nu
     {
       method: "POST",
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: adminUser.brand_id ?? null }),
+      body: JSON.stringify({ p_brand_id: (await getActiveBrandId(adminUser)) ?? null }),
     }
   );
 

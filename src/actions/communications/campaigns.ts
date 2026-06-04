@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
+import { getActiveBrandId } from "@/lib/brand-scope";
 import { svcHeaders } from "@/lib/svc-headers";
 
 export type CampaignType = "marketing" | "operational" | "transactional";
@@ -57,7 +58,11 @@ export async function getCommunicationCampaigns(brandId?: string): Promise<ListC
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  const effectiveBrandId = brandId ?? adminUser.brand_id ?? null;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+  if (!activeBrandId && adminUser.role !== "platform_admin") {
+    return { success: false, error: "Brand access required" };
+  }
+  const effectiveBrandId = activeBrandId;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -147,7 +152,7 @@ export async function deleteCampaign(campaignId: string, brandId?: string): Prom
     {
       method: "POST",
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_campaign_id: campaignId, p_brand_id: adminUser.brand_id ?? null }),
+      body: JSON.stringify({ p_campaign_id: campaignId, p_brand_id: (await getActiveBrandId(adminUser)) ?? null }),
     }
   );
 
@@ -167,7 +172,7 @@ export async function getCampaignById(campaignId: string, brandId?: string): Pro
     {
       method: "POST",
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_campaign_id: campaignId, p_brand_id: brandId ?? adminUser.brand_id ?? null }),
+      body: JSON.stringify({ p_campaign_id: campaignId, p_brand_id: (await getActiveBrandId(adminUser, brandId)) ?? null }),
     }
   );
 
