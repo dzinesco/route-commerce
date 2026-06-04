@@ -39,7 +39,8 @@ export async function uploadProductImage(
     {
       method: "PUT",
       headers: { 
-        ...svcHeaders(supabaseKey), 
+        "apikey": supabaseKey,
+        "Authorization": `Bearer ${supabaseKey}`,
         "Content-Type": `image/${ext}`, 
         "x-upsert": "true" 
       },
