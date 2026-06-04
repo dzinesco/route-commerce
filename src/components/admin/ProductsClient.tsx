@@ -245,21 +245,21 @@ export default function ProductsClient({ products, brandId }: { products: Produc
     }
 
     try {
-      // For edits, fall back to the product's own brand_id (platform_admins
-      // don't have a brand_id, but the product record always knows its brand).
-      const effectiveBrandId = brandId ?? editingProduct?.brand_id;
-      if (!effectiveBrandId) {
-        setError("Brand ID is required");
-        setSaving(false);
-        setIsLoading(false);
-        return;
-      }
-
-      let result;
       const imageUrl = pendingImageUrl || formData.image_url || null;
 
+      let result;
       if (editingProduct) {
-        result = await updateProduct(editingProduct.id, effectiveBrandId, {
+        // Edits: scope to the product's own brand. The page-level brandId
+        // prop can be undefined for platform_admins viewing all brands, but
+        // the product record always carries its own brand_id.
+        const productBrandId = editingProduct.brand_id;
+        if (!productBrandId) {
+          setError("This product is missing a brand assignment");
+          setSaving(false);
+          setIsLoading(false);
+          return;
+        }
+        result = await updateProduct(editingProduct.id, productBrandId, {
           name: formData.name.trim(),
           description: formData.description.trim(),
           price,
@@ -269,7 +269,14 @@ export default function ProductsClient({ products, brandId }: { products: Produc
           is_taxable: formData.is_taxable,
         });
       } else {
-        result = await createProduct(effectiveBrandId, {
+        // Creates: require the page-level brandId prop (no product to pull from).
+        if (!brandId) {
+          setError("Brand ID is required");
+          setSaving(false);
+          setIsLoading(false);
+          return;
+        }
+        result = await createProduct(brandId, {
           name: formData.name.trim(),
           description: formData.description.trim(),
           price,
