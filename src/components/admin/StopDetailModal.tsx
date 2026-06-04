@@ -31,6 +31,7 @@ export default function StopDetailModal({ stopId, onDuplicate, onClose }: Props)
   const [allProducts, setAllProducts] = useState<{ id: string; name: string; type: string; price: number }[]>([]);
   const [assignedProducts, setAssignedProducts] = useState<AssignedProduct[]>([]);
   const [brands, setBrands] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [callerUid, setCallerUid] = useState<string>("");
   const [tab, setTab] = useState<Tab>("details");
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function StopDetailModal({ stopId, onDuplicate, onClose }: Props)
         setAllProducts(res.allProducts);
         setAssignedProducts(res.assignedProducts);
         setBrands(res.brands);
+        setCallerUid(res.callerUid);
         setLoading(false);
       })
       .catch((err) => {
@@ -68,6 +70,7 @@ export default function StopDetailModal({ stopId, onDuplicate, onClose }: Props)
       setAllProducts(res.allProducts);
       setAssignedProducts(res.assignedProducts);
       setBrands(res.brands);
+      setCallerUid(res.callerUid);
     });
   }
 
@@ -145,7 +148,7 @@ export default function StopDetailModal({ stopId, onDuplicate, onClose }: Props)
                   stopId={stop.id}
                   allProducts={allProducts}
                   assignedProducts={assignedProducts}
-                  callerUid={stop.id}
+                  callerUid={callerUid}
                 />
               </div>
             </div>

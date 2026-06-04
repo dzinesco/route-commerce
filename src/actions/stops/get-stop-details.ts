@@ -32,6 +32,8 @@ export type StopDetailsResult =
       allProducts: { id: string; name: string; type: string; price: number }[];
       assignedProducts: AssignedProduct[];
       brands: { id: string; name: string; slug: string }[];
+      /** admin_users.user_id of the caller, forwarded to RPCs that authorise via user_id lookup */
+      callerUid: string;
     }
   | { success: false; error: string };
 
@@ -115,5 +117,6 @@ export async function getStopDetails(stopId: string): Promise<StopDetailsResult>
     allProducts: allProducts ?? [],
     assignedProducts: (productStops ?? []) as AssignedProduct[],
     brands: brands ?? [],
+    callerUid: adminUser.user_id,
   };
 }
