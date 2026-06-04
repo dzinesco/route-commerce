@@ -1,13 +1,14 @@
 import StopTableClient from "@/components/admin/StopTableClient";
 import LocationsTab from "@/components/admin/LocationsTab";
-import StopsHeaderActions from "@/components/admin/StopsHeaderActions";
+import StopsLocationsTabs from "@/components/admin/StopsLocationsTabs";
+import StatsStrip from "@/components/admin/StatsStrip";
 import { supabase } from "@/lib/supabase";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { adminListLocations } from "@/actions/locations";
 import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import { PageHeader } from "@/components/admin/design-system";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { TabSwitcher } from "@/components/admin/TabSwitcher";
 
 const StopIcon = () => (
   <svg className="h-5 w-5 sm:h-6 sm:w-6 text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,11 +17,7 @@ const StopIcon = () => (
   </svg>
 );
 
-const TABS = [
-  { value: "stops", label: "Stops" },
-  { value: "locations", label: "Locations" },
-] as const;
-type TabValue = (typeof TABS)[number]["value"];
+type TabValue = "stops" | "locations";
 
 function isTab(v: string | undefined): v is TabValue {
   return v === "stops" || v === "locations";
@@ -83,73 +80,83 @@ export default async function AdminStopsPage({ searchParams }: PageProps) {
     );
   }
 
+  // Derive stats for the strip. The stops/locations arrays are already on hand.
+  const safeStops = stops ?? [];
+  const cityCount = new Set(
+    safeStops.map((s) => `${(s.city ?? "").toLowerCase()}|${(s.state ?? "").toLowerCase()}`)
+  ).size;
+  const stateCount = new Set(safeStops.map((s) => (s.state ?? "").toUpperCase())).size;
+  const draftCount = safeStops.filter((s) => s.status === "draft").length;
+  const activeCount = safeStops.filter((s) => s.active && s.status !== "draft").length;
+  const inactiveCount = safeStops.filter((s) => !s.active && s.status !== "draft").length;
+
+  const locationCityCount = new Set(
+    locations.map((l) => (l.city ?? "").toLowerCase())
+  ).size;
+  const locationWithStops = locations.filter((l) => l.stop_count > 0).length;
+
   const subtitle =
     tab === "locations"
       ? "Reusable venues. Each stop links to one venue, so editing here updates every stop using it."
       : adminUser?.brand_id
-        ? "Managing stops for your brand."
-        : "Manage routes, pickup locations, dates, and cutoff times.";
+        ? "Manage stops, venues, and the routes that connect them."
+        : "Manage stops, venues, and the routes that connect them.";
+
+  const stopsStats = [
+    { value: safeStops.length, label: "stops" },
+    { value: cityCount, label: "cities" },
+    { value: stateCount, label: "states" },
+    { value: activeCount, label: "active" },
+    { value: draftCount, label: "draft", emphasis: draftCount > 0 },
+    { value: inactiveCount, label: "inactive" },
+  ];
+
+  const locationsStats = [
+    { value: locations.length, label: "venues" },
+    { value: locationCityCount, label: "cities" },
+    { value: locationWithStops, label: "with stops" },
+  ];
 
   return (
     <main className="min-h-screen bg-[var(--admin-bg)]">
-      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-        <PageHeader
-          breadcrumb={[
-            { label: "Admin", href: "/admin" },
-            { label: "Stops & Routes" }
-          ]}
-          icon={<StopIcon />}
-          title="Stops & Routes"
-          subtitle={subtitle}
-          actions={<StopsHeaderActions brandId={adminUser?.brand_id ?? ""} tab={tab} />}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="px-4 sm:px-6 md:px-8">
+      {/* Header */}
+      <div className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-4 sm:pb-5">
         <div className="max-w-6xl mx-auto">
-          <div
-            className="flex gap-1 border-b border-[var(--admin-border)]"
-            role="tablist"
-            aria-label="Stops and Locations tabs"
-          >
-            {TABS.map((t) => {
-              const active = t.value === tab;
-              return (
-                <Link
-                  key={t.value}
-                  href={t.value === "stops" ? "/admin/stops" : "/admin/stops?tab=locations"}
-                  role="tab"
-                  aria-selected={active}
-                  className="relative px-4 py-2.5 text-sm font-semibold transition-colors"
-                  style={{
-                    color: active ? "var(--admin-text-primary)" : "var(--admin-text-muted)",
-                  }}
-                >
-                  {t.label}
-                  {active && (
-                    <span
-                      className="absolute left-0 right-0 -bottom-px h-0.5"
-                      style={{ background: "var(--admin-accent)" }}
-                      aria-hidden
-                    />
-                  )}
-                </Link>
-              );
-            })}
+          <PageHeader
+            breadcrumb={[
+              { label: "Admin", href: "/admin" },
+              { label: "Stops & Routes" }
+            ]}
+            icon={<StopIcon />}
+            title="Stops & Routes"
+            subtitle={subtitle}
+          />
+          <div className="mt-3 ml-[52px]">
+            <StatsStrip
+              stats={tab === "locations" ? locationsStats : stopsStats}
+            />
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+      {/* Card: tabs + content */}
+      <div className="px-4 sm:px-6 md:px-8 pb-8">
         <div className="max-w-6xl mx-auto">
-          <div className="overflow-hidden rounded-b-2xl rounded-t-none border border-t-0 border-[var(--admin-border)] bg-white shadow-sm">
-            {tab === "stops" ? (
-              <StopTableClient stops={stops ?? []} />
-            ) : (
-              <LocationsTab locations={locations} brandId={adminUser?.brand_id ?? ""} />
-            )}
+          <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-white shadow-sm">
+            <StopsLocationsTabs
+              active={tab}
+              stopCount={safeStops.length}
+              locationCount={locations.length}
+              stopsSublabel={`${cityCount} cities`}
+              locationsSublabel={`${locationCityCount} cities`}
+            />
+            <TabSwitcher tabKey={tab}>
+              {tab === "stops" ? (
+                <StopTableClient stops={safeStops} />
+              ) : (
+                <LocationsTab locations={locations} brandId={adminUser?.brand_id ?? ""} />
+              )}
+            </TabSwitcher>
           </div>
         </div>
       </div>
