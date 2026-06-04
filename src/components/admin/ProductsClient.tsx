@@ -245,7 +245,10 @@ export default function ProductsClient({ products, brandId }: { products: Produc
     }
 
     try {
-      if (!brandId) {
+      // For edits, fall back to the product's own brand_id (platform_admins
+      // don't have a brand_id, but the product record always knows its brand).
+      const effectiveBrandId = brandId ?? editingProduct?.brand_id;
+      if (!effectiveBrandId) {
         setError("Brand ID is required");
         setSaving(false);
         setIsLoading(false);
@@ -256,7 +259,7 @@ export default function ProductsClient({ products, brandId }: { products: Produc
       const imageUrl = pendingImageUrl || formData.image_url || null;
 
       if (editingProduct) {
-        result = await updateProduct(editingProduct.id, brandId, {
+        result = await updateProduct(editingProduct.id, effectiveBrandId, {
           name: formData.name.trim(),
           description: formData.description.trim(),
           price,
@@ -266,7 +269,7 @@ export default function ProductsClient({ products, brandId }: { products: Produc
           is_taxable: formData.is_taxable,
         });
       } else {
-        result = await createProduct(brandId, {
+        result = await createProduct(effectiveBrandId, {
           name: formData.name.trim(),
           description: formData.description.trim(),
           price,
