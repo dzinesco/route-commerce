@@ -32,6 +32,8 @@ export type ProductFormValues = {
   active: boolean;
   is_taxable: boolean;
   image_url: string | null;
+  available_from?: string | null;
+  available_until?: string | null;
 };
 
 const TYPE_OPTIONS: Array<{
@@ -99,6 +101,8 @@ export default function ProductFormModal({
   );
   const [active, setActive] = useState(initial?.active ?? true);
   const [isTaxable, setIsTaxable] = useState(initial?.is_taxable ?? true);
+  const [availableFrom, setAvailableFrom] = useState(initial?.available_from ? initial.available_from.split('T')[0] : "");
+  const [availableUntil, setAvailableUntil] = useState(initial?.available_until ? initial.available_until.split('T')[0] : "");
 
   // Image state
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl);
@@ -127,6 +131,8 @@ export default function ProductFormModal({
     setBrandId(initial?.brand_id ?? lockedBrandId ?? brands[0]?.id ?? "");
     setActive(initial?.active ?? true);
     setIsTaxable(initial?.is_taxable ?? true);
+    setAvailableFrom(initial?.available_from ? initial.available_from.split('T')[0] : "");
+    setAvailableUntil(initial?.available_until ? initial.available_until.split('T')[0] : "");
     setImagePreview(initialImageUrl);
     setImageUrl(initialImageUrl);
     setUploading(false);
@@ -211,6 +217,8 @@ export default function ProductFormModal({
       active,
       is_taxable: isTaxable,
       image_url: imageUrl,
+      available_from: availableFrom ? new Date(availableFrom).toISOString() : null,
+      available_until: availableUntil ? new Date(availableUntil).toISOString() : null,
     });
     setSaving(false);
 
@@ -610,6 +618,43 @@ export default function ProductFormModal({
                   <p className="atelier-hint flex-1 min-w-[200px]">
                     Active products appear in the storefront. Taxable items add sales tax at checkout.
                   </p>
+                </div>
+
+                {/* Seasonal Availability */}
+                <div className="mt-6 pt-6 border-t border-stone-200/40">
+                  <span className="atelier-section-label block mb-3">Seasonal Availability</span>
+                  <p className="atelier-hint mb-4">Set when this product is available (e.g., mid-July through mid-September)</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="atelier-available-from" className="block text-[11px] font-mono uppercase tracking-wider text-stone-500 mb-1.5">Start Date</label>
+                      <input
+                        id="atelier-available-from"
+                        type="date"
+                        value={availableFrom}
+                        onChange={(e) => setAvailableFrom(e.target.value)}
+                        className="atelier-input"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="atelier-available-until" className="block text-[11px] font-mono uppercase tracking-wider text-stone-500 mb-1.5">End Date</label>
+                      <input
+                        id="atelier-available-until"
+                        type="date"
+                        value={availableUntil}
+                        onChange={(e) => setAvailableUntil(e.target.value)}
+                        className="atelier-input"
+                      />
+                    </div>
+                  </div>
+                  {(availableFrom || availableUntil) && (
+                    <button
+                      type="button"
+                      onClick={() => { setAvailableFrom(""); setAvailableUntil(""); }}
+                      className="mt-2 text-[11px] font-mono uppercase tracking-wider text-stone-400 hover:text-stone-600"
+                    >
+                      Clear dates
+                    </button>
+                  )}
                 </div>
               </section>
             </div>

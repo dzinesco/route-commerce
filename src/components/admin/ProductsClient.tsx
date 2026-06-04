@@ -351,6 +351,8 @@ export default function ProductsClient({
                 brand_id: editingProduct.brand_id,
                 active: editingProduct.active,
                 is_taxable: editingProduct.is_taxable,
+                available_from: editingProduct.available_from ?? null,
+                available_until: editingProduct.available_until ?? null,
               }
             : undefined
         }
