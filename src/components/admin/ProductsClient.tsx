@@ -21,6 +21,8 @@ type Product = {
   image_url?: string | null;
   brand_id: string;
   is_taxable: boolean;
+  available_from?: string | null;
+  available_until?: string | null;
 };
 
 type ViewMode = "table" | "cards";
