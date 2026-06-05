@@ -18,7 +18,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
@@ -38,7 +38,7 @@ jobs:
 
           # Install production deps only
           cd $APP_DIR
-          npm ci --omit=dev
+          npm install --omit=dev
 
           # Copy env if not already there
           if [ ! -f $APP_DIR/.env.production ]; then
