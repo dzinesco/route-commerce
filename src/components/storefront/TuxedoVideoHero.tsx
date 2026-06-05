@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { publicUrl, BUCKETS } from "@/lib/storage";
 
 // Register GSAP plugins
 if (typeof window !== "undefined") {
@@ -23,12 +22,13 @@ type TuxedoVideoHeroProps = {
   onSecondaryClick?: () => void;
 };
 
-const VIDEO_URL = publicUrl(BUCKETS.VIDEOS, "tuxedo-hero.mp4");
+// Use Next.js rewrite (next.config.ts) so the browser can stream assets
+// via same-origin /storage/* and avoid next/image "upstream resolved to
+// private ip" failures when the upstream is localhost MinIO.
+const VIDEO_URL = `/storage/videos/tuxedo-hero.mp4`;
 
-const OLATHE_SWEET_LOGO_DARK = publicUrl(
-  BUCKETS.BRAND_LOGOS,
-  "64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo-dark.png"
-);
+const OLATHE_SWEET_LOGO_DARK =
+  "/storage/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo-dark.png";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CINEMATIC HERO - SCROLL-DRIVEN ANIMATIONS

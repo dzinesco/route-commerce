@@ -106,8 +106,18 @@ const nextConfig: NextConfig = {
 
   // Rewrites for API proxy
   async rewrites() {
+    // Storage proxy: /storage/* -> MinIO at the same path
+    // Lets brand assets and product images use portable relative URLs
+    // (e.g. /storage/brand-logos/<id>/logo.png) in the DB, with Next.js
+    // proxying to whichever MinIO endpoint is configured for the environment.
+    // Avoids the next/image "upstream resolved to private ip" block on
+    // localhost MinIO by keeping the upstream fetch on the server side.
+    const storageBase = process.env.STORAGE_PUBLIC_URL || "http://localhost:9000";
     return [
-      // Add any necessary rewrites here
+      {
+        source: "/storage/:path*",
+        destination: `${storageBase}/:path*`,
+      },
     ];
   },
 

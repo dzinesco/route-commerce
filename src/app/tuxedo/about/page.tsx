@@ -6,7 +6,6 @@ import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import { supabase } from "@/lib/supabase";
 import { getBrandSettingsPublic } from "@/actions/brand-settings";
-import { publicUrl, BUCKETS } from "@/lib/storage";
 
 // Lazy load heavy sections
 const MissionSection = lazy(() => import("@/components/about/MissionSection"));
@@ -14,10 +13,11 @@ const FamilyTimelineSection = lazy(() => import("@/components/about/FamilyTimeli
 const ContactSection = lazy(() => import("@/components/about/ContactSection"));
 const CTASection = lazy(() => import("@/components/about/CTASection"));
 
-const OLATHE_SWEET_LOGO_DARK = publicUrl(
-  BUCKETS.BRAND_LOGOS,
-  "64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo.png"
-);
+// Use Next.js rewrite (next.config.ts) so the browser can stream assets
+// via same-origin /storage/* and avoid next/image "upstream resolved to
+// private ip" failures when the upstream is localhost MinIO.
+const OLATHE_SWEET_LOGO_DARK =
+  "/storage/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo.png";
 
 export default function TuxedoAboutPage() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);

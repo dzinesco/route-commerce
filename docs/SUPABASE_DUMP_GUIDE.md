@@ -203,3 +203,86 @@ psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT name, slug, crea
   for reproducibility. The data dump is gitignored (regenerate as needed).
 - After dump, the local PostgREST needs a schema cache reload — restart
   the postgrest process or it'll serve stale metadata for ~30 seconds.
+
+## Migrating Brand Assets (Supabase Storage → MinIO)
+
+Brand logos and other Storage files are NOT in the Postgres dump. The
+storage layer is now MinIO (S3-compatible) instead of Supabase Storage.
+
+### Download assets from Supabase
+
+```bash
+# Make sure the target buckets exist in MinIO (one-time)
+mc mb --ignore-existing local/brand-logos local/videos \
+                        local/product-images local/contacts-imports \
+                        local/water-photos
+
+# Pull each asset via the public URL. Path is <bucket>/<key> after the
+# /storage/v1/object/public/ prefix in the Supabase URL.
+mkdir -p .data/assets
+BRAND_ID="<your-brand-uuid>"
+for fname in logo.png olathe-sweet-logo.png olathe-sweet-logo-dark.png; do
+  curl -sf -o ".data/assets/$fname" \
+    "https://<project-ref>.supabase.co/storage/v1/object/public/brand-logos/$BRAND_ID/$fname"
+  mc cp ".data/assets/$fname" "local/brand-logos/$BRAND_ID/$fname"
+done
+```
+
+### Point the DB at MinIO (portable /storage/... paths)
+
+After capture, the `brand_settings.logo_url` etc. values still point at
+the Supabase URL. Replace the base with a relative `/storage/` path so
+the Next.js rewrite in `next.config.ts` can route to whichever MinIO
+endpoint is configured per environment (dev → `localhost:9000`, prod →
+`storage.route.crispygoat.com`).
+
+```sql
+UPDATE brand_settings
+SET
+  logo_url = REPLACE(logo_url, 'https://<project-ref>.supabase.co/storage/v1/object/public', '/storage'),
+  logo_url_dark = REPLACE(logo_url_dark, 'https://<project-ref>.supabase.co/storage/v1/object/public', '/storage'),
+  olathe_sweet_logo_url = REPLACE(olathe_sweet_logo_url, 'https://<project-ref>.supabase.co/storage/v1/object/public', '/storage'),
+  olathe_sweet_logo_url_dark = REPLACE(olathe_sweet_logo_url_dark, 'https://<project-ref>.supabase.co/storage/v1/object/public', '/storage'),
+  hero_image_url = REPLACE(hero_image_url, 'https://<project-ref>.supabase.co/storage/v1/object/public', '/storage');
+```
+
+### Why a rewrite instead of pointing at MinIO directly
+
+Next.js's image optimizer (`/_next/image?url=...`) refuses to fetch
+upstream images whose hostname resolves to a private IP. Local MinIO is
+on `127.0.0.1` / `::1`, so URLs like `http://localhost:9000/...` get
+blocked:
+
+```
+⨯ upstream image http://localhost:9000/... resolved to private ip
+  ["::1","127.0.0.1"]
+```
+
+The rewrite in `next.config.ts` resolves `/storage/*` to the configured
+MinIO base URL server-side, so the browser sees a same-origin URL and
+the optimizer's private-IP check is bypassed:
+
+```ts
+async rewrites() {
+  const storageBase = process.env.STORAGE_PUBLIC_URL || "http://localhost:9000";
+  return [{ source: "/storage/:path*", destination: `${storageBase}/:path*` }];
+}
+```
+
+For production, set `STORAGE_PUBLIC_URL` to the public MinIO endpoint
+(e.g., `https://storage.route.crispygoat.com`) and the same DB values
+work without modification.
+
+### Hardcoded brand asset URLs in client components
+
+A few components used `publicUrl(BUCKETS.BRAND_LOGOS, ...)` to build a
+MinIO URL at module load (used as a fallback before client-side data
+loads). Switch these to `/storage/...` paths so the rewrite covers them:
+
+- `src/components/storefront/TuxedoVideoHero.tsx` — hero video + Olathe Sweet dark logo
+- `src/components/time-tracking/TimeTrackingFieldClient.tsx` — field UI logo
+- `src/app/tuxedo/about/page.tsx` — about page logo
+
+`src/lib/email-service.ts` should keep using `publicUrl(...)` because
+Resend fetches the URL server-side from its own network — relative
+paths won't work for emails.
