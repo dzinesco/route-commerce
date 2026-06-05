@@ -20,33 +20,43 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Load env
-        run: cp /home/tyler/route-commerce/.env.production .env.production
-
       - name: Build
         run: npm run build
         env:
           NODE_ENV: production
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
 
       - name: Deploy
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
         run: |
           APP_DIR=/home/tyler/route-commerce
           mkdir -p $APP_DIR
 
+          # Write env file from secrets
+          printf "NEXT_PUBLIC_SUPABASE_URL=%s\n" "$NEXT_PUBLIC_SUPABASE_URL" > $APP_DIR/.env.production
+          printf "NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n" "$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> $APP_DIR/.env.production
+          printf "SUPABASE_SERVICE_ROLE_KEY=%s\n" "$SUPABASE_SERVICE_ROLE_KEY" >> $APP_DIR/.env.production
+          printf "MINIMAX_API_KEY=%s\n" "$MINIMAX_API_KEY" >> $APP_DIR/.env.production
+          printf "MINIMAX_BASE_URL=%s\n" "$MINIMAX_BASE_URL" >> $APP_DIR/.env.production
+
           # Copy build output and required files
           rsync -a --delete .next/ $APP_DIR/.next/
           rsync -a --delete public/ $APP_DIR/public/
-          cp package.json package-lock.json $APP_DIR/
+          cp package.json $APP_DIR/
           cp next.config.ts $APP_DIR/ 2>/dev/null || cp next.config.js $APP_DIR/ 2>/dev/null || true
 
           # Install production deps only
           cd $APP_DIR
           npm install --omit=dev
-
-          # Copy env if not already there
-          if [ ! -f $APP_DIR/.env.production ]; then
-            echo "WARNING: No .env.production found at $APP_DIR — app may not start correctly"
-          fi
 
           # Start or restart PM2 process
           if pm2 describe route-commerce > /dev/null 2>&1; then
