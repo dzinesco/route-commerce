@@ -1,0 +1,57 @@
+name: Deploy to route.crispygoat.com
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Deploy
+        run: |
+          APP_DIR=/home/tyler/route-commerce
+          mkdir -p $APP_DIR
+
+          # Copy build output and required files
+          rsync -a --delete .next/ $APP_DIR/.next/
+          rsync -a --delete public/ $APP_DIR/public/
+          cp package.json package-lock.json $APP_DIR/
+          cp next.config.ts $APP_DIR/ 2>/dev/null || cp next.config.js $APP_DIR/ 2>/dev/null || true
+
+          # Install production deps only
+          cd $APP_DIR
+          npm ci --omit=dev
+
+          # Copy env if not already there
+          if [ ! -f $APP_DIR/.env.production ]; then
+            echo "WARNING: No .env.production found at $APP_DIR — app may not start correctly"
+          fi
+
+          # Start or restart PM2 process
+          if pm2 describe route-commerce > /dev/null 2>&1; then
+            pm2 restart route-commerce
+          else
+            pm2 start npm --name route-commerce -- start -- -p 3100
+            pm2 save
+          fi
+
+          echo "Deployed successfully"
