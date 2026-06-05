@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { authClient } from "@/lib/auth-client";
 import { AdminUserRow } from "@/actions/admin/users";
 import { logUserActivity } from "@/actions/admin/audit";
+import { updateAdminProfileAction } from "@/actions/admin/profile";
 
 type ProfilePageProps = {
   currentUser: AdminUserRow;
@@ -26,13 +27,13 @@ export default function AdminMeClient({ currentUser }: ProfilePageProps) {
     setSaving(true);
     setError(null);
     try {
-      const { error: rpcError } = await supabase.rpc("update_admin_user", {
-        p_id: currentUser.id,
-        p_display_name: displayName || null,
-        p_phone_number: phoneNumber || null,
-      });
-      if (rpcError) {
-        setError(rpcError.message);
+      const result = await updateAdminProfileAction(
+        currentUser.id,
+        displayName || null,
+        phoneNumber || null
+      );
+      if (!result.success) {
+        setError(result.error);
         return;
       }
       await logUserActivity({
@@ -51,11 +52,11 @@ export default function AdminMeClient({ currentUser }: ProfilePageProps) {
     setChangingEmail(true);
     setEmailError(null);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        email: newEmail,
+      const { error: updateError } = await authClient.changeEmail({
+        newEmail: newEmail,
       });
       if (updateError) {
-        setEmailError(updateError.message);
+        setEmailError(updateError.message ?? "Failed to change email");
         return;
       }
       await logUserActivity({

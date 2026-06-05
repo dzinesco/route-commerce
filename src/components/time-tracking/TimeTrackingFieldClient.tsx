@@ -4,6 +4,7 @@
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import LayoutContainer from "@/components/layout/LayoutContainer";
+import { publicUrl, BUCKETS } from "@/lib/storage";
 import {
   verifyTimeTrackingPin,
   clockInWorker,
@@ -21,8 +22,10 @@ import {
 const BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
 const BRAND_NAME = "Tuxedo Corn";
 
-const OLATHE_SWEET_LOGO_DARK =
-  "https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo.png";
+const OLATHE_SWEET_LOGO_DARK = publicUrl(
+  BUCKETS.BRAND_LOGOS,
+  `${BRAND_ID}/olathe-sweet-logo.png`
+);
 
 // ── Translations ───────────────────────────────────────────────────────────────
 

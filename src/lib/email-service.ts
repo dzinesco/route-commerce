@@ -9,8 +9,14 @@
  *   FROM_EMAIL            — e.g. "Tuxedo Corn <no-reply@tuxedocorn.com>"
  */
 
+import { publicUrl, BUCKETS } from "@/lib/storage";
+
 const FROM_EMAIL = process.env.FROM_EMAIL ?? "Tuxedo Corn <no-reply@tuxedocorn.com>";
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
+
+const TUXEDO_BRAND_ID = "64294306-5f42-463d-a5e8-2ad6c81a96de";
+const OLATHE_SWEET_LOGO = publicUrl(BUCKETS.BRAND_LOGOS, `${TUXEDO_BRAND_ID}/olathe-sweet-logo.png`);
+const TUXEDO_LOGO = publicUrl(BUCKETS.BRAND_LOGOS, `${TUXEDO_BRAND_ID}/logo.png`);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared email send function
@@ -118,7 +124,7 @@ export async function sendOrderReceiptEmail(data: OrderReceiptData): Promise<boo
 
     <!-- Header -->
     <div style="background: #1c1917; border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
-      <img src="https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo.png"
+      <img src="${OLATHE_SWEET_LOGO}"
            alt="Olathe Sweet" style="height: 40px; width: auto; object-fit: contain; margin-bottom: 16px; filter: brightness(0) invert(1); opacity: 0.9;" />
       <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Order Confirmed</h1>
       <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.6);">Order #${data.orderId.slice(0, 8).toUpperCase()}</p>
@@ -167,7 +173,7 @@ export async function sendOrderReceiptEmail(data: OrderReceiptData): Promise<boo
 
       <!-- Olathe Sweet callout -->
       <div style="background: #fafaf9; border-radius: 10px; padding: 16px 20px; margin-top: 24px; display: flex; align-items: center; gap: 12px;">
-        <img src="https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo.png"
+        <img src="${OLATHE_SWEET_LOGO}"
              alt="Olathe Sweet" style="height: 28px; width: auto; object-fit: contain; opacity: 0.7; flex-shrink: 0;" />
         <p style="margin: 0; font-size: 12px; color: #78716c; line-height: 1.5;">
           Grown in Olathe, Colorado — Non-GMO · Hand-Picked · Farm-Direct
@@ -269,7 +275,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean>
 
     <!-- Header -->
     <div style="background: #1c1917; border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
-      <img src="https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/logo.png"
+      <img src="${TUXEDO_LOGO}"
            alt="Tuxedo Corn" style="height: 36px; width: auto; object-fit: contain; margin-bottom: 16px;" />
       <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Welcome, ${data.name.split(" ")[0]}</h1>
       <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.6);">Your ${roleLabel} account is ready</p>
@@ -350,7 +356,7 @@ export async function sendPasswordResetEmail(data: PasswordResetData): Promise<b
 <body style="margin: 0; padding: 0; background: #fafaf9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1c1917;">
   <div style="max-width: 600px; margin: 0 auto; padding: 32px 16px;">
     <div style="background: #1c1917; border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
-      <img src="https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/logo.png"
+      <img src="${TUXEDO_LOGO}"
            alt="Tuxedo Corn" style="height: 32px; width: auto; object-fit: contain; margin-bottom: 16px;" />
       <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #ffffff;">Reset Your Password</h1>
     </div>

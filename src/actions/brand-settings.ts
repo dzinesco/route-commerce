@@ -2,6 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { svcHeaders } from "@/lib/svc-headers";
+import { uploadFile, BUCKETS, publicUrl, storageKeys } from "@/lib/storage";
 
 export type UploadLogoResult =
   | { success: true; logoUrl: string }
@@ -30,31 +31,28 @@ export async function uploadBrandLogo(
   }
 
   const ext = file.type === "image/svg+xml" ? "svg" : file.type.split("/")[1];
-  const path = isDark ? `logo-dark.${ext}` : `logo.${ext}`;
-  const storagePath = `brand-logos/${brandId}/${path}`;
+  const fileName = isDark ? `logo-dark.${ext}` : `logo.${ext}`;
+  const key = storageKeys.brandLogo(brandId, fileName);
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
+  let url: string;
+  try {
+    const res = await uploadFile({
+      bucket: BUCKETS.BRAND_LOGOS,
+      key,
+      body: buffer,
+      contentType: file.type,
+    });
+    url = res.url;
+  } catch (e) {
+    return { success: false, error: `Upload failed: ${(e as Error).message}` };
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/brand-logos/${storagePath}`,
-    {
-      method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": file.type, "x-upsert": "true" },
-      body: buffer,
-    }
-  );
-
-  if (!uploadRes.ok) {
-    return { success: false, error: `Upload failed: ${await uploadRes.text()}` };
-  }
-
-  const publicUrl = `${supabaseUrl}/storage/v1/object/public/brand-logos/${storagePath}`;
-
-  // Save URL to brand_settings via RPC
   const saveRes = await fetch(
     `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
     {
@@ -62,7 +60,7 @@ export async function uploadBrandLogo(
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_brand_id: brandId,
-        [isDark ? "p_logo_url_dark" : "p_logo_url"]: publicUrl,
+        [isDark ? "p_logo_url_dark" : "p_logo_url"]: url,
       }),
     }
   );
@@ -71,7 +69,7 @@ export async function uploadBrandLogo(
     return { success: false, error: "Upload succeeded but failed to save URL" };
   }
 
-  return { success: true, logoUrl: publicUrl };
+  return { success: true, logoUrl: url };
 }
 
 export async function uploadOlatheSweetLogo(
@@ -96,28 +94,26 @@ export async function uploadOlatheSweetLogo(
   }
 
   const ext = file.type === "image/svg+xml" ? "svg" : file.type.split("/")[1];
-  const storagePath = `brand-logos/${brandId}/olathe-sweet-logo.${ext}`;
+  const key = storageKeys.brandLogo(brandId, `olathe-sweet-logo.${ext}`);
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/brand-logos/${storagePath}`,
-    {
-      method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": file.type, "x-upsert": "true" },
+  let url: string;
+  try {
+    const res = await uploadFile({
+      bucket: BUCKETS.BRAND_LOGOS,
+      key,
       body: buffer,
-    }
-  );
-
-  if (!uploadRes.ok) {
-    return { success: false, error: `Upload failed: ${await uploadRes.text()}` };
+      contentType: file.type,
+    });
+    url = res.url;
+  } catch (e) {
+    return { success: false, error: `Upload failed: ${(e as Error).message}` };
   }
 
-  const publicUrl = `${supabaseUrl}/storage/v1/object/public/brand-logos/${storagePath}`;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   const saveRes = await fetch(
     `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
@@ -126,7 +122,7 @@ export async function uploadOlatheSweetLogo(
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_brand_id: brandId,
-        p_olathe_sweet_logo_url: publicUrl,
+        p_olathe_sweet_logo_url: url,
       }),
     }
   );
@@ -135,7 +131,7 @@ export async function uploadOlatheSweetLogo(
     return { success: false, error: "Upload succeeded but failed to save URL" };
   }
 
-  return { success: true, logoUrl: publicUrl };
+  return { success: true, logoUrl: url };
 }
 
 export async function uploadOlatheSweetLogoDark(
@@ -160,28 +156,26 @@ export async function uploadOlatheSweetLogoDark(
   }
 
   const ext = file.type === "image/svg+xml" ? "svg" : file.type.split("/")[1];
-  const storagePath = `brand-logos/${brandId}/olathe-sweet-logo-dark.${ext}`;
+  const key = storageKeys.brandLogo(brandId, `olathe-sweet-logo-dark.${ext}`);
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/brand-logos/${storagePath}`,
-    {
-      method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": file.type, "x-upsert": "true" },
+  let url: string;
+  try {
+    const res = await uploadFile({
+      bucket: BUCKETS.BRAND_LOGOS,
+      key,
       body: buffer,
-    }
-  );
-
-  if (!uploadRes.ok) {
-    return { success: false, error: `Upload failed: ${await uploadRes.text()}` };
+      contentType: file.type,
+    });
+    url = res.url;
+  } catch (e) {
+    return { success: false, error: `Upload failed: ${(e as Error).message}` };
   }
 
-  const publicUrl = `${supabaseUrl}/storage/v1/object/public/brand-logos/${storagePath}`;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   const saveRes = await fetch(
     `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
@@ -190,7 +184,7 @@ export async function uploadOlatheSweetLogoDark(
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
       body: JSON.stringify({
         p_brand_id: brandId,
-        p_olathe_sweet_logo_url_dark: publicUrl,
+        p_olathe_sweet_logo_url_dark: url,
       }),
     }
   );
@@ -199,7 +193,7 @@ export async function uploadOlatheSweetLogoDark(
     return { success: false, error: "Upload succeeded but failed to save URL" };
   }
 
-  return { success: true, logoUrl: publicUrl };
+  return { success: true, logoUrl: url };
 }
 
 export type BrandSettings = {

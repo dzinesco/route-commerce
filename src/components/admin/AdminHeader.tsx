@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { authClient } from "@/lib/auth-client";
 
 type AdminHeaderProps = {
   userRole?: string | null;
@@ -90,7 +90,7 @@ export default function AdminHeader({ userRole, canManageUsers, routeTraceEnable
 
   async function handleLogout() {
     document.cookie = "dev_session=;path=/;max-age=0";
-    await supabase.auth.signOut();
+    await authClient.signOut();
     router.push("/login");
     router.refresh();
   }

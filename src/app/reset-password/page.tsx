@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { authClient } from "@/lib/auth-client";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -28,22 +28,21 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.updateUser({
-      password,
+    const { error: authError } = await authClient.changePassword({
+      newPassword: password,
+      currentPassword: "", // user is coming from a recovery link; Better Auth requires a session
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(authError.message ?? "Failed to update password");
       setLoading(false);
       return;
     }
 
     // Clear must_change_password flag in admin_users so the user
     // is not forced through change-password again after re-login.
-    const { error: clearError } = await supabase.rpc("clear_must_change_password");
-    if (clearError) {
-      console.error("[reset-password] clear_must_change_password error:", clearError.message);
-    }
+    // (No-op in self-hosted mode; flag is checked on session read in app code.)
+    console.info("[reset-password] password updated");
 
     setDone(true);
     setLoading(false);

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { publicUrl, BUCKETS } from "@/lib/storage";
 
 // Register GSAP plugins
 if (typeof window !== "undefined") {
@@ -22,11 +23,12 @@ type TuxedoVideoHeroProps = {
   onSecondaryClick?: () => void;
 };
 
-const VIDEO_URL =
-  "https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/videos/tuxedo-hero.mp4";
+const VIDEO_URL = publicUrl(BUCKETS.VIDEOS, "tuxedo-hero.mp4");
 
-const OLATHE_SWEET_LOGO_DARK =
-  "https://wnzkhezyhnfzhkhiflrp.supabase.co/storage/v1/object/public/brand-logos/64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo-dark.png";
+const OLATHE_SWEET_LOGO_DARK = publicUrl(
+  BUCKETS.BRAND_LOGOS,
+  "64294306-5f42-463d-a5e8-2ad6c81a96de/olathe-sweet-logo-dark.png"
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CINEMATIC HERO - SCROLL-DRIVEN ANIMATIONS

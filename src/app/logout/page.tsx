@@ -2,30 +2,24 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { authClient } from "@/lib/auth-client";
 
 export default function LogoutPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Clear all auth cookies — dev_session, rc_auth_uid, rc_auth_token
+    // Clear all auth cookies — dev_session, rc_session_token
     document.cookie = "dev_session=;path=/;max-age=0";
-    document.cookie = "rc_auth_uid=;path=/;max-age=0";
-    document.cookie = "rc_auth_token=;path=/;max-age=0";
+    document.cookie = "rc_session_token=;path=/;max-age=0";
+    document.cookie = "wholesale_session=;path=/;max-age=0";
     // Clear shopping cart on logout
     localStorage.removeItem("route_commerce_cart");
     localStorage.removeItem("route_commerce_stop");
 
-    // Sign out from Supabase and clear server cart
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (data.user?.id) {
-        const { clearServerCart } = await import("@/actions/checkout");
-        clearServerCart(data.user.id).catch(() => {});
-      }
-      supabase.auth.signOut().then(() => {
-        router.push("/login");
-        router.refresh();
-      });
+    // Sign out from Better Auth
+    authClient.signOut().then(() => {
+      router.push("/login");
+      router.refresh();
     });
   }, [router]);
 

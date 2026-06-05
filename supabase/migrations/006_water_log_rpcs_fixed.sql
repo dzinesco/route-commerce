@@ -25,7 +25,7 @@ DROP FUNCTION IF EXISTS public.get_water_entries(uuid);
 CREATE OR REPLACE FUNCTION public.verify_water_pin(p_brand_id uuid, p_pin text)
 RETURNS jsonb
 LANGUAGE plpgsql
-STATIC
+STABLE
 AS $$
 DECLARE
   v_user      jsonb;
@@ -84,7 +84,7 @@ CREATE OR REPLACE FUNCTION public.create_water_user(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
-STATIC
+STABLE
 AS $$
 DECLARE
   v_brand_id  uuid;
@@ -125,7 +125,7 @@ COMMENT ON FUNCTION public.create_water_user IS
 CREATE OR REPLACE FUNCTION public.reset_water_user_pin(p_user_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
-STATIC
+STABLE
 AS $$
 DECLARE
   v_raw_pin text;
@@ -160,7 +160,7 @@ CREATE OR REPLACE FUNCTION public.submit_water_entry(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
-STATIC
+STABLE
 AS $$
 DECLARE
   v_sess   record;
@@ -204,7 +204,7 @@ CREATE OR REPLACE FUNCTION public.update_water_user(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
-STATIC
+STABLE
 AS $$
 BEGIN
   UPDATE public.water_users
@@ -226,7 +226,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.get_water_entries(p_brand_id uuid, p_limit int DEFAULT 50)
 RETURNS jsonb
 LANGUAGE plpgsql
-STATIC
+STABLE
 AS $$
 BEGIN
   RETURN (

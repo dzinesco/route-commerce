@@ -1,7 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
 export type LoginWithPasswordResult =
   | { success: true; redirect: true }
@@ -11,46 +11,21 @@ export async function loginWithPassword(
   email: string,
   password: string
 ): Promise<LoginWithPasswordResult> {
-  const cookieStore = await cookies();
+  try {
+    const hdrs = await headers();
+    const result = await auth.api.signInEmail({
+      body: { email, password },
+      headers: hdrs,
+      asResponse: false,
+    });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!result?.user) {
+      return { success: false, error: "Invalid credentials" };
+    }
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return { success: false, error: "Server misconfiguration." };
+    return { success: true, redirect: true };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Invalid credentials";
+    return { success: false, error: message };
   }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error || !data.user) {
-    return { success: false, error: error?.message || "Invalid credentials" };
-  }
-
-  // Set the rc_auth_uid cookie that getAdminUser() reads
-  const isProd = process.env.NODE_ENV === "production";
-  cookieStore.set("rc_auth_uid", data.user.id, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProd,
-  });
-
-  return { success: true, redirect: true };
 }

@@ -1,8 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
-import { svcHeaders } from "@/lib/svc-headers";
+import { cookies, headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
 export type WholesaleLoginResult =
   | { success: true; token: string; userId: string; customerId: string }
@@ -12,121 +11,53 @@ export async function wholesaleLoginAction(formData: FormData): Promise<Wholesal
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  try {
+    const hdrs = await headers();
+    const result = await auth.api.signInEmail({
+      body: { email, password },
+      headers: hdrs,
+      asResponse: false,
+    });
 
-  const cookieStore = await cookies();
-  const request = new NextRequest("http://localhost/wholesale/login", {
-    headers: new Headers(),
-  });
-  const response = NextResponse.next({ request });
-
-  const { createServerClient } = await import("@supabase/ssr");
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet, headers) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-        Object.entries(headers).forEach(([key, value]) => {
-          response.headers.set(key, value);
-        });
-      },
-    },
-  });
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error || !data.user) {
-    return { success: false, error: error?.message ?? "Invalid credentials" };
-  }
-
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
-
-  if (!token) {
-    return { success: false, error: "No session returned from auth" };
-  }
-
-  // Find the wholesale customer record for this user
-  const customerRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_customer_by_user`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseAnonKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_brand_id: "placeholder", // will use any-brand lookup below
-        p_user_id: data.user.id,
-      }),
+    if (!result?.user) {
+      return { success: false, error: "Invalid credentials" };
     }
-  );
 
-  // If no brand_id known, try all brands — just use first active one found
-  // For now, set the cookie with user_id and a placeholder; portal will resolve proper customer
-  response.cookies.set("wholesale_session", JSON.stringify({
-    user_id: data.user.id,
-    access_token: token,
-  }), {
-    path: "/",
-    maxAge: 3600 * 24 * 7,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: false,
-  });
+    const cookieStore = await cookies();
+    // Better Auth sets its own session cookie (rc_session_token).
+    // Mark wholesale session for portal routing.
+    cookieStore.set("wholesale_session", JSON.stringify({
+      user_id: result.user.id,
+    }), {
+      path: "/",
+      maxAge: 3600 * 24 * 7,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+    });
 
-  // Also set the standard auth token for RPC calls
-  response.cookies.set("sb-wnzkhezyhnfzhkhiflrp-auth-token", token, {
-    path: "/",
-    maxAge: 3600 * 24 * 7,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: false,
-  });
-
-  return {
-    success: true,
-    token,
-    userId: data.user.id,
-    customerId: "pending", // resolved by portal page on load
-  };
+    return {
+      success: true,
+      token: "better-auth-session", // session lives in cookie
+      userId: result.user.id,
+      customerId: "pending", // resolved by portal page on load
+    };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Invalid credentials";
+    return { success: false, error: message };
+  }
 }
 
 export async function wholesaleLogoutAction() {
+  try {
+    const hdrs = await headers();
+    await auth.api.signOut({ headers: hdrs });
+  } catch {
+    // best-effort
+  }
+
   const cookieStore = await cookies();
-  const request = new NextRequest("http://localhost/wholesale/portal", {
-    headers: new Headers(),
-  });
-  const response = NextResponse.next({ request });
-
-  response.cookies.delete("wholesale_session");
-
-  const { createServerClient } = await import("@supabase/ssr");
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet, headers) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  await supabase.auth.signOut();
+  cookieStore.delete("wholesale_session");
 
   return { success: true };
 }

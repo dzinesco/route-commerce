@@ -37,7 +37,7 @@ CREATE OR REPLACE FUNCTION enroll_abandoned_cart(
   p_cart_snapshot JSONB,
   p_brand_name TEXT,
   p_locale TEXT DEFAULT 'en',
-  p_next_email_at TIMESTAMPTZ
+  p_next_email_at TIMESTAMPTZ DEFAULT NULL
 )
 RETURNS UUID
 LANGUAGE plpgsql

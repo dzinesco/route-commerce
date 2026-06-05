@@ -5,6 +5,7 @@ import IndianRiverStopsList from "./IndianRiverStopsList";
 // Page-level cache — matches the 5-min revalidate in getPublicStopsForBrand.
 // Mutations call revalidateTag("stops") to invalidate.
 export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function IndianRiverStopsPage() {
   const [stops, settings] = await Promise.all([

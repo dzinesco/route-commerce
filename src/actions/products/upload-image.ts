@@ -2,9 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { svcHeaders } from "@/lib/svc-headers";
-
-// Product images bucket - UUID from Supabase
-const PRODUCT_IMAGES_BUCKET_ID = "80aa01da-ab4b-44f8-b6e7-700552457e18";
+import { uploadFile, BUCKETS, storageKeys } from "@/lib/storage";
 
 export type UploadProductImageResult =
   | { success: true; imageUrl: string }
@@ -25,42 +23,41 @@ export async function uploadProductImage(
     return { success: false, error: "File too large. Max 5MB." };
   }
 
-  const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
-  const path = `products/${productId}/${crypto.randomUUID()}.${ext}`;
+  const rawExt = file.type.split("/")[1];
+  const ext = rawExt === "jpeg" ? "jpg" : rawExt;
+  const targetProductId = productId === "__NEW__" ? "new" : productId;
+  const key = storageKeys.productImage(targetProductId, ext);
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/${PRODUCT_IMAGES_BUCKET_ID}/${path}`,
-    {
-      method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Authorization": `Bearer ${supabaseKey}`, "Content-Type": `image/${ext}`, "x-upsert": "true" },
+  let url: string;
+  try {
+    const res = await uploadFile({
+      bucket: BUCKETS.PRODUCT_IMAGES,
+      key,
       body: buffer,
-    }
-  );
-
-  if (!uploadRes.ok) {
-    return { success: false, error: `Upload failed: ${await uploadRes.text()}` };
+      contentType: file.type,
+    });
+    url = res.url;
+  } catch (e) {
+    return { success: false, error: `Upload failed: ${(e as Error).message}` };
   }
-
-  const publicUrl = `${supabaseUrl}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET_ID}/${path}`;
 
   // If productId is "__NEW__", we just upload and return the URL (caller handles saving it)
   if (productId === "__NEW__") {
-    return { success: true, imageUrl: publicUrl };
+    return { success: true, imageUrl: url };
   }
 
-  // Update product record with new image URL
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
   const patchRes = await fetch(
     `${supabaseUrl}/rest/v1/products?id=eq.${productId}`,
     {
       method: "PATCH",
       headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ image_url: publicUrl }),
+      body: JSON.stringify({ image_url: url }),
     }
   );
 
@@ -68,7 +65,7 @@ export async function uploadProductImage(
     return { success: false, error: "Upload succeeded but failed to save image URL" };
   }
 
-  return { success: true, imageUrl: publicUrl };
+  return { success: true, imageUrl: url };
 }
 
 export async function deleteProductImage(

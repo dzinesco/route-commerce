@@ -1,4 +1,10 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 export type AdminUser = {
   id: string;
@@ -33,54 +39,44 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     return buildDevAdmin(dev);
   }
 
-  // ── Main auth: rc_auth_uid (new) or rc_uid (legacy) cookie set by /api/login ─
-  const uid = cookieStore.get("rc_auth_uid")?.value ?? cookieStore.get("rc_uid")?.value;
+  // ── Better Auth session check ────────────────────────────────────
+  const hdrs = await headers();
+  const session = await auth.api.getSession({ headers: hdrs });
+  if (!session?.user) return null;
+
+  const uid = session.user.id;
   if (!uid) return null;
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  // Lookup admin_users by user_id
+  let adminUsers: unknown[] = [];
+  try {
+    const res = await pool.query(
+      `SELECT * FROM admin_users WHERE user_id = $1 LIMIT 1`,
+      [uid]
+    );
+    adminUsers = res.rows;
+  } catch (e) {
     return null;
   }
 
-  // Lookup admin_users by Supabase auth user id
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  let adminUsers: unknown[] = [];
-  try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/admin_users?user_id=eq.${uid}&limit=1`,
-      { headers: { apikey: serviceKey, "Content-Type": "application/json" } }
-    );
-    if (res.ok) {
-      const data = await res.json().catch(() => []);
-      adminUsers = Array.isArray(data) ? data : [];
-    }
-  } catch (e) {
-    // fetch failed silently
-  }
-
-  // First login — auto-create platform_admin via SECURITY DEFINER RPC
+  // First login — auto-create platform_admin
   if (adminUsers.length === 0) {
-    // Check if uid is a valid UUID before trying to insert
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_REGEX.test(uid)) return null;
 
     try {
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/rpc/upsert_admin_user`,
-        {
-          method: "POST",
-          headers: { apikey: serviceKey, "Content-Type": "application/json", Prefer: "return=representation" },
-          body: JSON.stringify({ p_user_id: uid }),
-        }
+      const res = await pool.query(
+        `INSERT INTO admin_users (user_id, role, active)
+         VALUES ($1, 'platform_admin', true)
+         ON CONFLICT (user_id) DO UPDATE SET active = EXCLUDED.active
+         RETURNING *`,
+        [uid]
       );
-      if (res.ok) {
-        const inserted = await res.json().catch(() => null);
-        if (inserted && inserted.length > 0) {
-          return buildAdminUser(inserted[0] as Record<string, unknown>);
-        }
+      if (res.rows.length > 0) {
+        return buildAdminUser(res.rows[0] as Record<string, unknown>);
       }
     } catch (e) {
-      // RPC failed silently
+      return null;
     }
     return null;
   }
