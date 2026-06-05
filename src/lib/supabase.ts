@@ -4,8 +4,10 @@ import { getMockTableData } from "./mock-data";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Auto-enable mock mode when no Supabase URL is configured (demo/deployment without backend)
-const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true" || !supabaseUrl || !supabaseUrl.includes("supabase.co");
+// Auto-enable mock mode when no Supabase URL is configured (demo/deployment without backend).
+// Note: do NOT trigger on non-supabase.co URLs — local PostgREST (e.g. http://localhost:3001)
+// uses the same supabase-js client. Mock mode is for deployments without any database.
+const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true" || !supabaseUrl;
 
 // Mock query builder that supports all common Supabase methods
 class MockQueryBuilder {
