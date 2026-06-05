@@ -204,6 +204,30 @@ psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT name, slug, crea
 - After dump, the local PostgREST needs a schema cache reload — restart
   the postgrest process or it'll serve stale metadata for ~30 seconds.
 
+## Post-restore: clean up test brands
+
+The captured production data includes 3 test brands with hardcoded
+sequential UUIDs (`a1b2c3d4-…`, `b2c3d4e5-…`, `c3d4e5f6-…`) created
+during the migration work. They have no related rows in any of the 38
+tables that FK to `brands.id`, so deletion is safe (CASCADE / NO ACTION
+on zero rows is a no-op).
+
+```sql
+BEGIN;
+  DELETE FROM brands
+  WHERE slug IN ('sunrise-farms', 'green-valley', 'orchard-fresh');
+  -- expect DELETE 3
+COMMIT;
+```
+
+Verify the real brands remain:
+
+```sql
+SELECT name, slug, plan_tier FROM brands ORDER BY created_at;
+-- Tuxedo Corn         | tuxedo              | starter
+-- Indian River Direct | indian-river-direct | starter
+```
+
 ## Migrating Brand Assets (Supabase Storage → MinIO)
 
 Brand logos and other Storage files are NOT in the Postgres dump. The
