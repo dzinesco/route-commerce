@@ -1,6 +1,10 @@
 import { MetadataRoute } from "next";
 import { getActiveStopsForSitemap } from "@/actions/stops";
 
+// Sitemap calls a server action that needs the database — render at request time
+// rather than build time so the build doesn't require PostgREST to be up.
+export const dynamic = "force-dynamic";
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://yourdomain.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
