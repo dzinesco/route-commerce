@@ -60,13 +60,14 @@ Single Docker Compose stack on the prod server: `db` (Postgres 16) + `postgrest`
 ## Branch & Merge Strategy
 
 1. Create new branch `selfhost/migrate` from `main` (commit `9374e63`).
-2. Cherry-pick the 6 commits from `crispygoat/self-hosted-postgres`:
-   - `367a562` Add self-hosted Postgres docker-compose
-   - `e8f2d76` Fix workflow: use actual secrets, fix env file writing
-   - `beac3e4` Load .env.production from server before build
-   - `fddb917` Use npm install instead of npm ci (no lockfile)
-   - `8ad8dbb` Remove npm cache from workflow (local runner)
+2. Cherry-pick the 7 commits from `crispygoat/self-hosted-postgres` (oldest to newest):
+   - `2de32b0` Add rocket emoji to tagline
    - `988310f` Add Gitea Actions deploy workflow
+   - `8ad8dbb` Remove npm cache from workflow (local runner)
+   - `fddb917` Use npm install instead of npm ci (no lockfile)
+   - `beac3e4` Load .env.production from server before build
+   - `e8f2d76` Fix workflow: use actual secrets, fix env file writing
+   - `367a562` Add self-hosted Postgres docker-compose
 3. Cherry-pick the 1 commit from `crispygoat/feat/better-auth`:
    - `456b5b1` Add MinIO storage + replace Supabase Storage with S3 SDK
 4. Resolve conflicts (expected in `.env.example`, `.gitea/workflows/deploy.yml`, `docker-compose.yml`).
@@ -248,7 +249,7 @@ End-to-end verification sequence (per plan.md Phase E, expanded):
    - Run `pg_dump --schema-and-data --no-owner --no-privileges --schema=public --exclude-schema=auth --exclude-schema=storage "postgresql://postgres:<pw>@db.wnzkhezyhnfzhkhiflrp.supabase.co:5432/postgres" -f supabase/captured_schema.sql` from the user's Mac (direct PG blocked from this dev box per MEMORY.md).
    - `docker compose up -d db postgrest minio minio_init`.
    - Apply preflight, captured schema, then all 137 migrations. Document any remaining failures.
-   - Apply RLS disable block.
+   - Apply RLS disable block. (The 3 patched migrations 006/099/135 are applied as part of the 137-migration batch — verify each succeeded.)
 2. **PostgREST smoke.**
    - `curl http://127.0.0.1:3001/brands?limit=1 -H "apikey: <anon>"` → 200.
    - `curl -X POST http://127.0.0.1:3001/rpc/get_public_stops_for_brand -H "Content-Type: application/json" -d '{"p_slug":"indian-river-direct"}'` → 200 with non-empty array.
@@ -278,7 +279,7 @@ End-to-end verification sequence (per plan.md Phase E, expanded):
 | Risk | Mitigation |
 |---|---|
 | Migration apply order | `pg_dump` puts everything in dependency order; applying it first resolves most cross-references. Apply preflight first to stub `auth`, then captured schema, then migrations in numeric order. |
-| The 4 patched migrations are load-bearing | 006 (water-log RPCs) is critical for `/admin/water-log`; 099 (harvest reach segmentation) is critical for `/admin/communications`; 135 (email automation) is critical for abandoned cart + welcome sequence. If patches don't work, those features break. Document as follow-ups. |
+| The 3 patched migrations are load-bearing | 006 (water-log RPCs) is critical for `/admin/water-log`; 099 (harvest reach segmentation) is critical for `/admin/communications`; 135 (email automation) is critical for abandoned cart + welcome sequence. If patches don't work, those features break. Document as follow-ups. (087 is in the deleted list since Supabase Storage is replaced by MinIO.) |
 | `pg_dump` includes conflicting `auth.uid()` body | The preflight creates the stub. If `pg_dump` redefines it, apply `pg_dump` first, then re-apply preflight (CREATE OR REPLACE FUNCTION handles re-definition). |
 | Existing user-uploaded images unreachable in new stack | User will re-upload brand logos and product images. The Tuxedo video + Olathe logos (referenced in `email-service.ts` and `tuxedo/about/page.tsx`) need to be copied over manually to MinIO before the cutover. |
 | PostgREST connection pool | PostgREST opens ~10 connections. Default Postgres `max_connections=100` is fine. |
@@ -313,7 +314,7 @@ End-to-end verification sequence (per plan.md Phase E, expanded):
 
 - [ ] `selfhost/migrate` branch builds cleanly (`npx tsc --noEmit && npm run build`).
 - [ ] `docker compose up` on the dev box starts Postgres + PostgREST + MinIO and all 137 migrations apply.
-- [ ] All 4 patched migrations apply without errors.
+- [ ] All 3 patched migrations (006, 099, 135) apply without errors.
 - [ ] `supabase-js` calls against `http://localhost:3001` return the same shape as before against Supabase.
 - [ ] better-auth sign-up + sign-in round-trip works in the browser.
 - [ ] Product image upload via admin UI lands in MinIO and renders on the storefront.
