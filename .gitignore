@@ -41,4 +41,6 @@ supabase/.temp/
 
 # IDE / local config
 .mcp.json
-.env*
+
+# Docker / self-hosted Postgres
+db_data/
