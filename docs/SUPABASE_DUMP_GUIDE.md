@@ -1,176 +1,205 @@
 # Supabase Dump & Restore Guide
 
-This guide is the runbook for when your brother removes the Supabase
-spend cap and we can finally connect to the live Supabase project to
-pull the real schema + data.
+This guide is the runbook for capturing the real Supabase schema and data
+and restoring it to a local Postgres database. It documents the exact
+steps that worked when the spend cap was removed on 2026-06-05.
 
-## Prerequisites
+## Connection (this works from the dev box)
 
-- Brother has removed the Supabase spend cap (project status: ACTIVE_HEALTHY)
-- Supabase project ref: `wnzkhezyhnfzhkhiflrp` (from CLAUDE.md)
-- Supabase DB password: `YLKzP9jz2yqop7jr` (user-provided)
-- Local Postgres running on `127.0.0.1:5432` (user: `routecommerce`,
-  password: `routecommerce_dev_password`, db: `route_commerce`)
-
-## Connection Test
-
-The Supabase hostname has NO IPv4 address from this dev box. You
-must use the **Supabase Supavisor pooler** (port 6543) which resolves
-over IPv4. From your home network, you can also use the direct
-hostname on port 5432.
+The Supabase project `wnzkhezyhnfzhkhiflrp` (route-commerce) is hosted in
+**East US (North Virginia)**. The dev box has no IPv6, so we must use
+the **Supavisor pooler** (IPv4 only) — and it's on **`aws-1`**, not `aws-0`.
 
 ```bash
-# Direct hostname (home network only — dev box has no IPv6)
-psql "postgres://postgres.wnzkhezyhnfzhkhiflrp:YLKzP9jz2yqop7jr@db.wnzkhezyhnfzhkhiflrp.supabase.co:5432/postgres"
-
-# Pooler (works from dev box — IPv4 only)
-psql "postgres://postgres.wnzkhezyhnfzhkhiflrp:YLKzP9jz2yqop7jr@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+# Working pooler URL (from supabase/.temp/pooler-url)
+postgresql://postgres.wnzkhezyhnfzhkhiflrp:YLKzP9jz2yqop7jr@aws-1-us-east-1.pooler.supabase.com:5432/postgres
 ```
 
-If neither works after the cap is removed, check:
-1. `getent hosts db.wnzkhezyhnfzhkhiflrp.supabase.co` — should return IPv4
-2. Supabase dashboard → Settings → API → "Direct connection" string
+The `aws-0-us-east-1.pooler.supabase.com` hostname resolves over IPv4
+but Supavisor returns "tenant/user not found" because the project lives
+on `aws-1`. The correct region number is non-obvious — always check
+`supabase/.temp/pooler-url` for the actual endpoint.
 
-## Capture Schema (no data)
+The direct hostname `db.wnzkhezyhnfzhkhiflrp.supabase.co` only resolves
+over IPv6, which is unreachable from this dev box.
+
+## pg_dump version
+
+Supabase runs **PostgreSQL 17.6**. Local pg must be ≥ 17 to dump cleanly.
+The dev box had pg 16 by default — install pg 17 client:
 
 ```bash
-# From your home network, with the password set:
-PGPASSWORD="YLKzP9jz2yqop7jr" pg_dump \
-  --host=db.wnzkhezyhnfzhkhiflrp.supabase.co \
+echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt/ noble-pgdg main" \
+  | sudo tee /etc/apt/sources.list.d/pgdg.list
+sudo apt-get update
+sudo apt-get install -y --allow-unauthenticated postgresql-client-17
+# Use /usr/lib/postgresql/17/bin/pg_dump explicitly (or update PATH)
+```
+
+## Capture Schema
+
+```bash
+export PGPASSWORD="YLKzP9jz2yqop7jr"
+export PATH="/usr/lib/postgresql/17/bin:$PATH"
+
+mkdir -p supabase/captured
+pg_dump \
+  --host=aws-1-us-east-1.pooler.supabase.com \
   --port=5432 \
-  --username=postgres \
+  --username=postgres.wnzkhezyhnfzhkhiflrp \
   --dbname=postgres \
   --schema-only \
   --no-owner \
   --no-privileges \
   --no-acl \
-  --file=supabase/captured_schema.sql
+  --exclude-schema=auth \
+  --exclude-schema=storage \
+  --exclude-schema=realtime \
+  --exclude-schema=supabase_functions \
+  --exclude-schema=graphql \
+  --exclude-schema=graphql_public \
+  --exclude-schema=pgsodium \
+  --exclude-schema=pgsodium_masks \
+  --exclude-schema=extensions \
+  --exclude-schema=pgbouncer \
+  --exclude-schema=supabase_migrations \
+  --exclude-schema=net \
+  --exclude-schema=vault \
+  --file=supabase/captured/captured_schema.sql
 ```
 
-This produces a SQL file with all CREATE TABLE, CREATE FUNCTION,
-CREATE INDEX, etc. statements. May be 50-200 MB depending on the
-function count. **Compress it before committing:**
+Captured schema is ~540KB, 65 tables, 252 functions.
+
+## Capture Data
 
 ```bash
-gzip supabase/captured_schema.sql  # → captured_schema.sql.gz
-```
-
-## Capture Data (no schema)
-
-```bash
-PGPASSWORD="YLKzP9jz2yqop7jr" pg_dump \
-  --host=db.wnzkhezyhnfzhkhiflrp.supabase.co \
+pg_dump \
+  --host=aws-1-us-east-1.pooler.supabase.com \
   --port=5432 \
-  --username=postgres \
+  --username=postgres.wnzkhezyhnfzhkhiflrp \
   --dbname=postgres \
   --data-only \
   --no-owner \
   --no-privileges \
   --no-acl \
   --disable-triggers \
-  --file=supabase/captured_data.sql
+  --exclude-schema=auth \
+  --exclude-schema=storage \
+  --exclude-schema=realtime \
+  --exclude-schema=supabase_functions \
+  --exclude-schema=graphql \
+  --exclude-schema=graphql_public \
+  --exclude-schema=pgsodium \
+  --exclude-schema=pgsodium_masks \
+  --exclude-schema=extensions \
+  --exclude-schema=pgbouncer \
+  --exclude-schema=supabase_migrations \
+  --exclude-schema=net \
+  --exclude-schema=vault \
+  --file=supabase/captured/captured_data.sql
 ```
 
-Use `--disable-triggers` so the dump skips triggers that might fire
-on INSERT and slow things down. Compress:
+Captured data is ~130KB for this project's current size.
+
+## Restore to Local DB (PostgreSQL 16)
+
+PostgreSQL 16 doesn't support `transaction_timeout` (added in PG 17) and
+doesn't have the `supabase_vault` extension. Pre-create the stub objects:
 
 ```bash
-gzip supabase/captured_data.sql
-```
-
-## Restore to Local DB
-
-```bash
-cd /path/to/route-commerce
 export PGPASSWORD=routecommerce_dev_password
+psql -U routecommerce -h 127.0.0.1 -d route_commerce <<'SQL'
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO routecommerce;
 
-# 1. Wipe the synthesized schema
-psql -U routecommerce -h 127.0.0.1 -d route_commerce \
-  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+-- extensions schema (referenced by dump as extensions.uuid_generate_v4())
+CREATE SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" SCHEMA extensions;
 
-# 2. Apply the real schema
-zcat supabase/captured_schema.sql.gz | \
-  psql -U routecommerce -h 127.0.0.1 -d route_commerce \
-  -v ON_ERROR_STOP=1 2>&1 | tee /tmp/schema_restore.log
+-- Stub functions in extensions schema (real Supabase has pgcrypto.crypt etc.)
+CREATE OR REPLACE FUNCTION extensions.uuid_generate_v4()
+  RETURNS uuid LANGUAGE sql AS $$ SELECT gen_random_uuid(); $$;
+CREATE OR REPLACE FUNCTION extensions.gen_salt(text)
+  RETURNS text LANGUAGE sql AS $$ SELECT '$2a$06$' || repeat('A', 53); $$;
+CREATE OR REPLACE FUNCTION extensions.crypt(text, text)
+  RETURNS text LANGUAGE sql AS $$ SELECT $1; $$;
 
-# 3. Apply the data
-zcat supabase/captured_data.sql.gz | \
-  psql -U routecommerce -h 127.0.0.1 -d route_commerce \
-  -v ON_ERROR_STOP=1 2>&1 | tee /tmp/data_restore.log
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions TO routecommerce;
+
+-- auth stub (we excluded auth schema from dump, but RLS policies reference auth.uid())
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE TABLE IF NOT EXISTS auth.users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT,
+  raw_user_meta_data JSONB,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID
+  LANGUAGE sql STABLE AS $$ SELECT NULL::UUID; $$;
+GRANT USAGE ON SCHEMA auth TO routecommerce;
+GRANT ALL ON auth.users TO routecommerce;
+GRANT EXECUTE ON FUNCTION auth.uid() TO routecommerce;
+
+-- Drop Supabase-specific publications (we don't have realtime / vault)
+DROP PUBLICATION IF EXISTS supabase_realtime;
+DROP PUBLICATION IF EXISTS supabase_realtime_messages_publication;
+SQL
 ```
+
+Strip the PG17-only `SET transaction_timeout` line from the dump:
+
+```bash
+sed -i 's/^SET transaction_timeout = 0;$/-- transaction_timeout requires PG17 (we are on PG16); skipped/' \
+  supabase/captured/captured_schema.sql
+```
+
+Apply schema and data (idempotent — re-runs are safe):
+
+```bash
+psql -U routecommerce -h 127.0.0.1 -d route_commerce -v ON_ERROR_STOP=0 \
+  -f supabase/captured/captured_schema.sql 2>&1 | tail -20
+
+psql -U routecommerce -h 127.0.0.1 -d route_commerce -v ON_ERROR_STOP=0 \
+  -f supabase/captured/captured_data.sql 2>&1 | tail -20
+```
+
+Most errors on re-run are "already exists" — that's expected because the
+dump is idempotent for CREATE statements (we used `IF NOT EXISTS` where
+possible, but pg_dump doesn't add it for everything).
 
 ## Verify
 
 ```bash
-# Should show ~70+ tables (not just the 70 from the synthesized schema)
-psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "\dt"
+psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT count(*) FROM pg_tables WHERE schemaname='public';"
+# Expect: 65
 
-# Should show actual data, not 0 rows everywhere
-psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT count(*) FROM brands;"
-psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT count(*) FROM products;"
-psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT count(*) FROM orders;"
+psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT count(*) FROM pg_proc WHERE pronamespace=(SELECT oid FROM pg_namespace WHERE nspname='public');"
+# Expect: ~250+
+
+psql -U routecommerce -h 127.0.0.1 -d route_commerce -c "SELECT name, slug, created_at FROM brands ORDER BY created_at;"
+# Expect 5 brands: Tuxedo Corn, Indian River Direct, Sunrise Farms, Green Valley Organics, Orchard Fresh
 ```
 
-## Clean Up
+## What Didn't Work (don't try these)
 
-```bash
-# Once verified, drop the synthesized schema (no longer needed)
-rm supabase/synthesized/000_base_schema.sql
-git add -A
-git commit -m "remove synthesized schema (real dump now in place)"
-```
+| Approach | Why it failed |
+|---|---|
+| `psql ... db.wnzkhezyhnfzhkhiflrp.supabase.co:5432` | Hostname is IPv6-only, dev box has no IPv6 |
+| `aws-0-us-east-1.pooler.supabase.com` | "tenant/user not found" — wrong region (project is on `aws-1`) |
+| `pg_dump 16.x` against PG 17 server | "server version mismatch" — fatal error |
+| `supabase db dump --linked` | Requires Docker (we don't have it) |
 
-## Schema-Per-Brand Restructure (FUTURE, not in this dump)
+## Notes
 
-The user wants each brand in its own Postgres schema:
-- `brand_tuxedo` — products, orders, stops, etc. for Tuxedo
-- `brand_indian_river_direct` — products, orders, stops, etc. for IRD
-
-This is a major refactor and is **NOT** part of the dump-and-restore.
-Plan for it as a follow-up phase once the data is loaded into shared
-tables and the app is verified working.
-
-The refactor will involve:
-1. Creating schemas `brand_tuxedo`, `brand_indian_river_direct`
-2. Moving brand-specific tables into the appropriate schema
-3. Updating all RPC SECURITY DEFINER functions to set
-   `search_path` based on caller brand
-4. Updating server actions to set `search_path` per request
-5. Updating PostgREST config to expose schemas
-6. Testing brand isolation thoroughly
-
-## Troubleshooting
-
-### "password authentication failed"
-Password has been rotated. Check Supabase dashboard → Settings →
-Database → Reset password. The user-provided password
-`YLKzP9jz2yqop7jr` may need to be reset.
-
-### "could not translate host name"
-Dev box has no IPv6. Use the pooler hostname
-`aws-0-us-east-1.pooler.supabase.com` or run from a machine with IPv6.
-
-### "permission denied for schema auth"
-The dump includes the `auth` schema which is Supabase-managed.
-Filter it out with: `--exclude-schema=auth --exclude-schema=storage
---exclude-schema=realtime --exclude-schema=supabase_functions`.
-
-### "relation already exists"
-You forgot step 1 (DROP SCHEMA public CASCADE). The data restore
-runs `INSERT` and may not recreate tables — only the schema dump
-does that.
-
-### "out of memory" during data restore
-The data file is huge. Use `--single-transaction` to keep
-Postgres from spilling to disk:
-
-```bash
-zcat supabase/captured_data.sql.gz | \
-  psql -U routecommerce -h 127.0.0.1 -d route_commerce \
-  --single-transaction \
-  -v ON_ERROR_STOP=0 2>&1 | tee /tmp/data_restore.log
-```
-
-### Data dump is too big to commit
-Don't commit it. The data file is in `.gitignore` and gets
-re-loaded on first run via a one-shot script.
+- The captured data includes 3 test brands (Sunrise, Green Valley, Orchard)
+  created on 2026-06-03 — these were test data the user added during the
+  migration work, not real customers. They can be deleted safely.
+- Tuxedo Corn and Indian River Direct are the real production brands.
+- The schema dump is committed to git at `supabase/captured/captured_schema.sql.gz`
+  for reproducibility. The data dump is gitignored (regenerate as needed).
+- After dump, the local PostgREST needs a schema cache reload — restart
+  the postgrest process or it'll serve stale metadata for ~30 seconds.
