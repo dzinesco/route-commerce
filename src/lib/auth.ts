@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth/minimal";
+import { betterAuth } from "better-auth";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";

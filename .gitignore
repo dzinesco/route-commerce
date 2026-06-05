@@ -44,3 +44,17 @@ supabase/.temp/
 
 # Docker / self-hosted Postgres
 db_data/
+
+# Captured Supabase data (re-pull from Supabase as needed)
+supabase/captured/captured_data.sql.gz
+supabase/captured/captured_schema.sql
+
+# Local data and binaries
+.data/
+bin/postgrest
+bin/minio
+bin/mc
+bin/postgrest-proxy.js
+bin/postgrest.tar.xz
+# Captured Supabase dump (regenerate from Supabase with the guide in docs/SUPABASE_DUMP_GUIDE.md)
+supabase/captured/

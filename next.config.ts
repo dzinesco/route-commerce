@@ -19,6 +19,24 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      // Local self-hosted MinIO (replaces Supabase Storage)
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "9000",
+        pathname: "/**",
+      },
+      // Production MinIO behind route.crispygoat.com
+      {
+        protocol: "https",
+        hostname: "storage.route.crispygoat.com",
+      },
     ],
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
