@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply fix-agents.js patch
+        run: node fix-agents.js
+
+      - name: Typecheck
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_STORAGE_BASE_URL: http://localhost:9000
+          STORAGE_ENDPOINT: http://localhost:9000
+          DATABASE_URL: postgresql://routecommerce:routecommerce_dev_password@127.0.0.1:5432/route_commerce
+        run: npm run type-check
+
+      - name: Lint
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_STORAGE_BASE_URL: http://localhost:9000
+          STORAGE_ENDPOINT: http://localhost:9000
+          DATABASE_URL: postgresql://routecommerce:routecommerce_dev_password@127.0.0.1:5432/route_commerce
+        run: npm run lint
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_STORAGE_BASE_URL: http://localhost:9000
+          STORAGE_ENDPOINT: http://localhost:9000
+          DATABASE_URL: postgresql://routecommerce:routecommerce_dev_password@127.0.0.1:5432/route_commerce
+        run: npm run build
