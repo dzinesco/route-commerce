@@ -1,6 +1,6 @@
 # Route Commerce
 
-A multi-tenant B2B e-commerce platform for fresh produce wholesale distribution. Brands manage products, stops, orders, and wholesale customers from a single admin dashboard.
+A multi-tenant B2B e-commerce platform for fresh produce wholesale distribution. Brands manage products, stops, orders, and wholesale customers from a single admin dashboard. 🚀
 
 ## What It Does
 
