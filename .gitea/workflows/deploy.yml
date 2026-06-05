@@ -17,41 +17,155 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Start Docker stack
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          POSTGREST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
+        run: |
+          APP_DIR=/home/tyler/route-commerce
+          mkdir -p $APP_DIR
+          cd $APP_DIR
+          [ -f .env ] || cp .env.example .env
+          # Append production secrets to .env (overriding .env.example defaults)
+          {
+            echo "POSTGRES_USER=${POSTGRES_USER}"
+            echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+            echo "POSTGRES_DB=${POSTGRES_DB}"
+            echo "MINIO_ROOT_USER=${MINIO_ROOT_USER}"
+            echo "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}"
+            echo "POSTGREST_JWT_SECRET=${POSTGREST_JWT_SECRET}"
+          } >> .env
+          docker compose up -d db postgrest minio minio_init
+          # Wait for Postgres healthcheck
+          for i in $(seq 1 30); do
+            if docker compose exec -T db pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" > /dev/null 2>&1; then
+              echo "Postgres is ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Apply migrations
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        run: |
+          cd /home/tyler/route-commerce
+          PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=0 -f supabase/migrations/000_preflight_supabase_compat.sql || true
+          [ -f supabase/captured_schema.sql ] && PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=0 -f supabase/captured_schema.sql || echo "captured_schema.sql not present, skipping"
+          for f in supabase/migrations/[0-9]*.sql; do
+            PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=0 -q -f "$f" || echo "FAIL: $f"
+          done
+
       - name: Install dependencies
         run: npm install
 
       - name: Build
-        run: npm run build
         env:
           NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          NEXT_PUBLIC_BETTER_AUTH_URL: ${{ secrets.NEXT_PUBLIC_BETTER_AUTH_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_STORAGE_BASE_URL: ${{ secrets.NEXT_PUBLIC_STORAGE_BASE_URL }}
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_REGION: ${{ secrets.STORAGE_REGION }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_BUCKET_PREFIX: ${{ secrets.STORAGE_BUCKET_PREFIX }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: npm run build
 
       - name: Deploy
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          POSTGREST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          NEXT_PUBLIC_BETTER_AUTH_URL: ${{ secrets.NEXT_PUBLIC_BETTER_AUTH_URL }}
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_REGION: ${{ secrets.STORAGE_REGION }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_BUCKET_PREFIX: ${{ secrets.STORAGE_BUCKET_PREFIX }}
+          NEXT_PUBLIC_STORAGE_BASE_URL: ${{ secrets.NEXT_PUBLIC_STORAGE_BASE_URL }}
+          PGRST_SERVER_PORT: ${{ secrets.PGRST_SERVER_PORT }}
+          PGRST_DB_URI: ${{ secrets.PGRST_DB_URI }}
+          PGRST_DB_ANON_ROLE: ${{ secrets.PGRST_DB_ANON_ROLE }}
+          PGRST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: |
           APP_DIR=/home/tyler/route-commerce
           mkdir -p $APP_DIR
 
-          # Write env file from secrets
-          printf "NEXT_PUBLIC_SUPABASE_URL=%s\n" "$NEXT_PUBLIC_SUPABASE_URL" > $APP_DIR/.env.production
-          printf "NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n" "$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> $APP_DIR/.env.production
-          printf "SUPABASE_SERVICE_ROLE_KEY=%s\n" "$SUPABASE_SERVICE_ROLE_KEY" >> $APP_DIR/.env.production
-          printf "MINIMAX_API_KEY=%s\n" "$MINIMAX_API_KEY" >> $APP_DIR/.env.production
-          printf "MINIMAX_BASE_URL=%s\n" "$MINIMAX_BASE_URL" >> $APP_DIR/.env.production
+          # Write env file from secrets (preserves existing .env for docker compose)
+          {
+            printf "DATABASE_URL=%s\n" "$DATABASE_URL"
+            printf "POSTGRES_USER=%s\n" "$POSTGRES_USER"
+            printf "POSTGRES_PASSWORD=%s\n" "$POSTGRES_PASSWORD"
+            printf "POSTGRES_DB=%s\n" "$POSTGRES_DB"
+            printf "MINIO_ROOT_USER=%s\n" "$MINIO_ROOT_USER"
+            printf "MINIO_ROOT_PASSWORD=%s\n" "$MINIO_ROOT_PASSWORD"
+            printf "POSTGREST_JWT_SECRET=%s\n" "$POSTGREST_JWT_SECRET"
+            printf "BETTER_AUTH_SECRET=%s\n" "$BETTER_AUTH_SECRET"
+            printf "BETTER_AUTH_URL=%s\n" "$BETTER_AUTH_URL"
+            printf "NEXT_PUBLIC_BETTER_AUTH_URL=%s\n" "$NEXT_PUBLIC_BETTER_AUTH_URL"
+            printf "STORAGE_ENDPOINT=%s\n" "$STORAGE_ENDPOINT"
+            printf "STORAGE_REGION=%s\n" "$STORAGE_REGION"
+            printf "STORAGE_ACCESS_KEY=%s\n" "$STORAGE_ACCESS_KEY"
+            printf "STORAGE_SECRET_KEY=%s\n" "$STORAGE_SECRET_KEY"
+            printf "STORAGE_BUCKET_PREFIX=%s\n" "$STORAGE_BUCKET_PREFIX"
+            printf "NEXT_PUBLIC_STORAGE_BASE_URL=%s\n" "$NEXT_PUBLIC_STORAGE_BASE_URL"
+            printf "PGRST_SERVER_PORT=%s\n" "$PGRST_SERVER_PORT"
+            printf "PGRST_DB_URI=%s\n" "$PGRST_DB_URI"
+            printf "PGRST_DB_ANON_ROLE=%s\n" "$PGRST_DB_ANON_ROLE"
+            printf "PGRST_JWT_SECRET=%s\n" "$POSTGREST_JWT_SECRET"
+            printf "NEXT_PUBLIC_SUPABASE_URL=%s\n" "$NEXT_PUBLIC_SUPABASE_URL"
+            printf "NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n" "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            printf "STRIPE_SECRET_KEY=%s\n" "$STRIPE_SECRET_KEY"
+            printf "STRIPE_WEBHOOK_SECRET=%s\n" "$STRIPE_WEBHOOK_SECRET"
+            printf "STRIPE_PUBLISHABLE_KEY=%s\n" "$STRIPE_PUBLISHABLE_KEY"
+            printf "RESEND_API_KEY=%s\n" "$RESEND_API_KEY"
+            printf "RESEND_WEBHOOK_SECRET=%s\n" "$RESEND_WEBHOOK_SECRET"
+            printf "MINIMAX_API_KEY=%s\n" "$MINIMAX_API_KEY"
+            printf "MINIMAX_BASE_URL=%s\n" "$MINIMAX_BASE_URL"
+            printf "FROM_EMAIL=%s\n" "$FROM_EMAIL"
+          } > $APP_DIR/.env.production
 
           # Copy build output and required files
           rsync -a --delete .next/ $APP_DIR/.next/
           rsync -a --delete public/ $APP_DIR/public/
           cp package.json $APP_DIR/
+          cp docker-compose.yml $APP_DIR/
+          cp -r supabase/ $APP_DIR/
           cp next.config.ts $APP_DIR/ 2>/dev/null || cp next.config.js $APP_DIR/ 2>/dev/null || true
 
           # Install production deps only
