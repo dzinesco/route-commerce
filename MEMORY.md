@@ -308,3 +308,22 @@ The earlier commit `2f3be54 fix(actions): skip Supabase fetch at build time when
 
 - The crispygoat repo (`git@git.crispygoat.com:tyler/route-commerce.git`) and the GitHub `origin` repo are separate forks — `tyler/main` is the self-hosted Auth.js + Postgres branch, `origin/main` is the Supabase branch. Don't merge them; they share no deploy workflow.
 - Push targets `tyler/main` to trigger the Gitea build.
+
+## Build green — 2026-06-06
+
+Push `32396af` to `origin/main` triggered a successful Gitea deploy. Fixes that landed:
+- `force-dynamic` on `src/app/admin/layout.tsx` + `src/app/admin/settings/square-sync/page.tsx`
+- try/catch around Supabase REST fetches in `src/actions/stops.ts` and `src/actions/brand-settings.ts`
+- `.gitea/workflows/deploy.yml` paths updated to `deploy/docker-compose.yml`
+
+## Production prep — next steps
+
+1. **Verify the stack is actually running.** SSH to the deploy host, `docker compose -p prod-app ps` in `$APP_DIR` (`/home/tyler/route-commerce`). All services should be `healthy`.
+2. **Test Postgres connectivity.** `docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c '\dt'` should list tables from migrations. `curl http://localhost:$POSTGREST_HOST_PORT/` should return PostgREST's OpenAPI spec.
+3. **Test app → PostgREST.** Hit any public page that reads from PostgREST (e.g. `/indian-river-direct/stops` after the revalidate window). If it returns stops, the chain works.
+4. **Replace dummy secrets** in Gitea:
+   - `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321` + `NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-supabase-anon-ke` — either set real Supabase project values, or remove entirely once the Postgres-direct migration is complete (CLAUDE.md direction).
+   - `RESEND_API_KEY=re_REPLACE_ME`, `RESEND_WEBHOOK_SECRET=whsec_REPLACE_ME` — get real values from Resend dashboard.
+   - `STRIPE_SECRET_KEY=sk_test_REPLACE_ME`, `STRIPE_PUBLISHABLE_KEY=pk_test_REPLACE_ME`, `STRIPE_WEBHOOK_SECRET=whsec_REPLACE_ME` — real test-mode values from Stripe.
+5. **Supabase → direct Postgres migration.** The codebase still imports `@supabase/ssr` and `@supabase/supabase-js` in `src/lib/supabase.ts`, `src/lib/supabase/server.ts`, `src/actions/login.ts`, `src/actions/admin/users.ts`, `src/actions/admin/force-login.ts`, `src/actions/wholesale-auth.ts`. CLAUDE.md says these should be purged. The deploy stack already has PostgREST, so the path is: replace `supabase.from(...)` calls with `fetch` to `NEXT_PUBLIC_API_URL/rest/v1/...` or direct `pg` queries, then drop the `@supabase/*` deps.
+6. **Auth.js hardening.** `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` aren't in the secret list — the workflow falls back to `BETTER_AUTH_*` names which exist. Set the canonical `AUTH_*` names too so the fallback isn't load-bearing.
