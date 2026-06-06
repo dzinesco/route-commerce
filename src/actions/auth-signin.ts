@@ -1,7 +1,6 @@
 "use server";
 
 import { signIn, signOut } from "@/lib/auth";
-import { AuthError } from "next-auth";
 
 /**
  * Server actions that wrap the Auth.js v5 `signIn` / `signOut` API for
@@ -19,36 +18,13 @@ import { AuthError } from "next-auth";
  *     <button type="submit">Sign in with Google</button>
  *   </form>
  *
- * Usage for the dev credentials provider (dev only):
- *   <form action={signInWithDev}>
- *     <input name="username" />
- *     <input name="password" type="password" />
- *     <button type="submit">Dev login</button>
- *   </form>
+ * Note: dev/demo authentication is no longer a button on the login page.
+ * `src/middleware.ts` auto-issues the `dev_session` cookie for /admin/*
+ * when ALLOW_DEV_LOGIN is enabled. See CLAUDE.md.
  */
 
 export async function signInWithGoogle(): Promise<void> {
   await signIn("google", { redirectTo: "/admin" });
-}
-
-export async function signInWithDev(formData: FormData): Promise<void> {
-  const username = String(formData.get("username") ?? "admin");
-  const password = String(formData.get("password") ?? "dev");
-  try {
-    await signIn("dev-login", {
-      username,
-      password,
-      redirectTo: "/admin",
-    });
-  } catch (e) {
-    // signIn() throws a `NEXT_REDIRECT` to navigate — let that through
-    // so the redirect actually happens. Re-throw any other error so the
-    // caller can render a meaningful message.
-    if (e instanceof AuthError) {
-      throw new Error(`Dev sign-in failed: ${e.type}`);
-    }
-    throw e;
-  }
 }
 
 export async function signOutAction(): Promise<void> {
