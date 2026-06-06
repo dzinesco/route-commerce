@@ -86,9 +86,12 @@ jobs:
           export NEXT_PUBLIC_API_URL="http://localhost:$POSTGREST_HOST_PORT"
           export POSTGREST_HOST_PORT
 
-          # Seed config files into APP_DIR if missing (they live in the repo, not in APP_DIR)
+          # Seed config files into APP_DIR. The docker-compose.yml
+          # is copied UNCONDITIONALLY so deploys pick up compose
+          # changes (the previous `[ -f ... ] ||` guard kept stale
+          # copies on the server and masked a broken `env_file` path).
           [ -f $APP_DIR/.env.example ] || cp .env.example $APP_DIR/.env.example
-          [ -f $APP_DIR/docker-compose.yml ] || cp deploy/docker-compose.yml $APP_DIR/docker-compose.yml
+          cp -f deploy/docker-compose.yml $APP_DIR/docker-compose.yml
           cd $APP_DIR
           [ -f .env ] || cp .env.example .env
           # Append production secrets to .env (overriding .env.example defaults)
