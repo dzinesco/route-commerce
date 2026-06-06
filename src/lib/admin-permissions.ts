@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
+import { pool } from "@/lib/db";
 import type { AdminUser } from "./admin-permissions-types";
 export type { AdminUser } from "./admin-permissions-types";
 
@@ -8,7 +10,9 @@ export type { AdminUser } from "./admin-permissions-types";
  * Resolution order:
  *   1. Mock data mode (NEXT_PUBLIC_USE_MOCK_DATA=true) → platform_admin dev.
  *   2. `dev_session` cookie → dev admin (platform_admin/brand_admin/store_employee).
- *   3. Real auth (rc_auth_uid or rc_uid cookie) → load admin_users + brand_ids.
+ *   3. Auth.js v5 session (JWT cookie) → look up `admin_users` by the
+ *      Auth.js user id (the `users.id` UUID managed by @auth/pg-adapter).
+ *   4. Real auth (rc_auth_uid or rc_uid cookie) → load admin_users + brand_ids.
  *
  * `brand_id` is the active brand; `brand_ids` is the full membership list.
  * For dev sessions without a real DB, `brand_ids` is populated by:
@@ -24,10 +28,21 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     return buildDevAdmin("platform_admin");
   }
 
-  // ── Dev session bypass (enabled for testing on all envs) ──────────────
+  // ── Dev session bypass (enabled for testing on all envs) ──────────
   const dev = cookieStore.get("dev_session")?.value;
   if (dev === "platform_admin" || dev === "brand_admin" || dev === "store_employee") {
     return buildDevAdmin(dev);
+  }
+
+  // ── Auth.js v5 session (JWT) ─────────────────────────────────────
+  // After Google sign-in, the encrypted JWT cookie is set. `auth()`
+  // decrypts it server-side and returns the session — no DB call here,
+  // just cookie decryption. Then we look up the admin row by the
+  // Auth.js `users.id` UUID (same ID space as `admin_users.user_id`).
+  const session = await auth();
+  if (session?.user?.id) {
+    const admin = await getAdminUserFromPool(session.user.id);
+    if (admin) return admin;
   }
 
   // ── Main auth: rc_auth_uid (new) or rc_uid (legacy) cookie set by /api/login ─
@@ -89,6 +104,49 @@ export async function getAdminUser(): Promise<AdminUser | null> {
   const brandIds = await fetchAdminUserBrandIds(supabaseUrl, serviceKey, admin.id as string);
 
   return buildAdminUser(admin, brandIds);
+}
+
+/**
+ * Look up an admin user by the Auth.js `users.id` UUID using the shared
+ * `pg` pool. Returns `null` if no active row exists.
+ *
+ * The `admin_users.user_id` column is UUID (see 028_fix_caller_uid_type.sql).
+ * The Auth.js `users.id` is also UUID (see 204_authjs_tables.sql:18). The
+ * @auth/pg-adapter auto-generates a fresh UUID per new user on first
+ * sign-in; the Google `sub` claim is stored separately in
+ * `accounts."providerAccountId"`. So both IDs are in the same UUID space.
+ */
+async function getAdminUserFromPool(userId: string): Promise<AdminUser | null> {
+  try {
+    const { rows } = await pool.query<Record<string, unknown>>(
+      "SELECT * FROM admin_users WHERE user_id = $1 AND active = true LIMIT 1",
+      [userId]
+    );
+    if (rows.length === 0) return null;
+    const admin = rows[0];
+    const brandIds = await fetchAdminUserBrandIdsFromPool(admin.id as string);
+    return buildAdminUser(admin, brandIds);
+  } catch (e) {
+    console.warn("[admin-permissions] getAdminUserFromPool error:", e);
+    return null;
+  }
+}
+
+/**
+ * Load `brand_ids` from the admin_user_brands junction for the given
+ * admin row id, via the shared `pg` pool. Returns an empty array on any
+ * failure.
+ */
+async function fetchAdminUserBrandIdsFromPool(adminRowId: string): Promise<string[]> {
+  try {
+    const { rows } = await pool.query<{ brand_id: string }>(
+      "SELECT brand_id FROM admin_user_brands WHERE admin_user_id = $1",
+      [adminRowId]
+    );
+    return rows.map((r) => r.brand_id).filter((id): id is string => typeof id === "string");
+  } catch {
+    return [];
+  }
 }
 
 /**
