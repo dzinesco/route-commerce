@@ -2,11 +2,40 @@
 
 This file captures key context, decisions, fixes, and state from recent work so it survives across conversations.
 
-**Last updated:** 2026-06-03 (during Supabase migration apply session)
+**Last updated:** 2026-06-06 (Supabase → Postgres pivot)
 
 ---
 
-## Supabase CLI + Migrations Tooling
+## 🚨 Direction Pivot (2026-06-06) — Supabase → Postgres
+
+The platform is moving off Supabase entirely. We are connecting to **Postgres directly** (via `pg`), with **Auth.js (NextAuth v5)** handling authentication. See `CLAUDE.md` for the full updated architecture.
+
+### What changes immediately
+- **DB connection**: `DATABASE_URL` is the only required DB env var. No more `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, or `SUPABASE_ANON_KEY`.
+- **Migrations**: only the `pg` direct path in `supabase/push-migrations.js` is supported going forward. The Supabase CLI branch is dead code. The script reads `DATABASE_URL` from `.env.local` via `dotenv`.
+- **Code**: no new `@supabase/*` imports, no `rest/v1/` REST fetch, no Supabase JS client usage. Use a shared `pg` `Pool` (target location: `src/lib/db.ts`, **TBD — create during the cutover**).
+- **Auth**: legacy `rc_auth_uid` cookie + bespoke `/api/login` is being replaced by Auth.js. Until the Auth.js migration ships, the `dev_session` cookie remains the source of truth.
+- **Storage**: Supabase Storage (e.g. the `product-images` bucket created in migration 145) is going away. Need an S3-compatible alternative — **TBD**.
+
+### What's TBD / needs follow-up
+- [ ] `DATABASE_URL` for local dev (Neon? local Postgres? — user hasn't specified the Postgres host yet)
+- [ ] New connection layer: raw `pg` Pool vs Drizzle vs Prisma vs Neon serverless driver — **not decided**
+- [ ] Auth.js migration actually landing (currently "in progress" per CLAUDE.md)
+- [ ] Where do product images, brand logos, etc. live now? S3? Cloudflare R2? Re-encode as URL strings?
+- [ ] Whether the Supabase project (`wnzkhezyhnfzhkhiflrp`) gets shut down or kept read-only for the transition
+- [ ] Cutover sequencing: do we delete `@supabase/*` from `package.json` in one PR or incrementally?
+
+### Migration content that's now obsolete
+- **145 (product-images bucket)**: Supabase Storage bucket + RLS policies. Replaced by object store of choice.
+- **Any RLS policy on tables** (200 added several): the "no RLS, app-layer scoping" model still holds but the policies are inert in the new world.
+- The `supabase link --project-ref wnzkhezyhnfzhkhiflrp` setup is no longer needed for ongoing work.
+
+### Historical sections below
+The "Supabase CLI + Migrations Tooling" section that used to live at the top of this file describes the *previous* tooling. It is kept below as **historical record** of work that was already applied to the Supabase project. Do **not** follow its CLI instructions — use the `pg` direct path instead. Migration-file patch notes (091, 145, 148, 200, 201) are also kept as historical record of what got applied.
+
+---
+
+## Supabase CLI + Migrations Tooling *(SUPERSEDED — see Direction Pivot above)*
 
 ### Login + Link (done in this session)
 - User ran `supabase login`
@@ -35,13 +64,21 @@ Key changes:
 - Falls back to direct `pg` only if CLI path fails.
 - Header comments updated with current recommended workflow.
 
-**Recommended commands now:**
+**Recommended commands now (Supabase CLI path — being phased out, use `pg` direct path going forward):**
 ```bash
+# Supabase CLI path (legacy — do not use going forward)
 supabase login
 supabase link --project-ref wnzkhezyhnfzhkhiflrp
-node supabase/push-migrations.js 148          # or any prefix
+node supabase/push-migrations.js 148          # CLI path
 # or
 npm run migrate:one 148
+```
+
+```bash
+# Direct pg path (this is the future — only the pg branch is kept alive in the script)
+DATABASE_URL=postgres://... node supabase/push-migrations.js 148
+# or
+DATABASE_URL=postgres://... npm run migrate:one 148
 ```
 
 `npm run migrate` (no arg) will push every `*.sql` in order (use with caution).
@@ -133,19 +170,23 @@ Verification queries (post-apply) confirmed:
 
 ---
 
-## Current State / Gotchas
+## Current State / Gotchas (2026-06-06)
 
-- `supabase migration list` will show a lot of "pending" because the project's custom numeric migrations (00x_*.sql) were historically applied via the raw-SQL push script, not registered in Supabase's `schema_migrations` tracking table. Only early ones (001/002) + many timestamped migrations from other activity are tracked.
-- Many migrations are intentionally written to be re-runnable. Re-pushing a prefix is the supported workflow for this project.
-- When adding **new** migrations in the future, prefer the standard `supabase migration new` flow if possible, but the custom `push-migrations.js` + numeric prefix style is still the established pattern here.
-- Storage policies, RLS, SECURITY DEFINER functions, and brand-scoped data are all over the place — test carefully after big applies.
+- The Supabase CLI is no longer the recommended path. Use `DATABASE_URL` + `pg` directly. The `supabase/` directory is kept as a path for migrations tooling only.
+- The Postgres host/URL for local dev is **TBD** (not yet decided by the user). Until it's set, `npm run migrate` will fail at the `pg` connect step. (The Supabase project at `wnzkhezyhnfzhkhiflrp` may still exist as a fallback read-only target — unconfirmed.)
+- `supabase migration list` will show a lot of "pending" because the project's custom numeric migrations (00x_*.sql) were historically applied via the raw-SQL push script, not registered in Supabase's `schema_migrations` tracking table. This is mostly irrelevant now that we're moving off Supabase.
+- Many migrations are intentionally written to be re-runnable. Re-pushing a prefix is the supported workflow for this project — this still holds under direct `pg`.
+- When adding **new** migrations, use the established `supabase/push-migrations.js` + numeric prefix style (`NNN_descriptive_name.sql`). Do not introduce `supabase migration new` — that flow is going away with the CLI branch.
+- Storage policies (145), RLS policies (200), SECURITY DEFINER functions, and brand-scoped data are still in Postgres — test carefully after big applies. Brand scoping still relies on `p_brand_id` parameters in RPCs.
 - CLAUDE.md already documents the overall migrate story and the `get_brand_settings` gotcha.
+- **Open question for next session:** confirm Postgres host + connection layer (raw `pg` vs Drizzle/Prisma) and start the actual cutover (drop `@supabase/*` deps, create `src/lib/db.ts`, replace cookie auth with Auth.js).
 
 ---
 
 ## How to Use This Memory
 
 - Cat this file at the start of future sessions if context is needed: `cat MEMORY.md`
+- **Read the Direction Pivot section first** — it supersedes the older Supabase-flavored instructions.
 - Update this file with new key facts, applied migrations, or new gotchas.
 - Feel free to add dated sections.
 

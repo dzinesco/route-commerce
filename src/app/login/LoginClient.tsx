@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { signInWithGoogle, signInWithDev } from "@/actions/auth-signin";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -122,6 +123,82 @@ function LoginForm() {
                 <p className="mt-2 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
                   Sign in to your account
                 </p>
+              </div>
+
+              {/* Auth.js v5 — primary sign-in: Google OAuth */}
+              <form action={signInWithGoogle} className="space-y-3">
+                <button
+                  type="submit"
+                  className="w-full inline-flex items-center justify-center gap-3 rounded-xl border border-stone-200/80 bg-white px-6 py-3.5 text-sm font-semibold text-stone-900 shadow-sm transition-all hover:bg-stone-50 active:scale-[0.98]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                  aria-label="Sign in with Google"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.99 10.99 0 0 0 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A10.99 10.99 0 0 0 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
+                    />
+                  </svg>
+                  <span>Sign in with Google</span>
+                </button>
+              </form>
+
+              {/* Dev login (only visible in development) */}
+              {process.env.NODE_ENV !== "production" && (
+                <form action={signInWithDev} className="space-y-3">
+                  <div className="rounded-xl bg-amber-50/70 border border-amber-200/60 px-3 py-2 text-xs text-amber-900">
+                    <strong>Dev login</strong> — only available in development.
+                    Set <code>ALLOW_DEV_LOGIN=false</code> in <code>.env.local</code> to hide.
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      name="username"
+                      type="text"
+                      defaultValue="admin"
+                      className="rounded-xl border border-stone-200/80 bg-white/90 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 placeholder:text-stone-400"
+                      placeholder="Username"
+                      aria-label="Dev username"
+                    />
+                    <input
+                      name="password"
+                      type="password"
+                      defaultValue="dev"
+                      className="rounded-xl border border-stone-200/80 bg-white/90 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 placeholder:text-stone-400"
+                      placeholder="Password"
+                      aria-label="Dev password"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                  >
+                    Dev sign in (no Google required)
+                  </button>
+                </form>
+              )}
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-stone-200/70" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                  <span className="bg-white/0 px-2 text-stone-400" style={{ background: "linear-gradient(to right, transparent, white 30%, white 70%, transparent)" }}>
+                    or sign in with email
+                  </span>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5" aria-label="Sign in form">
