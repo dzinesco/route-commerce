@@ -169,6 +169,7 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || secrets.AUTH_GOOGLE_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.AUTH_GOOGLE_SECRET }}
           ALLOW_DEV_LOGIN: ${{ secrets.ALLOW_DEV_LOGIN }}
+          ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
 
           # Supabase (legacy, still used by admin pages/server actions until
           # the Auth.js migration is finished)
@@ -221,6 +222,7 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || secrets.AUTH_GOOGLE_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.AUTH_GOOGLE_SECRET }}
           ALLOW_DEV_LOGIN: ${{ secrets.ALLOW_DEV_LOGIN }}
+          ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
 
           # Storage
           STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
@@ -277,6 +279,7 @@ jobs:
             printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID"
             printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET"
             printf "ALLOW_DEV_LOGIN=%s\n" "$ALLOW_DEV_LOGIN"
+            printf "ADMIN_ALLOWED_EMAILS=%s\n" "$ADMIN_ALLOWED_EMAILS"
             printf "STORAGE_ENDPOINT=%s\n" "$STORAGE_ENDPOINT"
             printf "STORAGE_REGION=%s\n" "$STORAGE_REGION"
             printf "STORAGE_ACCESS_KEY=%s\n" "$STORAGE_ACCESS_KEY"

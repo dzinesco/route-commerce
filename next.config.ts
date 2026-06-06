@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Lock the file-tracing root to the project directory. Without this,
+  // Next.js 16 walks up from package.json looking for a lockfile, finds
+  // the homelab runner's stale `act` cache at
+  // /home/tyler/.cache/act/.../package-lock.json, and warns:
+  //   "We detected multiple lockfiles and selected the directory of
+  //    /home/tyler/package-lock.json as the root directory."
+  // The deploy runner's APP_DIR is /home/tyler/route-commerce, so
+  // resolving relative to the project root is correct both locally and
+  // in CI.
+  outputFileTracingRoot: ".",
+
   // Enable strict mode
   reactStrictMode: true,
 

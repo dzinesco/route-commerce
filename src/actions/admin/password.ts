@@ -1,18 +1,24 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
+/**
+ * Update the password for the currently signed-in admin.
+ *
+ * Identity comes from the Auth.js session (`auth().user.id`), which is
+ * the same UUID space as `admin_users.user_id` and `auth.users.id` in
+ * Postgres. The legacy `rc_auth_uid` / `rc_uid` cookie fallback has
+ * been removed — the Auth.js JWT is the single source of truth.
+ */
 export async function updatePasswordAction(
   newPassword: string
 ): Promise<{ error?: string }> {
-  const cookieStore = await cookies();
-  const uid =
-    cookieStore.get("rc_auth_uid")?.value ??
-    cookieStore.get("rc_uid")?.value;
+  const session = await auth();
+  const userId = session?.user?.id;
 
-  if (!uid) {
-    return { error: "Not authenticated. Please log in again." };
+  if (!userId) {
+    return { error: "Not authenticated. Please sign in again." };
   }
 
   const service = createServiceClient(
@@ -21,7 +27,7 @@ export async function updatePasswordAction(
   );
 
   const { error } = await service.rpc("update_user_password", {
-    p_user_id: uid,
+    p_user_id: userId,
     p_password: newPassword,
   });
 

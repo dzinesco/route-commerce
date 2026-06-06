@@ -46,6 +46,22 @@ function buildDevCredentialsProvider() {
  * Note: when using a database adapter the session strategy is fixed to
  * "database" — Auth.js will persist sessions in the `sessions` table.
  */
+/**
+ * Parse the ADMIN_ALLOWED_EMAILS env var into a lowercased set.
+ * Returns `null` if the env var is unset/empty — the caller should treat
+ * `null` as "no allowlist, allow everyone" (backward compatible with
+ * demo/dev where you want any Google account to get in).
+ */
+function parseAdminAllowlist(): Set<string> | null {
+  const raw = process.env.ADMIN_ALLOWED_EMAILS;
+  if (!raw) return null;
+  const emails = raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return emails.length > 0 ? new Set(emails) : null;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   // Use JWT sessions to match the edge-friendly config in `authConfig`.
@@ -62,6 +78,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig.providers,
     ...(isDevLoginEnabled() ? [buildDevCredentialsProvider()] : []),
   ],
+  callbacks: {
+    /**
+     * Sign-in gate. If ADMIN_ALLOWED_EMAILS is set, the user's email
+     * must be in the list. Returns `false` to deny the sign-in.
+     *
+     * The dev credentials provider is exempt — dev users have synthetic
+     * emails like "admin@dev.local" and shouldn't be blocked by a
+     * production allowlist.
+     */
+    async signIn({ user, account }) {
+      // Bypass allowlist for the dev credentials provider.
+      if (account?.provider === "dev-login") return true;
+
+      const allowlist = parseAdminAllowlist();
+      if (!allowlist) return true; // No allowlist configured — open mode.
+
+      const email = user.email?.toLowerCase();
+      if (!email || !allowlist.has(email)) {
+        console.warn(
+          `[auth] signIn denied: ${email ?? "<no email>"} not in ADMIN_ALLOWED_EMAILS`
+        );
+        return false;
+      }
+      return true;
+    },
+  },
   events: {
     /**
      * First-time sign-in: auto-create a `platform_admin` row in

@@ -12,13 +12,17 @@ export type { AdminUser } from "./admin-permissions-types";
  *   2. `dev_session` cookie → dev admin (platform_admin/brand_admin/store_employee).
  *   3. Auth.js v5 session (JWT cookie) → look up `admin_users` by the
  *      Auth.js user id (the `users.id` UUID managed by @auth/pg-adapter).
- *   4. Real auth (rc_auth_uid or rc_uid cookie) → load admin_users + brand_ids.
+ *
+ * The legacy `rc_auth_uid` / `rc_uid` cookie path has been removed.
+ * The Auth.js JWT is the single source of truth for identity; the
+ * `dev_session` cookie is only used for the demo / dev auto-login in
+ * `src/proxy.ts`.
  *
  * `brand_id` is the active brand; `brand_ids` is the full membership list.
  * For dev sessions without a real DB, `brand_ids` is populated by:
  *   - platform_admin: `[]` (listBrandsForAdmin resolves against the brands table)
- *   - store_employee: `[<first real brand>]` if a brand exists, else `[]`
- *   - brand_admin: `[]` (legacy dev; we don't have a way to scope brand in dev)
+ *   - store_employee: `[]`
+ *   - brand_admin: `[]`
  */
 export async function getAdminUser(): Promise<AdminUser | null> {
   const cookieStore = await cookies();
@@ -45,65 +49,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     if (admin) return admin;
   }
 
-  // ── Main auth: rc_auth_uid (new) or rc_uid (legacy) cookie set by /api/login ─
-  const uid = cookieStore.get("rc_auth_uid")?.value ?? cookieStore.get("rc_uid")?.value;
-  if (!uid) return null;
-
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return null;
-  }
-
-  // Lookup admin_users by Supabase auth user id
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  let adminUsers: unknown[] = [];
-  try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/admin_users?user_id=eq.${uid}&limit=1`,
-      { headers: { apikey: serviceKey, "Content-Type": "application/json" } }
-    );
-    if (res.ok) {
-      const data = await res.json().catch(() => []);
-      adminUsers = Array.isArray(data) ? data : [];
-    }
-  } catch (e) {
-    // fetch failed silently
-  }
-
-  // First login — auto-create platform_admin via SECURITY DEFINER RPC
-  if (adminUsers.length === 0) {
-    // Check if uid is a valid UUID before trying to insert
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!UUID_REGEX.test(uid)) return null;
-
-    try {
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/rpc/upsert_admin_user`,
-        {
-          method: "POST",
-          headers: { apikey: serviceKey, "Content-Type": "application/json", Prefer: "return=representation" },
-          body: JSON.stringify({ p_user_id: uid }),
-        }
-      );
-      if (res.ok) {
-        const inserted = await res.json().catch(() => null);
-        if (inserted && inserted.length > 0) {
-          return buildAdminUser(inserted[0] as Record<string, unknown>, []);
-        }
-      }
-    } catch (e) {
-      // RPC failed silently
-    }
-    return null;
-  }
-
-  const admin = adminUsers[0] as Record<string, unknown>;
-  if (!admin.active) return null;
-
-  // Load brand_ids from the admin_user_brands junction
-  const brandIds = await fetchAdminUserBrandIds(supabaseUrl, serviceKey, admin.id as string);
-
-  return buildAdminUser(admin, brandIds);
+  return null;
 }
 
 /**
@@ -144,31 +90,6 @@ async function fetchAdminUserBrandIdsFromPool(adminRowId: string): Promise<strin
       [adminRowId]
     );
     return rows.map((r) => r.brand_id).filter((id): id is string => typeof id === "string");
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Load `brand_ids` from the admin_user_brands junction for the given admin row.
- * Returns an empty array on any failure (e.g. before migration 207 is applied).
- */
-async function fetchAdminUserBrandIds(
-  supabaseUrl: string,
-  serviceKey: string,
-  adminRowId: string
-): Promise<string[]> {
-  try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/admin_user_brands?admin_user_id=eq.${adminRowId}&select=brand_id`,
-      { headers: { apikey: serviceKey, "Content-Type": "application/json" } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json().catch(() => []);
-    if (!Array.isArray(data)) return [];
-    return data
-      .map((row: Record<string, unknown>) => row.brand_id as string)
-      .filter((id): id is string => typeof id === "string");
   } catch {
     return [];
   }
