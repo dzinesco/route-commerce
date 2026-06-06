@@ -279,22 +279,29 @@ export async function getBrandSettingsPublic(brandSlug: string): Promise<GetBran
     return { success: false, error: "Supabase not configured", wholesaleEnabled: undefined };
   }
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_brand_settings_by_slug`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_slug: brandSlug }),
-    }
-  );
+  // Wrapped in try/catch so a build-time Supabase outage (ECONNREFUSED)
+  // doesn't crash the prerender — the page just falls back to its
+  // default brand name and revalidates from a real request later.
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_brand_settings_by_slug`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+        body: JSON.stringify({ p_brand_slug: brandSlug }),
+      }
+    );
 
-  if (!response.ok) return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
-  const data = await response.json();
-  return {
-    success: true,
-    settings: data,
-    wholesaleEnabled: data?.wholesale_enabled,
-  };
+    if (!response.ok) return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
+    const data = await response.json();
+    return {
+      success: true,
+      settings: data,
+      wholesaleEnabled: data?.wholesale_enabled,
+    };
+  } catch {
+    return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
+  }
 }
 
 export async function saveBrandSettings(params: {

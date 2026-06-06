@@ -286,3 +286,25 @@ Follow-up pass on the original Codex review covering public site, buyer path, bi
 ### Migration 203 — applied via Supabase CLI
 
 `203_plan_usage_active_products.sql` updates `get_brand_plan_info` to count `products` where `active = true AND deleted_at IS NULL`, matching the dashboard's "Active Products" stat. The `NOTIFY pgrst, 'reload schema'` ensures PostgREST picks up the change without restart.
+
+## Gitea build fix — 2026-06-06
+
+Gitea runner (`https://git.crispygoat.com/tyler/route-commerce.git`, branch `main`) was failing `next build` with two errors:
+
+1. **DYNAMIC_SERVER_USAGE** on `/admin/settings/square-sync` (and the whole admin tree): `getAdminUser()` reads `cookies()` via `next/headers`. The admin layout tried to prerender statically, so the first child page that hit cookies aborted the build.
+2. **Prerender ECONNREFUSED** on `/indian-river-direct/stops`: `getPublicStopsForBrand` / `getActiveStopsForSitemap` / `getBrandSettingsPublic` fetch `NEXT_PUBLIC_SUPABASE_URL` at build time. The Gitea runner passes a Supabase URL that resolves but is unreachable, so `fetch` throws `ECONNREFUSED` and the prerender aborts.
+
+The earlier commit `2f3be54 fix(actions): skip Supabase fetch at build time when env vars unset` only added `if (!supabaseUrl || !supabaseKey) return [];` — but in CI the env vars **are** set, so the guard passed and the fetch was still attempted.
+
+### Fixes applied
+
+- `src/actions/stops.ts` — wrapped `getActiveStopsForSitemap` and `getPublicStopsForBrand` fetches in `try/catch` returning `[]` on error. Env-var guard kept as fast path.
+- `src/actions/brand-settings.ts` — wrapped `getBrandSettingsPublic` fetch in `try/catch` returning `{ success: false }` on error.
+- `src/app/admin/settings/square-sync/page.tsx` — added `export const dynamic = "force-dynamic";` (was missing).
+- `src/app/admin/layout.tsx` — added `export const dynamic = "force-dynamic";` so the entire admin tree opts out of static prerender (layout calls `getAdminUser()` which reads cookies).
+- `.gitea/workflows/deploy.yml` was simplified earlier in commit `2d837bc` to a thin wrapper around `deploy/deploy.sh`.
+
+### Remote
+
+- The crispygoat repo (`git@git.crispygoat.com:tyler/route-commerce.git`) and the GitHub `origin` repo are separate forks — `tyler/main` is the self-hosted Auth.js + Postgres branch, `origin/main` is the Supabase branch. Don't merge them; they share no deploy workflow.
+- Push targets `tyler/main` to trigger the Gitea build.

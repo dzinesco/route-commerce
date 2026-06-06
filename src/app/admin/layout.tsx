@@ -8,6 +8,11 @@ import "@/styles/admin-design-system.css";
 import { ToastProvider } from "@/components/admin/Toast";
 import { ToastContainer } from "@/components/admin/ToastContainer";
 
+// Admin layout calls getAdminUser() which reads cookies(). Without this,
+// Next.js tries to prerender the entire /admin/* tree statically and the
+// first page that hits cookies() aborts the build with DYNAMIC_SERVER_USAGE.
+export const dynamic = "force-dynamic";
+
 // Toast provider wrapper component
 function ToastProviderWrapper({ children }: { children: React.ReactNode }) {
   return (

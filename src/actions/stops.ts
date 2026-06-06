@@ -116,19 +116,25 @@ export async function getActiveStopsForSitemap(): Promise<StopForSitemap[]> {
   // an empty list lets the sitemap render with only the static URLs.
   if (!supabaseUrl || !supabaseKey) return [];
 
-  // Get all active stops with their brand slug
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_active_stops_with_brand`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    }
-  );
+  // Get all active stops with their brand slug. Wrapped in try/catch so a
+  // build-time outage (ECONNREFUSED) doesn't crash the prerender — the
+  // sitemap just renders without stop URLs.
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_active_stops_with_brand`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+      }
+    );
 
-  if (!response.ok) return [];
+    if (!response.ok) return [];
 
-  const stops = await response.json();
-  return Array.isArray(stops) ? stops : [];
+    const stops = await response.json();
+    return Array.isArray(stops) ? stops : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -165,21 +171,28 @@ export async function getPublicStopsForBrand(
   // fetch path is unchanged.
   if (!supabaseUrl || !supabaseKey) return [];
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_public_stops_for_brand`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_slug: brandSlug }),
-      next: {
-        revalidate: 300,
-        tags: ["stops", `brand:${brandSlug}:stops`],
-      },
-    }
-  );
+  // Wrapped in try/catch so a build-time Supabase outage (ECONNREFUSED)
+  // doesn't crash the prerender — the page just renders with no stops
+  // and revalidates from a real request once the cache is warm.
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_public_stops_for_brand`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+        body: JSON.stringify({ p_brand_slug: brandSlug }),
+        next: {
+          revalidate: 300,
+          tags: ["stops", `brand:${brandSlug}:stops`],
+        },
+      }
+    );
 
-  if (!response.ok) return [];
+    if (!response.ok) return [];
 
-  const stops = await response.json();
-  return Array.isArray(stops) ? (stops as PublicStop[]) : [];
+    const stops = await response.json();
+    return Array.isArray(stops) ? (stops as PublicStop[]) : [];
+  } catch {
+    return [];
+  }
 }
