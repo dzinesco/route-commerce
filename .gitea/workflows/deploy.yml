@@ -81,7 +81,7 @@ jobs:
 
           # Seed config files into APP_DIR if missing (they live in the repo, not in APP_DIR)
           [ -f $APP_DIR/.env.example ] || cp .env.example $APP_DIR/.env.example
-          [ -f $APP_DIR/docker-compose.yml ] || cp docker-compose.yml $APP_DIR/docker-compose.yml
+          [ -f $APP_DIR/docker-compose.yml ] || cp deploy/docker-compose.yml $APP_DIR/docker-compose.yml
           cd $APP_DIR
           [ -f .env ] || cp .env.example .env
           # Append production secrets to .env (overriding .env.example defaults)
@@ -279,7 +279,7 @@ jobs:
           rsync -a --delete .next/ $APP_DIR/.next/
           rsync -a --delete public/ $APP_DIR/public/
           cp package.json $APP_DIR/
-          cp docker-compose.yml $APP_DIR/
+          cp deploy/docker-compose.yml $APP_DIR/
           cp -r supabase/ $APP_DIR/
           cp next.config.ts $APP_DIR/ 2>/dev/null || cp next.config.js $APP_DIR/ 2>/dev/null || true
 
