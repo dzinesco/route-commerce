@@ -379,3 +379,75 @@ credentials provider. This is the next piece of the Auth.js migration
 (see CLAUDE.md "Auth.js migration — in progress"). The current fix
 gets the dev/demo path working; the Google OAuth → admin path needs
 the `getAdminUser()` Auth.js check wired up.
+
+## Auth.js v5 wiring complete — 2026-06-06
+
+Push `1e9f9c0` completes the Auth.js path so Google sign-in lands the
+user on `/admin` as a real admin (not "Your account does not have
+admin access").
+
+**What landed:**
+
+- **`src/lib/db.ts` (NEW)** — shared `pg.Pool` singleton. The single
+  connection pool for the whole app. Extracted from `src/lib/auth.ts`
+  (which had its own private pool). Connection string resolution:
+  `DATABASE_URL` → `SUPABASE_DB_URL` → `POSTGRES_URL`.
+
+- **`src/lib/auth.ts`** — imports the shared pool. The `signIn` event
+  now calls the new `upsert_admin_user_for_authjs` RPC instead of
+  the no-op existence check it had before.
+
+- **`supabase/migrations/209_authjs_auto_create_admin.sql` (NEW)** —
+  pushed automatically by the deploy workflow (line 130 of
+  `.gitea/workflows/deploy.yml` does `cat supabase/migrations/[0-9]*.sql
+  | $PG`). Contains:
+  - `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS
+    can_manage_settings BOOLEAN NOT NULL DEFAULT false` — defensive,
+    since this column is in the TypeScript `AdminUser` type but not
+    in any tracked migration (was likely dashboard-added).
+  - SECURITY DEFINER RPC `upsert_admin_user_for_authjs(p_user_id UUID)`
+    that inserts a `platform_admin` row with all `can_manage_*` flags
+    true, `ON CONFLICT (user_id) DO NOTHING`.
+  - `NOTIFY pgrst, 'reload schema'` so PostgREST picks up the new RPC.
+
+- **`src/lib/admin-permissions.ts`** — new Auth.js session check
+  between `dev_session` and `rc_auth_uid`. Uses `auth()` from
+  `@/lib/auth` to decrypt the JWT cookie server-side, then
+  `getAdminUserFromPool()` queries `admin_users` + `admin_user_brands`
+  via the shared pool. The legacy `rc_auth_uid` path is unchanged
+  (deferred — it still hits the dummy Supabase URL in prod).
+
+- **`src/middleware.ts`** — recognizes `authjs.session-token` and
+  `__Secure-authjs.session-token` cookies at the edge so signed-in
+  users aren't bounced to `/login`.
+
+**Key insight: same ID space.** Both `admin_users.user_id` (UUID, per
+`028_fix_caller_uid_type.sql`) and Auth.js `users.id` (UUID, per
+`204_authjs_tables.sql:18`) are in the same UUID space. The
+`@auth/pg-adapter` auto-generates a fresh UUID per new user on first
+sign-in; the Google `sub` claim is stored separately in
+`accounts."providerAccountId"`. So no schema change was needed —
+just a `user_id` lookup in `getAdminUserFromPool()`.
+
+**Full sign-in flow now:**
+
+1. Dev/demo: visit `/admin` → middleware auto-issues `dev_session`
+   cookie → `getAdminUser()` returns platform_admin. (No DB call.)
+2. Production: click "Sign in with Google" → Auth.js OAuth →
+   `signIn` event fires → `upsert_admin_user_for_authjs` creates
+   the `admin_users` row → redirect to `/admin` → `getAdminUser()`
+   reads JWT, queries pool via `auth.js.user.id`, returns
+   platform_admin.
+
+**What's still broken (out of scope for this push):**
+
+- Legacy `rc_auth_uid` path in `getAdminUser()` still fetches from
+  `${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/...` which is a dummy
+  `http://localhost:54321` in prod. Any pre-existing user with a
+  `rc_auth_uid` cookie will get null. Defer until the Supabase →
+  direct Postgres migration of the REST calls.
+- `getCurrentAdminUser` (client-side variant) still reads from
+  server-passed props — no change needed.
+- The `signIn` event RPC call will fail silently if `DATABASE_URL`
+  is not set. The user would see "Your account does not have admin
+  access" and need to sign out and back in once the env is fixed.
