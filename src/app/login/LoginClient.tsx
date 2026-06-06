@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import {
+  signInWithPassword,
+  signInWithGoogle,
+  type SignInResult,
+} from "@/actions/auth-actions";
 
 function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [result, setResult] = useState<SignInResult | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [forgotPassword, setForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -22,49 +24,48 @@ function LoginForm() {
     setMounted(true);
   }, []);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setGlobalError(null);
-    if (!email.trim()) { setGlobalError("Please enter your email address."); return; }
-    if (!password.trim()) { setGlobalError("Please enter your password."); return; }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      const data = await res.json().catch(() => ({ error: "Login failed" }));
-      if (res.ok && data?.ok) {
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setSubmitting(true);
+      setResult(null);
+      const fd = new FormData(e.currentTarget);
+      const r = await signInWithPassword(null, fd);
+      setResult(r);
+      setSubmitting(false);
+      if (r.ok) {
+        // Server action succeeded; navigate to /admin
         window.location.replace("/admin");
-      } else {
-        setGlobalError(data?.error || `Login failed (${res.status})`);
       }
-    } catch {
-      setGlobalError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [email, password]);
+    },
+    []
+  );
 
-  const handleForgotPassword = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!forgotEmail.trim()) return;
-    setForgotLoading(true);
-    setForgotError(null);
-    const fd = new FormData();
-    fd.set("email", forgotEmail.trim());
-    const result = await fetch("/api/forgot-password", {
-      method: "POST",
-      body: fd,
-    }).then(r => r.json()).catch(() => ({ error: "Network error" }));
-    setForgotLoading(false);
-    if (result.error) {
-      setForgotError(result.error);
-    } else {
-      setForgotSent(true);
-    }
-  }, [forgotEmail]);
+  const handleForgotPassword = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!forgotEmail.trim()) return;
+      setForgotLoading(true);
+      setForgotError(null);
+      const fd = new FormData();
+      fd.set("email", forgotEmail.trim());
+      const r = await fetch("/api/forgot-password", {
+        method: "POST",
+        body: fd,
+      })
+        .then((r) => r.json())
+        .catch(() => ({ error: "Network error" }));
+      setForgotLoading(false);
+      if (r.error) {
+        setForgotError(r.error);
+      } else {
+        setForgotSent(true);
+      }
+    },
+    [forgotEmail]
+  );
+
+  const globalError = result && !result.ok ? result.error : null;
 
   return (
     <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5", height: "100vh" }}>
@@ -124,6 +125,32 @@ function LoginForm() {
                 </p>
               </div>
 
+              {/* Google sign-in (primary) */}
+              <form action={signInWithGoogle}>
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-3 rounded-xl bg-white border border-stone-200/80 px-6 py-3.5 text-sm font-semibold text-stone-800 hover:bg-stone-50 active:scale-[0.98] transition-all shadow-sm"
+                  style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.99 10.99 0 0012 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 015.5 12c0-.73.13-1.44.34-2.1V7.07H2.18A10.99 10.99 0 001 12c0 1.77.43 3.45 1.18 4.93l3.66-2.83z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z" />
+                  </svg>
+                  Continue with Google
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-6">
+                <div className="flex-1 h-px bg-stone-200/80" />
+                <span className="text-xs uppercase tracking-wider text-stone-400" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                  or
+                </span>
+                <div className="flex-1 h-px bg-stone-200/80" />
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-5" aria-label="Sign in form">
                 {globalError && (
                   <div role="alert" className="rounded-2xl bg-red-50/80 p-4 text-sm text-red-600 border border-red-100/50">
@@ -140,12 +167,11 @@ function LoginForm() {
                   <label htmlFor="email" className="block text-sm font-medium text-stone-700" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Email</label>
                   <input
                     id="email"
+                    name="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="username"
-                    disabled={loading}
+                    disabled={submitting}
                     className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
                     style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
                     placeholder="you@company.com"
@@ -155,61 +181,33 @@ function LoginForm() {
 
                 <div className="space-y-2">
                   <label htmlFor="password" className="block text-sm font-medium text-stone-700" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Password</label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                      disabled={loading}
-                      className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 pr-12 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
-                      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-                      placeholder="••••••••"
-                      aria-required="true"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 transition-colors"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    disabled={submitting}
+                    className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
+                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+                    placeholder="••••••••"
+                    aria-required="true"
+                  />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={submitting}
                   className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
                 >
-                  {loading ? (
-                    <>
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Signing in...
-                    </>
-                  ) : "Sign in"}
+                  {submitting ? "Signing in..." : "Sign in"}
                 </button>
 
                 {!forgotPassword && !forgotSent && (
                   <button
                     type="button"
-                    onClick={() => { setForgotPassword(true); setGlobalError(null); }}
+                    onClick={() => { setForgotPassword(true); setResult(null); }}
                     className="w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
                     style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
                   >
@@ -290,13 +288,6 @@ function LoginForm() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     <span>SOC 2</span>
-                  </div>
-                  <span className="text-stone-300">•</span>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#6b8f71"/>
-                    </svg>
-                    <span>Powered by Supabase</span>
                   </div>
                 </div>
               </div>

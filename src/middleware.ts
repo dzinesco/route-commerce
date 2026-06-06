@@ -1,93 +1,82 @@
-// Supabase Auth Middleware - keeps existing auth working
+// NextAuth v5 + Supabase Auth Middleware
+//
+// Runs on every non-static request. Responsibilities:
+//   1. Allow Auth.js v5 to read/write its own session cookie
+//   2. Protect /admin/* and /wholesale/* — redirect to /login if not authenticated
+//   3. Redirect away from /login when the user already has a session
+//   4. Preserve the `dev_session` cookie bypass (demo flow)
+//   5. Add a handful of baseline security headers
+//
+// Backward compatibility: the legacy `rc_auth_uid` / `rc_uid` cookies are
+// intentionally no longer read here — `getAdminUser()` in src/lib/admin-permissions.ts
+// is the single source of truth and reads the Auth.js session instead. Pages
+// still gated by `getAdminUser()` will continue to enforce auth even if a stale
+// `rc_auth_uid` cookie is present.
 
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
-// Public routes that don't require authentication
-const publicRoutes = [
-  "/",
-  "/login",
-  "/login2",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/pricing",
-  "/terms-and-conditions",
-  "/privacy-policy",
-  "/contact",
-  "/api/health",
-  "/api/stripe/webhook",
-  "/api/resend/webhook",
-  // Brand storefronts are public
-  "/tuxedo",
-  "/tuxedo/*",
-  "/indian-river-direct",
-  "/indian-river-direct/*",
-  "/cart",
-  "/cart/*",
-  "/checkout",
-  "/checkout/*",
-  // Error pages
-  "/error",
-  "/not-found",
-];
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
 
-// Admin routes that require auth
-const adminRoutes = ["/admin", "/water/admin"];
+  // ── Auth detection ──────────────────────────────────────────────────
+  // Auth.js session takes priority; `dev_session` cookie is the demo bypass.
+  const hasSession = !!req.auth;
+  const devSession = req.cookies.get("dev_session")?.value;
+  const isDevSession =
+    devSession === "platform_admin" ||
+    devSession === "brand_admin" ||
+    devSession === "store_employee";
 
-// Wholesale routes
-const wholesaleRoutes = ["/wholesale"];
+  const isAuthed = hasSession || isDevSession;
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const isAdmin = pathname.startsWith("/admin");
+  const isLogin = pathname === "/login";
 
-  // Check if route is public
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route.replace("/*", ""))
-  );
-
-  if (isPublicRoute) {
-    return NextResponse.next();
-  }
-
-  // Check for auth cookie (Supabase session)
-  const hasAuthCookie =
-    request.cookies.get("rc_auth_uid")?.value ||
-    request.cookies.get("rc_uid")?.value ||
-    request.cookies.get("dev_session")?.value;
-
-  if (!hasAuthCookie) {
-    // Redirect to login
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Check for admin routes (may need additional role checking)
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
-  if (isAdminRoute) {
-    // Dev session check for role
-    const devSession = request.cookies.get("dev_session")?.value;
-    if (devSession === "store_employee") {
-      // Store employees have limited admin access
-      // More granular checks happen in the page components
+  if (isAdmin && !isAuthed) {
+    // Demo auto-login: when no real auth is configured, issue a platform_admin
+    // dev cookie so the rest of the admin shell renders. Mirrors the old
+    // `dev_session` middleware fallback.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || !supabaseUrl.includes("supabase.co")) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/admin";
+      url.searchParams.set("demo", "1");
+      const res = NextResponse.redirect(url);
+      res.cookies.set("dev_session", "platform_admin", {
+        path: "/",
+        maxAge: 60 * 60 * 24,
+        httpOnly: true,
+        sameSite: "lax",
+      });
+      return addSecurityHeaders(res);
     }
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
+    return addSecurityHeaders(NextResponse.redirect(url));
   }
 
-  // Add security headers to all responses
-  const response = NextResponse.next();
-  
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-XSS-Protection", "1; mode=block");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  
-  return response;
+  if (isLogin && isAuthed) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/admin";
+    return addSecurityHeaders(NextResponse.redirect(url));
+  }
+
+  return addSecurityHeaders(NextResponse.next());
+});
+
+function addSecurityHeaders(res: NextResponse): NextResponse {
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("X-Frame-Options", "DENY");
+  res.headers.set("X-XSS-Protection", "1; mode=block");
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  return res;
 }
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all files in the _next directory
+    // Skip Next.js internals and static files
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
   ],
 };

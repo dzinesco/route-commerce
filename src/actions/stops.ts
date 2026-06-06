@@ -105,22 +105,30 @@ export type StopForSitemap = {
 };
 
 export async function getActiveStopsForSitemap(): Promise<StopForSitemap[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Get all active stops with their brand slug
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_active_stops_with_brand`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    }
-  );
+  if (!supabaseUrl || !supabaseKey) return [];
 
-  if (!response.ok) return [];
+  // Get all active stops with their brand slug.
+  // Wrapped in try/catch so a build-time outage (ECONNREFUSED) doesn't
+  // crash the prerender — the sitemap just renders without stop URLs.
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_active_stops_with_brand`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+      }
+    );
 
-  const stops = await response.json();
-  return Array.isArray(stops) ? stops : [];
+    if (!response.ok) return [];
+
+    const stops = await response.json();
+    return Array.isArray(stops) ? stops : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -150,24 +158,33 @@ export async function getPublicStopsForBrand(
 ): Promise<PublicStop[]> {
   if (!brandSlug) return [];
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_public_stops_for_brand`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_slug: brandSlug }),
-      next: {
-        revalidate: 300,
-        tags: ["stops", `brand:${brandSlug}:stops`],
-      },
-    }
-  );
+  if (!supabaseUrl || !supabaseKey) return [];
 
-  if (!response.ok) return [];
+  // Wrapped in try/catch so a build-time Supabase outage (ECONNREFUSED)
+  // doesn't crash the prerender — the page just renders with no stops
+  // and revalidates from a real request once the cache is warm.
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_public_stops_for_brand`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+        body: JSON.stringify({ p_brand_slug: brandSlug }),
+        next: {
+          revalidate: 300,
+          tags: ["stops", `brand:${brandSlug}:stops`],
+        },
+      }
+    );
 
-  const stops = await response.json();
-  return Array.isArray(stops) ? (stops as PublicStop[]) : [];
+    if (!response.ok) return [];
+
+    const stops = await response.json();
+    return Array.isArray(stops) ? (stops as PublicStop[]) : [];
+  } catch {
+    return [];
+  }
 }

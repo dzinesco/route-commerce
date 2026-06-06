@@ -20,7 +20,7 @@ type StopProductAssignmentProps = {
   stopId: string;
   allProducts: Product[];
   assignedProducts: AssignedProduct[];
-  callerUid: string;
+  callerUid: string | null;
 };
 
 export default function StopProductAssignment({

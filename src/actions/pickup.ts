@@ -5,7 +5,7 @@ import { logAuditEvent } from "@/actions/audit";
 import { svcHeaders } from "@/lib/svc-headers";
 
 type MarkPickupResult =
-  | { success: true; pickup_completed_at: string; pickup_completed_by: string }
+  | { success: true; pickup_completed_at: string; pickup_completed_by: string | null }
   | { success: false; error: string };
 
 export async function markPickupComplete(
@@ -23,6 +23,9 @@ export async function markPickupComplete(
   }
 
   const now = new Date().toISOString();
+  // `user_id` is null for Google-authenticated admins who haven't been
+  // linked to a Supabase auth user yet. Pass null through; downstream
+  // audit/assignment RPCs will surface a clearer error.
   const performedBy = adminUser.user_id;
 
   // brand_admin: verify the order belongs to their brand

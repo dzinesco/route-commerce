@@ -1,79 +1,117 @@
 import { test, expect } from "@playwright/test";
 
-// ─────────────────────────────────────────────────────────────
-// Login flow: credentials → /api/login JSON → redirect to /admin
-// ─────────────────────────────────────────────────────────────
-test("login with valid credentials redirects to /admin and shows admin dashboard", async ({
-  page,
-}) => {
-  // Navigate to login page
-  await page.goto("/login");
+const BASE = process.env.PLAYWRIGHT_URL ?? "http://localhost:3000";
 
-  // Fill credentials
-  await page.fill("#email", process.env.TEST_ADMIN_EMAIL!);
-  await page.fill("#password", process.env.TEST_ADMIN_PASSWORD!);
+// ─────────────────────────────────────────────────────────────────────
+// Login form renders the right affordances
+// ─────────────────────────────────────────────────────────────────────
+test.describe("Login form rendering", () => {
+  test("renders Google button, email + password fields, and Sign in button", async ({ page }) => {
+    await page.goto(`${BASE}/login`);
 
-  // Submit form
-  await page.click('button[type="submit"]');
+    // The Google button is the primary CTA at the top of the form.
+    await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
 
-  // Wait for navigation to /admin — the JSON response + client nav must happen
-  await page.waitForURL("**/admin", { timeout: 10000 });
+    // Email + password inputs
+    await expect(page.locator("#email")).toBeVisible();
+    await expect(page.locator("#password")).toBeVisible();
 
-  // Admin dashboard must be rendered (Control Center heading or admin layout)
-  await expect(page.locator("body")).not.toContainText("Access Denied");
-  await expect(page.locator("body")).not.toContainText("Login failed");
+    // The "Sign in" submit button is on the email/password form (not on the
+    // Google one). Use the form's aria-label to scope the lookup.
+    const signInForm = page.getByRole("form", { name: /sign in form/i });
+    await expect(signInForm.getByRole("button", { name: /^sign in$/i })).toBeVisible();
+  });
+
+  test("missing email surfaces browser required validation", async ({ page }) => {
+    await page.goto(`${BASE}/login`);
+    await page.locator("#password").fill("something");
+    // Don't fill email
+    const signInForm = page.getByRole("form", { name: /sign in form/i });
+    await signInForm.getByRole("button", { name: /^sign in$/i }).click();
+    // The email input has `required` — the browser should block submission
+    // and the email field remains focused. We don't assert on URL change.
+    await expect(page.locator("#email")).toHaveAttribute("required", "");
+  });
 });
 
-// ─────────────────────────────────────────────────────────────
-// Login failure: bad password shows error, stays on /login
-// ─────────────────────────────────────────────────────────────
-test("login with wrong password shows error and stays on /login", async ({
-  page,
-}) => {
-  await page.goto("/login");
+// ─────────────────────────────────────────────────────────────────────
+// Demo mode (?demo=1) — the path that works without a Supabase backend
+// ─────────────────────────────────────────────────────────────────────
+test.describe("Demo mode (?demo=1)", () => {
+  test("Platform Admin button sets dev_session and lands on /admin", async ({ page, context }) => {
+    await page.goto(`${BASE}/login?demo=1`);
+    await page.getByRole("button", { name: /platform admin/i }).click();
 
-  await page.fill("#email", process.env.TEST_ADMIN_EMAIL!);
-  await page.fill("#password", "wrongpassword123!");
+    // The click sets the cookie client-side and navigates. We should land
+    // on the admin dashboard.
+    await page.waitForURL(/\/admin/, { timeout: 10_000 });
+    const cookies = await context.cookies();
+    expect(cookies.find((c) => c.name === "dev_session")?.value).toBe("platform_admin");
+  });
 
-  await page.click('button[type="submit"]');
+  test("Brand Admin button sets dev_session=brand_admin", async ({ page, context }) => {
+    await page.goto(`${BASE}/login?demo=1`);
+    await page.getByRole("button", { name: /brand admin/i }).click();
+    await page.waitForURL(/\/admin/, { timeout: 10_000 });
+    const cookies = await context.cookies();
+    expect(cookies.find((c) => c.name === "dev_session")?.value).toBe("brand_admin");
+  });
 
-  // Error message should appear
-  await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 5000 });
-  // Should NOT navigate away from login
-  await expect(page).toHaveURL(/\/login/);
+  test("Store Employee button sets dev_session=store_employee", async ({ page, context }) => {
+    await page.goto(`${BASE}/login?demo=1`);
+    await page.getByRole("button", { name: /store employee/i }).click();
+    await page.waitForURL(/\/admin/, { timeout: 10_000 });
+    const cookies = await context.cookies();
+    expect(cookies.find((c) => c.name === "dev_session")?.value).toBe("store_employee");
+  });
 });
 
-// ─────────────────────────────────────────────────────────────
-// Login with missing fields shows validation error
-// ─────────────────────────────────────────────────────────────
-test("login with missing email shows validation error", async ({ page }) => {
-  await page.goto("/login");
+// ─────────────────────────────────────────────────────────────────────
+// Credentials sign-in (skipped if env vars aren't set — needs a real
+// Supabase auth user to actually succeed)
+// ─────────────────────────────────────────────────────────────────────
+test.describe("Credentials sign-in", () => {
+  test.skip(
+    !process.env.TEST_ADMIN_EMAIL || !process.env.TEST_ADMIN_PASSWORD,
+    "Set TEST_ADMIN_EMAIL and TEST_ADMIN_PASSWORD to run the credentials flow against a real Supabase backend.",
+  );
 
-  // Don't fill email, only password
-  await page.fill("#password", "something");
+  test("valid credentials redirect to /admin", async ({ page }) => {
+    await page.goto(`${BASE}/login`);
+    await page.locator("#email").fill(process.env.TEST_ADMIN_EMAIL!);
+    await page.locator("#password").fill(process.env.TEST_ADMIN_PASSWORD!);
 
-  await page.click('button[type="submit"]');
+    const signInForm = page.getByRole("form", { name: /sign in form/i });
+    await signInForm.getByRole("button", { name: /^sign in$/i }).click();
 
-  // Browser validation should fire (email required)
-  await expect(page.locator("#email")).toHaveAttribute("required", "");
-});
+    await page.waitForURL(/\/admin/, { timeout: 15_000 });
+    await expect(page.locator("body")).not.toContainText("Access Denied");
+  });
 
-// ─────────────────────────────────────────────────────────────
-// Session persistence: after login, navigating to /admin
-// should load without re-authenticating
-// ─────────────────────────────────────────────────────────────
-test("admin session persists across page reloads", async ({ page }) => {
-  // Login first
-  await page.goto("/login");
-  await page.fill("#email", process.env.TEST_ADMIN_EMAIL!);
-  await page.fill("#password", process.env.TEST_ADMIN_PASSWORD!);
-  await page.click('button[type="submit"]');
-  await page.waitForURL("**/admin", { timeout: 10000 });
+  test("wrong password shows an error and stays on /login", async ({ page }) => {
+    await page.goto(`${BASE}/login`);
+    await page.locator("#email").fill(process.env.TEST_ADMIN_EMAIL!);
+    await page.locator("#password").fill("definitely-wrong-password");
 
-  // Reload the page
-  await page.reload();
+    const signInForm = page.getByRole("form", { name: /sign in form/i });
+    await signInForm.getByRole("button", { name: /^sign in$/i }).click();
 
-  // Should still be on /admin (session cookie keeps user logged in)
-  await expect(page).toHaveURL(/\/admin/);
-  await expect(page.locator("body")).not.toContainText("Access Denied");
+    // The error banner uses role="alert"
+    await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 8_000 });
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("session persists across reload", async ({ page }) => {
+    await page.goto(`${BASE}/login`);
+    await page.locator("#email").fill(process.env.TEST_ADMIN_EMAIL!);
+    await page.locator("#password").fill(process.env.TEST_ADMIN_PASSWORD!);
+
+    const signInForm = page.getByRole("form", { name: /sign in form/i });
+    await signInForm.getByRole("button", { name: /^sign in$/i }).click();
+    await page.waitForURL(/\/admin/, { timeout: 15_000 });
+
+    await page.reload();
+    await expect(page).toHaveURL(/\/admin/);
+    await expect(page.locator("body")).not.toContainText("Access Denied");
+  });
 });

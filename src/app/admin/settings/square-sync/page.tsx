@@ -4,6 +4,10 @@ import { getPaymentSettings } from "@/actions/payments";
 import { getSyncLog, type SyncLogEntry } from "@/actions/square-sync-ui";
 import SquareSyncSettingsClient from "./SquareSyncSettingsClient";
 
+// Uses cookies() via getAdminUser — must be dynamic to avoid the
+// "couldn't be rendered statically" build error.
+export const dynamic = "force-dynamic";
+
 export default async function SquareSyncSettingsPage() {
   const adminUser = await getAdminUser();
   if (!adminUser) redirect("/login");

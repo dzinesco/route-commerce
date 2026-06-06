@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Route Commerce is a multi-tenant B2B e-commerce platform for fresh produce wholesale distribution. Brands sell to customers who pick up at scheduled stops or receive shipments. The platform includes admin dashboards for order management, stop/route scheduling, product catalogs, payment processing (Stripe + Square), and a communications module ("Harvest Reach") for email/SMS campaigns.
 
-Tech stack: Next.js 16 (App Router) · Supabase (auth + Postgres + RLS) · Stripe · Square · Resend (email) · Tailwind CSS v4
+Tech stack: Next.js 16 (App Router) · **Postgres** (direct — Supabase is being removed) · Auth.js (NextAuth v5, in-progress migration from bespoke cookie auth) · Stripe · Square · Resend (email) · Tailwind CSS v4
+
+> **Direction:** Supabase is being removed in favor of a direct Postgres connection. The `supabase/` directory is kept as a path for migrations tooling only (no Supabase platform/CLI/auth). Until the Auth.js migration ships, auth still flows through the `dev_session` / `rc_auth_uid` cookies — see the Authentication section. New DB code should connect to Postgres directly (via `pg` or the chosen driver — see Database section) and **must not** import from `@supabase/*` or call Supabase REST.
 
 ---
 
@@ -21,14 +23,12 @@ npx tsc --noEmit     # TypeScript check (no emit)
 npx playwright test  # Run E2E tests (Playwright)
 ```
 
-> The migrate script auto-detects Supabase CLI first, then falls back to direct PostgreSQL.
-> For CLI mode: `brew install supabase/tap/supabase` then `supabase link --project-ref wnzkhezyhnfzhkhiflrp`
-> For direct PG mode: `pg` and `dotenv` are already in devDependencies.
-> If `get_brand_settings` migration fails with "cannot change return type", the function signature changed — drop and recreate it first.
+> The migrate script (`supabase/push-migrations.js`) now only uses the direct `pg` path — the Supabase CLI branch is legacy. It reads `DATABASE_URL` from `.env.local` via `dotenv`. `pg` is already in devDependencies.
+> If a migration fails with "cannot change return type", the function signature changed — drop and recreate it first.
 
 **Recent migration work is documented in `MEMORY.md`** (Supabase login + link process, updates to `push-migrations.js` for modern CLI, specific SQL patches made to 091/145/148/200/201 so they would apply cleanly, and which migrations were pushed in the session). Cat `MEMORY.md` for details.
 
-No test suite currently exists. E2E tests use Playwright (`tests/` or `test-e2e.ts`).
+E2E tests live in `tests/` and run via Playwright. Specs include `tests/smoke.spec.ts` and `tests/login/login-flow.spec.ts`. **Note: `playwright.config.ts` defaults `baseURL` to production** (`https://route-commerce-platform.vercel.app`); override with `PLAYWRIGHT_URL=http://localhost:3000` for local runs, or pass `--config` with a local config.
 
 ---
 
@@ -36,14 +36,36 @@ No test suite currently exists. E2E tests use Playwright (`tests/` or `test-e2e.
 
 ### Authentication & Authorization
 
-**Dev mode** bypasses Supabase auth entirely via `dev_session` cookie set by `/login`:
+**Auth.js v5 (NextAuth)** is the active auth system. Config lives in `src/lib/auth.ts`, with the route handler at `src/app/api/auth/[...nextauth]/route.ts`. The login page (`src/app/login/LoginClient.tsx`) renders a "Continue with Google" button alongside the email/password form, both backed by Auth.js providers. Server-side code reads the session via `await auth()` from `@/lib/auth`; client code that needs to sign out can call the `signOutAction` server action from `@/actions/auth-actions`.
+
+**Providers (see `src/lib/auth.ts`):**
+- **Google OAuth** — primary sign-in. Active when `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` are set. Users auto-provision as `platform_admin` if their Google `sub` is UUID-shaped (rare) — for Google sign-ins, `admin_users` rows must be provisioned manually by an existing admin until the `email`-based provisioning flow lands.
+- **Email/password (Supabase-backed)** — wraps the existing `auth/v1/token?grant_type=password` flow. This is transitional; once Supabase auth is fully removed, this provider goes away.
+
+**Demo / dev mode** still works through a `dev_session` cookie:
 - `dev_session=platform_admin` — full access, all brands
 - `dev_session=brand_admin` — full access to assigned brand only
 - `dev_session=store_employee` — limited access (orders, pickup, wholesale only)
+- The login page renders "Demo Mode" buttons that set this cookie client-side; the middleware also auto-issues `dev_session=platform_admin` for the `/admin` demo flow when Supabase isn't configured.
 
-`src/lib/admin-permissions.ts` is the single source of truth for the current admin user. It uses a `dev_session` cookie in development and Supabase Auth in production. **Never import this file directly into Client Components** — use the `getCurrentAdminUser` server action from `@/actions/admin-user` instead.
+**Single source of truth for the current admin user:** `getAdminUser()` in `src/lib/admin-permissions.ts`. It reads `dev_session` first, then the Auth.js session via `auth()` from `@/lib/auth`. The Supabase `admin_users` lookup still uses `rest/v1/admin_users?user_id=eq.<uid>` — when the `pg` pool at `src/lib/db.ts` lands, that lookup should switch to a direct `SELECT`. **Never import `admin-permissions.ts` into Client Components** — use the `getCurrentAdminUser` server action from `@/actions/admin-user` instead.
+
+The middleware (`src/middleware.ts`) uses Auth.js v5's `auth()` wrapper. It guards `/admin/*` and `/login`, preserves the `dev_session` bypass, and adds baseline security headers.
 
 The `AdminUser` type lives in `src/lib/admin-permissions-types.ts` and is shared across server/client boundary.
+
+#### Migration status
+
+- ✅ Auth.js v5 installed (`next-auth@beta`, currently `5.0.0-beta.31`)
+- ✅ `src/lib/auth.ts` + `src/app/api/auth/[...nextauth]/route.ts` in place
+- ✅ Google + Credentials (Supabase-backed) providers configured
+- ✅ `getAdminUser()` reads from `auth()` session
+- ✅ Middleware uses `auth()` wrapper
+- ✅ Old `/api/login`, `/api/logout`, `/api/auth/uid`, `/api/set-auth-cookie` removed
+- ⏳ Add `email` column to `admin_users` and provision Google users by email (TODO)
+- ⏳ Switch the `admin_users` lookup in `getAdminUser()` to direct `pg` (TODO — needs `src/lib/db.ts`)
+- ⏳ Remove the email/password (Supabase) provider when Supabase auth is fully cut over (TODO)
+- ⏳ The `rc_auth_uid` cookie is no longer the source of truth, but `actions/admin/users.ts` still reads it for backward compat with pre-existing sessions — the `DEV_FORCE_UID` constant and its branches are now dead code (the `/api/force-admin` route that set it was deleted) and should be removed in a follow-up
 
 ### Server Actions Pattern
 
@@ -55,9 +77,19 @@ All database writes go through server actions in `src/actions/`. These:
 
 Server actions are "use server" files that export async functions. Client components import and call them directly.
 
-### SECURITY DEFINER RPCs + Brand Scoping
+### Database (Postgres, direct)
 
-The app uses **PostgreSQL SECURITY DEFINER functions** for all data access. These run with the function owner's privileges and bypass RLS entirely. This means:
+The app connects to **Postgres directly** — no Supabase platform, JS client, or REST gateway. Server actions use the `pg` driver (or whatever the chosen connection layer is) to call `SECURITY DEFINER` PL/pgSQL functions. Storage of files (product images, etc.) is moving to an S3-compatible object store; until that's wired up, image references can stay as URLs.
+
+#### Connection
+
+- `DATABASE_URL` in `.env.local` (and hosting dashboard) is the only required DB env var.
+- A single shared `pg` `Pool` is exported from `src/lib/db.ts` (TBD — to be created/confirmed during the migration). Server actions and API routes import it and call `pool.query(...)` against RPC names.
+- No `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `@supabase/*` imports — these are being purged from the codebase.
+
+#### SECURITY DEFINER RPCs + Brand Scoping
+
+The app uses **PostgreSQL SECURITY DEFINER functions** for all data access. These run with the function owner's privileges and bypass any future RLS. This means:
 
 - Brand isolation must be enforced at the **application layer** (in server actions), not in database policies
 - Every RPC that touches brand-scoped data accepts a `p_brand_id UUID` parameter and filters by it
@@ -182,9 +214,18 @@ For annual pricing, create separate annual prices in Stripe (e.g., $441/yr for S
 
 ### Communications Module ("Harvest Reach")
 
-The communications system (`/admin/communications`) uses a separate set of tables that are **NOT protected by RLS** — they rely entirely on the SECURITY DEFINER RPCs + application-layer brand scoping. Key tables: `communication_campaigns`, `communication_templates`, `communication_contacts`, `communication_message_logs`.
+The communications system (`/admin/communications`) uses a separate set of tables that are **NOT protected by RLS** — they rely entirely on the SECURITY DEFINER RPCs + application-layer brand scoping. Key tables: `communication_campaigns`, `communication_templates`, `communication_contacts`, `communication_message_logs`. (The "no RLS" framing carries over from the Supabase era; on raw Postgres this just means no row-level policies — scoping is still enforced by RPC + app layer.)
 
 `send_campaign` / `send_stop_blast` RPCs insert into `communication_message_logs` but do NOT populate `event_id`. The Resend webhook (`src/app/api/resend/webhook/route.ts`) must therefore look up logs by `customer_email + subject + created_at` (7-day window), not by `event_id`.
+
+**Scheduled automations** (declared in `vercel.json`):
+- `POST /api/email-automation/abandoned-cart` — every 6h, fires abandoned-cart sequence emails
+- `POST /api/email-automation/welcome-sequence` — every 6h, fires welcome onboarding sequence
+- `POST /api/cron/send-scheduled` — daily 09:00, sends scheduled campaigns
+- `POST /api/wholesale/notifications/{send,dispatch,pickup-reminder}` — wholesale lifecycle
+- `POST /api/square/process-queue` — every 2 min, drains Square sync queue
+
+These endpoints are also reachable via curl for manual triggering; the email-automation routes accept `Authorization: Bearer $CRON_SECRET`.
 
 ### Payments
 
@@ -200,7 +241,7 @@ Separate from orders/stops — tracks irrigation/water usage per brand. `src/act
 
 ## Key Conventions
 
-- All DB mutations use Supabase REST API (`fetch` to `${supabaseUrl}/rest/v1/rpc/...`) from server actions, NOT the Supabase JS client (avoids SSR cookie issues)
+- All DB access goes through a shared `pg` `Pool` (see Database section). Server actions call SECURITY DEFINER RPCs via `pool.query('SELECT * FROM fn_name($1, $2)', [...])`. Do not introduce `@supabase/*` imports or REST fetch to `*/rest/v1/`.
 - `gen_random_uuid()` used in migrations for primary keys
 - Migrations use `CREATE OR REPLACE FUNCTION` for idempotency — never `DROP` then `CREATE`
 - Status enums stored as TEXT — no PostgreSQL ENUM type
@@ -217,11 +258,11 @@ Separate from orders/stops — tracks irrigation/water usage per brand. `src/act
 |---|---|
 | Admin auth + permissions | `src/lib/admin-permissions.ts`, `src/lib/admin-permissions-types.ts` |
 | Middleware (route protection) | `src/middleware.ts` |
-| Server actions | `src/actions/*.ts` (one file per domain) |
+| Server actions | `src/actions/*.ts` (one file per domain; also grouped into `src/actions/{admin,ai,billing,communications,harvest-reach,integrations,orders,products,settings,shipping,stops,water-log,platform,route-trace,time-tracking,email-automation}/`) |
 | Admin pages | `src/app/admin/[module]/page.tsx` |
 | Admin client components | `src/components/admin/*.tsx` |
-| Migrations | `supabase/migrations/` |
-| Supabase client | `src/lib/supabase.ts` |
+| Migrations | `supabase/migrations/` (kept for now; will likely move to `db/migrations/` in a later pass) |
+| Postgres pool / driver | `src/lib/db.ts` (TBD — create during the Supabase removal pass) |
 | Email templates | `src/lib/email-templates.ts` |
 | Date formatting | `src/lib/format-date.ts` |
 | Feature flags | `src/lib/feature-flags.ts` |
@@ -238,7 +279,8 @@ Separate from orders/stops — tracks irrigation/water usage per brand. `src/act
 ## Gotchas
 
 - **Dev mode `brand_id: null`**: `getAdminUser()` returns `brand_id: null` for platform_admin dev sessions. Always pass explicit `brandId` to server action functions that accept it — don't rely on `adminUser.brand_id` alone.
-- **Communications = no RLS**: The communications tables (campaigns, templates, contacts, message_logs) have RLS disabled. All brand scoping must be enforced in server actions.
+- **Communications = no RLS**: The communications tables (campaigns, templates, contacts, message_logs) have no row-level policies. All brand scoping must be enforced in server actions.
+- **Supabase residue in the wild**: `grep -r "@supabase" src/` will still find imports during the transition. Do not add new ones; if you're touching a file that imports from Supabase, replace the call with the equivalent `pg`-pool call before merging.
 - **Webhook event_id**: `log_communication_messages` never populates `event_id`, so the Resend webhook uses `customer_email + subject` lookup instead.
 - **Mixed fulfillment orders**: An order can have both pickup and ship items. `get_shipping_orders` RPC returns orders with at least one `fulfillment = 'ship'` item.
 - **SMS opt-in defaults**: `communication_contacts.sms_opt_in` defaults to `FALSE` (opt-out by default). `email_opt_in` defaults to `TRUE`. Always check `sms_opt_in` specifically for SMS sends, not `email_opt_in`.

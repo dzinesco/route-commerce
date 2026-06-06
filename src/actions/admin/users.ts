@@ -79,18 +79,10 @@ export type UpdateAdminUserInput = {
 
 async function getAuthClient() {
   const cookieStore = await cookies();
-  const headerStore = await headers();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const request = new NextRequest("http://localhost/admin", { headers: new Headers() });
   const response = NextResponse.next({ request });
-
-  // Read rc_auth_uid from the raw HTTP Cookie header (document.cookie sets
-  // cookies that arrive in the header but NOT in next/headers cookies()).
-  const cookieHeader = headerStore.get("cookie") || "";
-  const allCookies = cookieHeader.split(";").map(c => c.trim());
-  const rcUidCookie = allCookies.find(c => c.startsWith("rc_auth_uid="));
-  const rcAuthUid = rcUidCookie ? rcUidCookie.split("=")[1] : null;
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -101,16 +93,20 @@ async function getAuthClient() {
       },
     },
   });
-  return { supabase, response, rcAuthUid };
+  const devSession = cookieStore.get("dev_session")?.value;
+  return { supabase, response, devSession };
 }
 
 async function callRpcWithAuth<T>(fn: string, params: Record<string, unknown>): Promise<{ data: T | null; error: string | null }> {
-  const { supabase, rcAuthUid } = await getAuthClient();
+  const { supabase, devSession } = await getAuthClient();
 
-  // Dev force-login UID bypasses Supabase auth entirely
-  const DEV_FORCE_UID = "dev-user-00000000-0000-0000-0000-000000000001";
-  if (rcAuthUid === DEV_FORCE_UID) {
-    return { data: null, error: null }; // let the action proceed without auth check
+  // Dev mode bypass — let the action proceed without Supabase auth.
+  // (Pre-Auth.js this was gated on the legacy `rc_auth_uid === DEV_FORCE_UID`
+  // cookie that the now-deleted `/api/force-admin` route set. With Auth.js v5
+  // in place, the `dev_session` cookie is the single source of truth for the
+  // demo flow.)
+  if (process.env.NODE_ENV !== "production" && devSession) {
+    return { data: null, error: null };
   }
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -368,8 +364,6 @@ function buildUsersFromRows(adminRows: Record<string, unknown>[], authUsers: { i
 
 // ─── Production admin actions (require real Supabase auth) ─────────────────
 
-const DEV_FORCE_UID = "dev-user-00000000-0000-0000-0000-000000000001";
-
 export async function getAdminUsers(brandId?: string): Promise<{ users: AdminUserRow[]; error: string | null }> {
   if (useMockData) {
     const mockUsers = getMockTableData("users") as AdminUserRow[];
@@ -389,15 +383,18 @@ export async function getAdminUsers(brandId?: string): Promise<{ users: AdminUse
   const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
     .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
 
-  // In development mode: ALL requests with a valid rc_auth_uid use the dev/service path.
-  // This includes real Supabase auth users — bypassing supabase.auth.getUser JWT validation.
-  if (process.env.NODE_ENV !== "production" && rcAuthUid && rcAuthUid !== DEV_FORCE_UID) {
-    return devListAdminUsers(rcAuthUid);
+  // In development mode: dev_session cookie holders use the dev/service path.
+  // (The previous code also accepted a legacy `rc_auth_uid` cookie set by
+  // `/api/dev-login` — `/api/dev-login` still sets both cookies, so existing
+  // dev sessions keep working. The legacy DEV_FORCE_UID check is removed
+  // because the only route that set that specific UID was deleted.)
+  if (process.env.NODE_ENV !== "production" && devSession) {
+    return devListAdminUsers(devSession);
   }
 
   // Dev session cookie (platform_admin/brand_admin) — always use service role path
   const isDevAdmin = process.env.NODE_ENV !== "production" && (
-    devSession === "platform_admin" || devSession === "brand_admin" || rcAuthUid === DEV_FORCE_UID
+    devSession === "platform_admin" || devSession === "brand_admin"
   );
   if (isDevAdmin) {
     return devListAdminUsers(rcAuthUid ?? undefined);
@@ -445,16 +442,10 @@ export async function getAdminUsers(brandId?: string): Promise<{ users: AdminUse
 export async function createAdminUser(input: CreateAdminUserInput): Promise<{ user: AdminUserRow | null; error: string | null }> {
   // Read auth context
   const cookieStore = await cookies();
-  const headerStore = await headers();
   const devSession = cookieStore.get("dev_session")?.value;
-  const cookieHeader = headerStore.get("cookie") || "";
-  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
-    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
 
-  // DEV_FORCE_UID bypass — set by Emergency Force Login or /api/force-admin
-  if (rcAuthUid === DEV_FORCE_UID) {
-    return devCreateAdminUser(input);
-  }
+  // TODO: when the Auth.js v5 migration lands everywhere, replace this
+  // cookie-based check with a session check via `await auth()` from `@/lib/auth`.
 
   const isDevAdmin = process.env.NODE_ENV !== "production" && devSession === "platform_admin";
 
@@ -463,8 +454,17 @@ export async function createAdminUser(input: CreateAdminUserInput): Promise<{ us
     return devCreateAdminUser(input);
   }
 
-  // Production path — use service role directly (bypasses Supabase JWT auth)
-  // rc_auth_uid cookie proves the admin is logged in; service role creates the account
+  // Production path — service role creates the account. The caller is
+  // expected to be an authenticated admin (gated by the admin layout /
+  // getAdminUser() check on the page).
+  // Keep reading the legacy `rc_auth_uid` cookie for backward compat with
+  // pre-Auth.js sessions — TODO: drop this branch once all clients are on
+  // Auth.js.
+  const headerStore = await headers();
+  const cookieHeader = headerStore.get("cookie") || "";
+  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
+    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
+
   if (rcAuthUid) {
     const service = getServiceClient();
 
@@ -557,13 +557,12 @@ export async function createAdminUser(input: CreateAdminUserInput): Promise<{ us
 export async function updateAdminUser(input: UpdateAdminUserInput): Promise<{ user: AdminUserRow | null; error: string | null }> {
   // Dev bypass check
   const cookieStore = await cookies();
-  const headerStore = await headers();
   const devSession = cookieStore.get("dev_session")?.value;
-  const cookieHeader = headerStore.get("cookie") || "";
-  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
-    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
-  // DEV_FORCE_UID bypass — Emergency Force Login sets this cookie directly
-  if (rcAuthUid === DEV_FORCE_UID) {
+  // Dev mode — let the action proceed with the service role.
+  // (The previous code also accepted a legacy `rc_auth_uid === DEV_FORCE_UID`
+  // cookie set by the now-deleted Emergency Force Login page. With Auth.js v5
+  // and the demo buttons in /login, the `dev_session` cookie is sufficient.)
+  if (process.env.NODE_ENV !== "production" && devSession) {
     const service = getServiceClient();
     const { data, error } = await service
       .from("admin_users")
@@ -606,13 +605,13 @@ export async function updateAdminUser(input: UpdateAdminUserInput): Promise<{ us
 export async function deleteAdminUser(id: string): Promise<{ success: boolean; error: string | null }> {
   // Dev bypass check
   const cookieStore = await cookies();
-  const headerStore = await headers();
   const devSession = cookieStore.get("dev_session")?.value;
-  const cookieHeader = headerStore.get("cookie") || "";
-  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
-    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
-  // DEV_FORCE_UID bypass — Emergency Force Login sets this cookie directly
-  if (rcAuthUid === DEV_FORCE_UID) {
+  // Dev mode — let the action proceed with the service role.
+  // (The previous code gated on `rc_auth_uid === DEV_FORCE_UID`, a magic
+  // cookie value the now-deleted Emergency Force Login page set. With
+  // Auth.js v5 and the demo buttons in /login, the `dev_session` cookie is
+  // the source of truth for the dev path.)
+  if (process.env.NODE_ENV !== "production" && devSession) {
     const service = getServiceClient();
     // Get user_id first
     const { data: adminRow, error: fetchError } = await service
@@ -642,7 +641,10 @@ export async function setMustChangePassword(userId: string): Promise<{ success: 
   const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
     .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
 
-  if (rcAuthUid === DEV_FORCE_UID || process.env.NODE_ENV !== "production") {
+  // Dev path or legacy rc_auth_uid cookie — use service role directly.
+  // TODO: when Auth.js v5 is the only auth path, drop the rcAuthUid branch
+  // and require `await auth()` to be present.
+  if (process.env.NODE_ENV !== "production" || rcAuthUid) {
     const service = getServiceClient();
     const { error } = await service.from("admin_users").update({ must_change_password: true }).eq("id", userId);
     return { success: !error, error: error?.message ?? null };

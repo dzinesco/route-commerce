@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { updatePasswordAction } from "@/actions/admin/password";
@@ -12,22 +12,6 @@ export default function ChangePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/uid")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.uid) {
-          router.push("/login");
-        } else {
-          setUserId(data.uid);
-          setCheckingSession(false);
-        }
-      })
-      .catch(() => router.push("/login"));
-  }, [router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,28 +35,15 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (userId) {
-      logUserActivity({
-        user_id: userId,
-        activity_type: "password_change",
-        details: {},
-      });
-    }
+    // Audit log (best-effort — the password change itself was the source of truth)
+    logUserActivity({
+      user_id: result.userId ?? "unknown",
+      activity_type: "password_change",
+      details: {},
+    }).catch(() => {});
 
     router.push("/admin");
     router.refresh();
-  }
-
-  if (checkingSession) {
-    return (
-      <main className="min-h-screen bg-zinc-950 px-6 py-12 flex items-start justify-center">
-        <div className="w-full max-w-md">
-          <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-8 text-center">
-            <p className="text-zinc-500 text-sm">Checking session...</p>
-          </div>
-        </div>
-      </main>
-    );
   }
 
   return (
