@@ -327,3 +327,55 @@ Push `32396af` to `origin/main` triggered a successful Gitea deploy. Fixes that 
    - `STRIPE_SECRET_KEY=sk_test_REPLACE_ME`, `STRIPE_PUBLISHABLE_KEY=pk_test_REPLACE_ME`, `STRIPE_WEBHOOK_SECRET=whsec_REPLACE_ME` — real test-mode values from Stripe.
 5. **Supabase → direct Postgres migration.** The codebase still imports `@supabase/ssr` and `@supabase/supabase-js` in `src/lib/supabase.ts`, `src/lib/supabase/server.ts`, `src/actions/login.ts`, `src/actions/admin/users.ts`, `src/actions/admin/force-login.ts`, `src/actions/wholesale-auth.ts`. CLAUDE.md says these should be purged. The deploy stack already has PostgREST, so the path is: replace `supabase.from(...)` calls with `fetch` to `NEXT_PUBLIC_API_URL/rest/v1/...` or direct `pg` queries, then drop the `@supabase/*` deps.
 6. **Auth.js hardening.** `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` aren't in the secret list — the workflow falls back to `BETTER_AUTH_*` names which exist. Set the canonical `AUTH_*` names too so the fallback isn't load-bearing.
+
+## Login flow consolidated — 2026-06-06
+
+Push `e499139` fixes the "dev login redirects back to /login" bug and
+removes the three-mode login page.
+
+**Root cause:** `src/middleware.ts` didn't exist, so the `authorized`
+callback in `auth.config.ts` never ran at the edge. The demo buttons at
+`/login?demo=1` set `dev_session` via `document.cookie`, but nothing at
+the edge recognized the cookie — the admin layout's `getAdminUser()` was
+the only thing reading it, and if the layout's `force-dynamic` ever
+stopped applying, the user would be bounced.
+
+**Fix:**
+- **New `src/middleware.ts`** — plain middleware (NOT the `auth()`
+  wrapper). Gates `/admin/*` and `/login`:
+  - If `dev_session`, `rc_auth_uid`, or `rc_uid` cookie is present →
+    `NextResponse.next()`.
+  - If no auth cookie, on `/admin/*`, and `ALLOW_DEV_LOGIN !== "false"`
+    (on by default) → set `dev_session=platform_admin` cookie and
+    `NextResponse.next()`. Invisible auto-login.
+  - If no auth and dev disabled → redirect to `/login`.
+  - If authenticated and on `/login` → redirect to `/admin`.
+- **`src/app/login/LoginClient.tsx`** — stripped to a single Google
+  OAuth button. Removed:
+  - Email/password form (was hitting dummy Supabase and 500'ing).
+  - Dev credentials form (`signInWithDev`).
+  - `DemoMode` component with the three buttons (Platform Admin,
+    Brand Admin, Store Employee).
+  - `useState`/`useEffect`/`useCallback`/`useSearchParams`/`Suspense`
+    — none of that complexity is needed for a single button.
+- **`src/actions/auth-signin.ts`** — removed `signInWithDev`. Kept
+  `signInWithGoogle` and `signOutAction`.
+- **Deleted `src/app/dev-login/page.tsx`** and
+  **`src/app/api/dev-login/route.ts`** — dead routes, middleware
+  handles it.
+
+**What "one way to log in" looks like now:**
+- Dev/demo: visit `/admin` → middleware sets `dev_session` cookie →
+  `getAdminUser()` returns platform_admin → you're in.
+- Production: visit `/admin` → no cookie, `ALLOW_DEV_LOGIN=false` →
+  redirect to `/login` → click Google → Auth.js OAuth flow.
+
+**Note for Auth.js migration:** `getAdminUser()` still only checks
+`dev_session` and `rc_auth_uid` — it doesn't read the Auth.js JWT.
+After Google sign-in succeeds, the user has a valid Auth.js session
+but `getAdminUser()` returns null. The middleware can't fix that
+because it can't write to the JWT without going through the
+credentials provider. This is the next piece of the Auth.js migration
+(see CLAUDE.md "Auth.js migration — in progress"). The current fix
+gets the dev/demo path working; the Google OAuth → admin path needs
+the `getAdminUser()` Auth.js check wired up.
