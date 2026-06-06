@@ -1,0 +1,6 @@
+# Runtime artefacts written by deploy.sh — do NOT commit these.
+.deploy.lock
+deploy.log
+.postgrest-port
+.nextjs-port
+.env.production

@@ -1,0 +1,57 @@
+# =============================================================================
+# Dockerfile.nextjs — multi-stage build for the Next.js frontend
+# =============================================================================
+# Used by docker-compose.yml's `nextjs` service.
+#
+# Why this looks the way it does:
+#   - `NEXT_PUBLIC_API_URL` must be present at BUILD time (Next.js inlines
+#     it into the client JS). We pass it through as an ARGs so the build
+#     context is reproducible (`docker build --build-arg` or via deploy.sh's
+#     `docker compose --env-file` flow).
+#   - We copy the host's pre-built `.next/` (produced by `npm run build` in
+#     deploy.sh) rather than running `next build` inside the image. This
+#     keeps the image lean and avoids double-building.
+# =============================================================================
+
+# ---- builder: produce node_modules with dev deps for the build step --------
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# ---- builder: produce the standalone .next/ output ------------------------
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# These ARGs are wired through docker-compose's `args:` block (or the CLI).
+# deploy.sh exports them in the build environment.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG NEXTJS_HOST_PORT
+ENV NEXTJS_HOST_PORT=${NEXTJS_HOST_PORT}
+
+RUN npm run build
+
+# ---- runner: minimal image, standalone server -----------------------------
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Run as non-root.
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
+# Copy only what the standalone server needs.
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+USER nextjs
+EXPOSE 3000
+
+# Adjust this CMD to match the actual server file your build emits.
+# For `output: "standalone"` in next.config.js the file is server.js.
+CMD ["node", "server.js"]
