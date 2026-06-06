@@ -2,17 +2,14 @@
 # docker-compose.yml — production stack consumed by deploy.sh
 # =============================================================================
 #
-# The host-side ports (POSTGREST_HOST_PORT, NEXTJS_HOST_PORT) are written by
-# deploy.sh into .env.production. We interpolate from there with ${VAR:-3011}
-# so a manual `docker compose up` without the deploy script still works.
+# Only `postgrest` lives in docker. Postgres itself runs on the host
+# (the deploy workflow applies migrations via `psql -h 127.0.0.1`).
+# Next.js runs under PM2 on the host — it is NOT a docker service.
 #
-# Note on networking: the Next.js container calls PostgREST on
-# `host.docker.internal:POSTGREST_HOST_PORT` so the inlined
-# NEXT_PUBLIC_API_URL (a localhost URL, per the deploy contract) resolves
-# correctly. On Linux you may need to add
-#   extra_hosts:
-#     - "host.docker.internal:host-gateway"
-# which is included below for that reason.
+# The host-side port (POSTGREST_HOST_PORT) is written by the deploy
+# workflow into $APP_DIR/.env. We interpolate from there with
+# ${VAR:-3011} so a manual `docker compose up` without the deploy
+# script still works.
 # =============================================================================
 
 name: prod-app  # default project name; deploy.sh overrides with -p
@@ -39,32 +36,3 @@ services:
       timeout: 3s
       retries: 6
 
-  nextjs:
-    # Build context is the workspace root (one level up from this file).
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.nextjs
-    container_name: prod-app-nextjs
-    restart: unless-stopped
-    ports:
-      - "${NEXTJS_HOST_PORT:-3012}:3000"
-    environment:
-      # Runtime vars — these can change without rebuilding. NEXT_PUBLIC_*
-      # is also exported here for completeness, but the BROWSER's view of
-      # NEXT_PUBLIC_API_URL is baked in at build time (see Dockerfile).
-      NODE_ENV: production
-      PORT: 3000
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-    env_file:
-      - ../.env.production   # server-side secrets read at runtime
-    extra_hosts:
-      # Lets the container reach the host on the dynamically allocated port.
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgrest:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 6

@@ -25,6 +25,13 @@ jobs:
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           POSTGREST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
+
+          # PostgREST — needs the DB URI at start time (it reads env
+          # from the container, not from .env.production which is
+          # written later by the Deploy step).
+          PGRST_DB_URI: ${{ secrets.PGRST_DB_URI }}
+          PGRST_DB_ANON_ROLE: ${{ secrets.PGRST_DB_ANON_ROLE }}
+          PGRST_SERVER_PORT: ${{ secrets.PGRST_SERVER_PORT }}
         run: |
           APP_DIR=/home/tyler/route-commerce
           mkdir -p $APP_DIR
@@ -92,15 +99,22 @@ jobs:
             echo "MINIO_ROOT_USER=${MINIO_ROOT_USER}"
             echo "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}"
             echo "POSTGREST_JWT_SECRET=${POSTGREST_JWT_SECRET}"
+            echo "PGRST_DB_URI=${PGRST_DB_URI}"
+            echo "PGRST_DB_ANON_ROLE=${PGRST_DB_ANON_ROLE:-anon}"
+            echo "PGRST_SERVER_PORT=${PGRST_SERVER_PORT:-3000}"
             echo "POSTGREST_HOST_PORT=$POSTGREST_HOST_PORT"
             echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL"
           } >> .env
           # Bring the stack up fresh — --force-recreate ensures no stale
-          # network/container references from prior failed attempts
-          docker compose up -d --force-recreate db postgrest minio minio_init
-          # Wait for Postgres healthcheck
+          # network/container references from prior failed attempts.
+          # Only `postgrest` lives in docker; Postgres itself runs on the
+          # host (see the migrations step below, which uses
+          # `psql -h 127.0.0.1`).
+          docker compose up -d --force-recreate postgrest
+          # Wait for Postgres to accept connections on the host.
+          # The DB is on 127.0.0.1, not in a docker service.
           for i in $(seq 1 30); do
-            if docker compose exec -T db pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" > /dev/null 2>&1; then
+            if PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT 1" > /dev/null 2>&1; then
               echo "Postgres is ready"
               break
             fi
