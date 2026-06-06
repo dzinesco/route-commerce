@@ -36,6 +36,19 @@ jobs:
           APP_DIR=/home/tyler/route-commerce
           mkdir -p $APP_DIR
 
+          # Seed config files into APP_DIR FIRST, before any docker compose
+          # command. The `docker compose down` below validates the compose
+          # file (including `env_file` paths) — if the old copy is still
+          # on the server with a broken `env_file`, the step fails before
+          # we get a chance to overwrite it.
+          #   - docker-compose.yml: copied UNCONDITIONALLY so deploys pick
+          #     up compose changes. The previous `[ -f ... ] ||` guard
+          #     kept stale copies on the server.
+          #   - .env.example: copied on first deploy only (it's a template;
+          #     the real `.env` is built from it below).
+          [ -f $APP_DIR/.env.example ] || cp .env.example $APP_DIR/.env.example
+          cp -f deploy/docker-compose.yml $APP_DIR/docker-compose.yml
+
           # Free the dev-stack port (3001) and the port the previous deploy used
           # (so a new deploy can pick it back up if it's the lowest free port)
           PREV_PORT=$(cat .postgrest-port 2>/dev/null || echo "")
@@ -86,12 +99,6 @@ jobs:
           export NEXT_PUBLIC_API_URL="http://localhost:$POSTGREST_HOST_PORT"
           export POSTGREST_HOST_PORT
 
-          # Seed config files into APP_DIR. The docker-compose.yml
-          # is copied UNCONDITIONALLY so deploys pick up compose
-          # changes (the previous `[ -f ... ] ||` guard kept stale
-          # copies on the server and masked a broken `env_file` path).
-          [ -f $APP_DIR/.env.example ] || cp .env.example $APP_DIR/.env.example
-          cp -f deploy/docker-compose.yml $APP_DIR/docker-compose.yml
           cd $APP_DIR
           [ -f .env ] || cp .env.example .env
           # Append production secrets to .env (overriding .env.example defaults)
