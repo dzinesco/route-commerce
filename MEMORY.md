@@ -451,3 +451,42 @@ just a `user_id` lookup in `getAdminUserFromPool()`.
 - The `signIn` event RPC call will fail silently if `DATABASE_URL`
   is not set. The user would see "Your account does not have admin
   access" and need to sign out and back in once the env is fixed.
+
+## Deploy fix — PostgREST env + dead nextjs service — 2026-06-06
+
+Push `2d55791` fixes two issues that broke the "Start Docker stack" step:
+
+1. **`PGRST_DB_URI` not set** — the env var was only in the "Deploy"
+   step's env, which runs after PostgREST has already started.
+   PostgREST booted with a blank DB URI. Now set in the "Start
+   Docker stack" step's env and written to `$APP_DIR/.env` (the
+   file docker compose auto-loads).
+
+2. **`docker-compose.yml` had a dead `nextjs` service** with
+   `env_file: ../.env.production`. That file is written by the
+   "Deploy" step (later in the workflow), so at "Start Docker stack"
+   time the path doesn't exist. `docker compose up` validates the
+   whole compose file and bailed.
+
+   The `nextjs` service is dead code anyway — PM2 runs Next.js
+   directly from `$APP_DIR`, never through docker. Removed it.
+
+**Other fixes in the same push:**
+
+- `docker compose up -d db postgrest minio minio_init` referenced
+  services that don't exist in the compose file. Postgres runs on
+  the host (the migrations step uses `psql -h 127.0.0.1`), not in
+  docker. Changed to just `postgrest`.
+
+- The `pg_isready` check was `docker compose exec -T db pg_isready`.
+  Since `db` is a host service, changed to
+  `PGPASSWORD=... psql -h 127.0.0.1 -U ... -d ... -c "SELECT 1"`.
+
+**Architecture (now consistent):**
+
+- Postgres: host (127.0.0.1:5432), migrations via `psql -h 127.0.0.1`
+- PostgREST: docker, connects to host Postgres via `PGRST_DB_URI`
+- Next.js: host, PM2 process, reads `DATABASE_URL` from `.env.production`
+- MinIO: not yet wired up (the `MINIO_ROOT_USER`/`PASSWORD` env vars
+  are written to `.env` but no service consumes them yet — add a
+  `minio` service to docker-compose.yml when storage goes live)
