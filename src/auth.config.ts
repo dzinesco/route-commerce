@@ -45,32 +45,6 @@ export const authConfig = {
 
   callbacks: {
     /**
-     * Gate /admin routes. Anything not on the public list and not signed in
-     * gets redirected to /login. This mirrors what the page-level checks do,
-     * but runs first at the edge so unauthorized requests never hit the
-     * server component tree.
-     */
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnAdmin = nextUrl.pathname.startsWith("/admin");
-      const isOnProtectedExample = nextUrl.pathname.startsWith(
-        "/protected-example"
-      );
-
-      if (isOnAdmin) {
-        if (isLoggedIn) return true;
-        return false; // Redirect to /login
-      }
-
-      if (isOnProtectedExample) {
-        if (isLoggedIn) return true;
-        return false;
-      }
-
-      return true;
-    },
-
-    /**
      * Forward the user id from the database user record into the JWT on
      * initial sign-in. With database sessions this is what populates
      * `session.user.id` for downstream server actions.

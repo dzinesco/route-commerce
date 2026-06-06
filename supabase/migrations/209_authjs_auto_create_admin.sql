@@ -11,6 +11,35 @@
 ALTER TABLE admin_users
   ADD COLUMN IF NOT EXISTS can_manage_settings BOOLEAN NOT NULL DEFAULT false;
 
+-- Defensive: ensure admin_users.user_id has a unique constraint so the
+-- `ON CONFLICT (user_id)` below resolves. The table was created via the
+-- Supabase dashboard — we can't be sure the dashboard created a UNIQUE
+-- index on user_id. If the constraint is missing, the ON CONFLICT
+-- clause will fail the whole "Apply migrations" step on the deploy
+-- runner. Skip silently if a matching unique/primary constraint already
+-- exists, otherwise add one (cleaning up any duplicate rows first so
+-- the ADD CONSTRAINT doesn't fail).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.admin_users'::regclass
+      AND contype IN ('u', 'p')           -- unique or primary key
+      AND pg_get_constraintdef(oid) ILIKE '%(user_id)%'
+  ) THEN
+    -- Shouldn't happen in practice (this RPC is the only writer for new
+    -- rows), but guard against duplicate user_id values that would
+    -- block the unique constraint from being created.
+    DELETE FROM admin_users a
+    USING admin_users b
+    WHERE a.user_id = b.user_id
+      AND a.ctid > b.ctid;
+    ALTER TABLE admin_users
+      ADD CONSTRAINT admin_users_user_id_key UNIQUE (user_id);
+  END IF;
+END $$;
+
 -- SECURITY DEFINER RPC: upsert a platform_admin row for the given
 -- Auth.js user id.
 --
