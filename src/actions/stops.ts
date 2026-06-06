@@ -110,8 +110,11 @@ export type StopForSitemap = {
 };
 
 export async function getActiveStopsForSitemap(): Promise<StopForSitemap[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Build-time prerender runs before Supabase env is configured. Returning
+  // an empty list lets the sitemap render with only the static URLs.
+  if (!supabaseUrl || !supabaseKey) return [];
 
   // Get all active stops with their brand slug
   const response = await fetch(
@@ -155,8 +158,12 @@ export async function getPublicStopsForBrand(
 ): Promise<PublicStop[]> {
   if (!brandSlug) return [];
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Build-time prerender runs before Supabase env is configured. Returning
+  // an empty list lets the page render with zero stops; at runtime the
+  // fetch path is unchanged.
+  if (!supabaseUrl || !supabaseKey) return [];
 
   const response = await fetch(
     `${supabaseUrl}/rest/v1/rpc/get_public_stops_for_brand`,

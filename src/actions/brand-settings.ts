@@ -271,8 +271,13 @@ export async function getBrandSettings(brandId: string): Promise<GetBrandSetting
 
 // Public version for storefront pages — uses slug, no auth required
 export async function getBrandSettingsPublic(brandSlug: string): Promise<GetBrandSettingsResult & { wholesaleEnabled?: boolean | null }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Build-time prerender runs before Supabase env is configured. Return
+  // a not-configured result; the page falls back to slug-based defaults.
+  if (!supabaseUrl || !supabaseKey) {
+    return { success: false, error: "Supabase not configured", wholesaleEnabled: undefined };
+  }
 
   const response = await fetch(
     `${supabaseUrl}/rest/v1/rpc/get_brand_settings_by_slug`,
