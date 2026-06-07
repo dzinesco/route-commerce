@@ -1,18 +1,8 @@
 "use client";
 
 import { useState } from "react";
-
-type Customer = {
-  id: string;
-  customer_name: string;
-  customer_email: string | null;
-  customer_phone: string | null;
-  pickup_complete: boolean;
-};
-
-type StopMessagingFormProps = {
-  stopId: string;
-};
+import { getStopPendingCustomers, type StopCustomer } from "@/actions/stops/get-stop-customers";
+import { sendStopBlast } from "@/actions/communications/stop-blast";
 
 const quickMessages = [
   { label: "Truck running late", value: "Heads up — the truck is running about 15 minutes behind schedule. Thanks for your patience!" },
@@ -23,8 +13,14 @@ const quickMessages = [
   { label: "Pickup reminder", value: "Reminder — you have an order ready for pickup today. See you soon!" },
 ];
 
-export default function StopMessagingForm({ stopId }: StopMessagingFormProps) {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+export default function StopMessagingForm({
+  stopId,
+  brandId,
+}: {
+  stopId: string;
+  brandId: string;
+}) {
+  const [customers, setCustomers] = useState<StopCustomer[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [channel, setChannel] = useState<"sms" | "email" | "both">("sms");
@@ -38,22 +34,16 @@ export default function StopMessagingForm({ stopId }: StopMessagingFormProps) {
     setLoading(true);
     setError(null);
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/orders?stop_id=eq.${stopId}&pickup_complete=eq.false&pickup_complete=eq.false&select=customer_name,customer_email,customer_phone,pickup_complete`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-      }
-    );
+    const result = await getStopPendingCustomers(stopId);
 
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.message);
-    } else {
-      setCustomers(data);
-      setLoaded(true);
+    if (!result.success) {
+      setError(result.error);
+      setLoading(false);
+      return;
     }
+
+    setCustomers(result.customers);
+    setLoaded(true);
     setLoading(false);
   }
 
@@ -67,41 +57,21 @@ export default function StopMessagingForm({ stopId }: StopMessagingFormProps) {
     setSending(true);
     setError(null);
 
-    const recipients = customers.filter((c) => {
-      if (channel === "sms") return c.customer_phone;
-      if (channel === "email") return c.customer_email;
-      return c.customer_phone || c.customer_email;
+    const blast = await sendStopBlast({
+      stopId,
+      brandId,
+      channel,
+      body: message,
+      audience: "pending",
     });
 
-    // Call Supabase Edge Function to send messages
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-messages`,
-      {
-        method: "POST",
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          channel,
-          message,
-          recipients: recipients.map((r) => ({
-            phone: r.customer_phone,
-            email: r.customer_email,
-            name: r.customer_name,
-          })),
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      const err = await res.json();
-      setError(err.message ?? "Failed to send messages");
+    if (!blast.success) {
+      setError(blast.error);
       setSending(false);
       return;
     }
 
-    setSent(recipients.length);
+    setSent(blast.messages_logged);
     setSending(false);
   }
 

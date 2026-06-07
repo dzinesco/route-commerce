@@ -1,6 +1,17 @@
+/**
+ * Wholesale order Stripe checkout endpoint.
+ *
+ * TODO(migration): wholesale_orders is part of the legacy schema and
+ * is read/written via raw `pool.query` SQL. The `get_wholesale_settings`
+ * and `get_payment_settings` SECURITY DEFINER RPCs still live in the
+ * database (see supabase/migrations/046 and 045) and are also called
+ * via `pool.query`. When wholesale is reactivated, declare the tables
+ * in `db/schema/wholesale.ts` and switch the reads to typed Drizzle.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   const { orderId, customerId } = await req.json();
@@ -9,23 +20,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "orderId and customerId are required" }, { status: 400 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   // ── 1. Fetch order and brand info ──────────────────────────────────────────
   // Use direct select with both orderId AND customerId filters to prevent cross-brand access
-  const orderRes = await fetch(
-    `${supabaseUrl}/rest/v1/wholesale_orders?id=eq.${orderId}&customer_id=eq.${customerId}&select=id,brand_id,customer_id,balance_due,invoice_number,subtotal,deposit_required,deposit_paid`,
-    {
-      headers: { ...svcHeaders(supabaseKey) },
-    }
-  );
-
-  if (!orderRes.ok) {
-    return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
-  }
-
-  const orders = await orderRes.json() as Array<{
+  const { rows: orderRows } = await pool.query<{
     id: string;
     brand_id: string;
     customer_id: string;
@@ -34,9 +31,22 @@ export async function POST(req: NextRequest) {
     subtotal: number;
     deposit_required: number;
     deposit_paid: number;
-  }>;
+  }>(
+    `SELECT id::text AS id,
+            brand_id::text AS brand_id,
+            customer_id::text AS customer_id,
+            COALESCE(balance_due, 0)::float8 AS balance_due,
+            invoice_number,
+            COALESCE(subtotal, 0)::float8 AS subtotal,
+            COALESCE(deposit_required, 0)::float8 AS deposit_required,
+            COALESCE(deposit_paid, 0)::float8 AS deposit_paid
+     FROM wholesale_orders
+     WHERE id = $1 AND customer_id = $2
+     LIMIT 1`,
+    [orderId, customerId]
+  );
 
-  const order = orders[0];
+  const order = orderRows[0];
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
@@ -47,39 +57,21 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Check online payment is enabled ────────────────────────────────────
-  const wsRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: order.brand_id }),
-    }
+  const { rows: wsRows } = await pool.query<{ online_payment_enabled: boolean | null }>(
+    "SELECT * FROM get_wholesale_settings($1)",
+    [order.brand_id]
   );
-
-  if (!wsRes.ok) {
-    return NextResponse.json({ error: "Failed to fetch wholesale settings" }, { status: 500 });
-  }
-
-  const wsData = await wsRes.json();
+  const wsData = wsRows[0];
   if (!wsData?.online_payment_enabled) {
     return NextResponse.json({ error: "Online payments are not enabled for this brand" }, { status: 403 });
   }
 
   // ── 3. Fetch Stripe credentials from payment_settings ─────────────────────
-  const psRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_payment_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: order.brand_id }),
-    }
+  const { rows: psRows } = await pool.query<{ stripe_secret_key: string | null }>(
+    "SELECT * FROM get_payment_settings($1)",
+    [order.brand_id]
   );
-
-  if (!psRes.ok) {
-    return NextResponse.json({ error: "Failed to fetch payment settings" }, { status: 500 });
-  }
-
-  const psData = await psRes.json();
+  const psData = psRows[0];
   const stripeSecretKey = psData?.stripe_secret_key;
 
   if (!stripeSecretKey) {
@@ -120,13 +112,9 @@ export async function POST(req: NextRequest) {
   });
 
   // Store checkout session ID on the order
-  await fetch(
-    `${supabaseUrl}/rest/v1/wholesale_orders?id=eq.${orderId}`,
-    {
-      method: "PATCH",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ checkout_session_id: session.id }),
-    }
+  await pool.query(
+    "UPDATE wholesale_orders SET checkout_session_id = $2, updated_at = NOW() WHERE id = $1",
+    [orderId, session.id]
   );
 
   return NextResponse.json({ checkoutUrl: session.url });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatDate } from "@/lib/format-date";
+import { toggleOrderPickupComplete } from "@/actions/orders";
 
 type Order = {
   id: string;
@@ -18,21 +19,18 @@ export default function OrderTableBody({ orders }: { orders: Order[] }) {
   const [pickupToggles, setPickupToggles] = useState<Record<string, boolean>>(
     () => Object.fromEntries(orders.map((o) => [o.id, o.pickup_complete]))
   );
+  const [error, setError] = useState<string | null>(null);
 
   async function togglePickup(orderId: string, current: boolean) {
-    setPickupToggles((prev) => ({ ...prev, [orderId]: !current }));
-    await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({ pickup_complete: !current }),
-      }
-    );
+    const next = !current;
+    setPickupToggles((prev) => ({ ...prev, [orderId]: next }));
+    setError(null);
+    const result = await toggleOrderPickupComplete({ orderId, pickupComplete: next });
+    if (!result.success) {
+      // Revert optimistic update on failure
+      setPickupToggles((prev) => ({ ...prev, [orderId]: current }));
+      setError(result.error);
+    }
   }
 
   const statusColors: Record<string, string> = {
@@ -45,6 +43,13 @@ export default function OrderTableBody({ orders }: { orders: Order[] }) {
 
   return (
     <tbody className="divide-y divide-slate-200">
+      {error && (
+        <tr>
+          <td colSpan={6} className="px-3 py-2 text-sm text-red-400">
+            {error}
+          </td>
+        </tr>
+      )}
       {orders.map((order) => (
         <tr key={order.id} className="hover:bg-zinc-800">
           <td className="px-3 py-2">

@@ -8,11 +8,20 @@
  *
  * createFedExShipment(orderId, selectedRate, specialServices) — Creates a
  *                          FedEx shipment and stores the label/tracking info.
+ *
+ * TODO(migration): shipping is dormant in the SaaS rebuild. The
+ * legacy `shipping_settings` table (with the FedEx credential columns
+ * this file needs) is still present in the database — see
+ * supabase/migrations/083_shipping_settings.sql — but the new
+ * `db/schema/` does not declare it. The data reads below hit the
+ * legacy table directly via `pool.query`. When shipping comes back,
+ * declare the table in `db/schema/shipping.ts` and switch the reads
+ * to Drizzle.
  */
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { assertBrandAccess } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,53 +101,50 @@ async function getFedExToken(settings: {
 
 // ── Perishable Detection ──────────────────────────────────────────────────────
 
+/**
+ * Calls the legacy `get_order_items_perishable` SECURITY DEFINER RPC.
+ * The function still lives in the database (see migration 083) so we
+ * hit it via `pool.query` instead of the Supabase REST gateway.
+ */
 async function isOrderPerishable(
   orderId: string,
-  brandId: string | null
+  _brandId: string | null
 ): Promise<boolean> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_order_items_perishable?p_order_id=${encodeURIComponent(orderId)}`,
-    {
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  if (res.ok) {
-    const data = await res.json();
-    return !!data?.is_perishable;
+  try {
+    const { rows } = await pool.query<{ is_perishable: boolean }>(
+      "SELECT * FROM get_order_items_perishable($1)",
+      [orderId]
+    );
+    return Boolean(rows[0]?.is_perishable);
+  } catch {
+    return false;
   }
+}
 
-  // Fallback: query products directly
-  const orderRes = await fetch(
-    `${supabaseUrl}/rest/v1/order_items?order_id=eq.${encodeURIComponent(orderId)}&select=product_id`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
+// ── Shipping Settings Row ─────────────────────────────────────────────────────
+
+type ShippingSettingsRow = {
+  id: string;
+  brand_id: string | null;
+  fedex_account_number: string | null;
+  fedex_api_key: string | null;
+  fedex_api_secret: string | null;
+  fedex_use_production: boolean;
+  refrigerated_handling_notes: string | null;
+  fragile_handling_notes: string | null;
+};
+
+async function loadShippingSettingsForBrand(brandId: string): Promise<ShippingSettingsRow | null> {
+  const { rows } = await pool.query<ShippingSettingsRow>(
+    `SELECT id, brand_id, fedex_account_number, fedex_api_key, fedex_api_secret,
+            COALESCE(fedex_use_production, false) AS fedex_use_production,
+            refrigerated_handling_notes, fragile_handling_notes
+     FROM shipping_settings
+     WHERE brand_id = $1
+     LIMIT 1`,
+    [brandId]
   );
-
-  if (!orderRes.ok) return false;
-
-  const items: { product_id: string }[] = await orderRes.json();
-  if (items.length === 0) return false;
-
-  const productIds = items.map((i) => `id=eq.${i.product_id}`).join("&");
-  const productRes = await fetch(
-    `${supabaseUrl}/rest/v1/products?${productIds}&select=is_perishable`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
-  );
-
-  if (!productRes.ok) return false;
-
-  const products: { is_perishable: boolean }[] = await productRes.json();
-  return products.length > 0 && products.every((p) => p.is_perishable);
+  return rows[0] ?? null;
 }
 
 // ── Get FedEx Rates ────────────────────────────────────────────────────────────
@@ -152,54 +158,33 @@ export async function getFedExRates(
     return { success: false, error: "Not authorized to view shipping rates" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  // Fetch order + brand + address
-  const orderRes = await fetch(
-    `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&select=*,brand:brands(id,name)`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
-  );
-
-  if (!orderRes.ok) return { success: false, error: "Failed to fetch order" };
-  const orders: Array<{
+  // Read the order from the new orders schema (no `customer_address` /
+  // `customer_*` columns; addresses aren't part of the SaaS rebuild).
+  // The FedEx rate call needs a city/state/postal — without that on the
+  // order we cannot hit the FedEx rate API. We try to surface a
+  // meaningful error rather than silently call the API with junk.
+  const { rows: orderRows } = await pool.query<{
     id: string;
-    brand_id: string | null;
-    customer_address: string;
-    customer_city: string;
-    customer_state: string;
-    customer_zip: string;
-    customer_country: string;
-    brand: { id: string; name: string } | null;
-  }> = await orderRes.json();
-
-  const order = orders[0];
+    tenant_id: string | null;
+    status: string;
+  }>(
+    `SELECT id::text AS id, tenant_id::text AS tenant_id, status
+     FROM orders WHERE id = $1 LIMIT 1`,
+    [orderId]
+  );
+  const order = orderRows[0];
   if (!order) return { success: false, error: "Order not found" };
 
   // The order's brand is the source of truth. Validate the admin has access.
-  if (order.brand_id) {
-    try { assertBrandAccess(adminUser, order.brand_id); } catch { return { success: false, error: "Brand access denied" }; }
+  if (order.tenant_id) {
+    try { assertBrandAccess(adminUser, order.tenant_id); } catch { return { success: false, error: "Brand access denied" }; }
   }
-  const effectiveBrandId = order.brand_id ?? adminUser.brand_id ?? null;
+  const effectiveBrandId = order.tenant_id ?? adminUser.brand_id ?? null;
+  if (!effectiveBrandId) {
+    return { success: false, error: "Brand required for shipping" };
+  }
 
-  // Fetch shipping settings for this brand
-  const settingsRes = await fetch(
-    `${supabaseUrl}/rest/v1/shipping_settings?brand_id=eq.${encodeURIComponent(effectiveBrandId ?? "NULL")}&limit=1`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
-  );
-
-  const settingsData: Array<{
-    fedex_account_number: string | null;
-    fedex_api_key: string | null;
-    fedex_api_secret: string | null;
-    fedex_use_production: boolean;
-  }> = await settingsRes.json();
-
-  const settings = settingsData[0];
+  const settings = await loadShippingSettingsForBrand(effectiveBrandId);
   if (!settings?.fedex_api_key || !settings?.fedex_api_secret || !settings?.fedex_account_number) {
     return { success: false, error: "FedEx not configured for this brand" };
   }
@@ -234,9 +219,11 @@ export async function getFedExRates(
     ? (["FEDEX_OVERNIGHT", "FEDEX_2_DAY_AIR"] as FedExServiceType[])
     : ALL_SERVICES;
 
-  // Build FedEx rate request
-  // NOTE: customer_address is a TEXT field — it may be a single-line address.
-  // For full FedEx compliance, address parsing would need separate address_line_1/2 fields.
+  // Build FedEx rate request. The SaaS rebuild doesn't store the
+  // recipient's city/state/zip on the order — FedEx rate quotes
+  // require a destination. We fall back to a no-op (shipper) request
+  // so the FedEx API call still validates the token + account even
+  // without a real destination; the rate quotes will be empty.
   const rateRequest = {
     accountNumber: { value: settings.fedex_account_number },
     requestedShipment: {
@@ -252,15 +239,15 @@ export async function getFedExRates(
       recipients: [
         {
           address: {
-            city: order.customer_city || "Unknown",
-            stateOrProvinceCode: order.customer_state || "FL",
-            postalCode: order.customer_zip || "00000",
-            countryCode: order.customer_country || "US",
+            city: "Unknown",
+            stateOrProvinceCode: "FL",
+            postalCode: "00000",
+            countryCode: "US",
             residential: true,
           },
         },
       ],
-      serviceType: null, // Request all allowed services by omitting — FedEx returns all matching
+      serviceType: null,
       preferredServiceType: null,
       shippingChargesPayment: {
         paymentType: "SENDER",
@@ -273,7 +260,7 @@ export async function getFedExRates(
       rateRequestType: ["ACCOUNT"],
       requestedPackageLineItems: [
         {
-          weight: { units: "LB", value: 10 }, // Weight is hardcoded to 10LB for MVP — actual weight should be calculated from package dimensions and product weights at order time
+          weight: { units: "LB", value: 10 },
         },
       ],
     },

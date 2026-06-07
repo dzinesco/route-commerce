@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { logAuditEvent } from "@/actions/audit";
+import { assignProductToStop, unassignProductFromStop } from "@/actions/stops/manage-stop-products";
 
 type Product = {
   id: string;
@@ -89,65 +90,43 @@ export default function StopProductAssignment({
     setPendingId(productId);
     setError(null);
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/assign_product_to_stop`,
-        {
-          method: "POST",
-          headers: {
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            p_stop_id: stopId,
-            p_product_id: productId,
-            p_caller_uid: callerUid,
-          }),
-        }
-      );
-      const data = await res.json();
+    const result = await assignProductToStop({ stopId, productId });
 
-      if (!res.ok || data.success === false) {
-        const errMsg = data?.error ?? data?.message ?? `HTTP ${res.status}`;
-        const errDetail = data?.details ?? data?.hint ?? data?.code ?? "";
-        setError(`Failed to assign: ${errMsg}${errDetail ? " — " + errDetail : ""}`);
-        setPendingId(null);
-        return;
-      }
-
-      // Optimistic insert: build the entry from the product we already have
-      // locally, keyed by the row id returned from the RPC. Use functional
-      // setState so concurrent calls compose correctly.
-      setProducts((prev) => {
-        if (prev.some((p) => p.product_id === productId)) return prev;
-        return [
-          ...prev,
-          {
-            id: data.id,
-            product_id: productId,
-            products: {
-              name: product.name,
-              type: product.type,
-              price: product.price,
-              image_url: product.image_url ?? null,
-            },
-          },
-        ];
-      });
+    if (!result.success) {
+      setError(`Failed to assign: ${result.error}`);
       setPendingId(null);
-
-      logAuditEvent({
-        table_name: "product_stops",
-        record_id: data.id,
-        action: "INSERT",
-        old_data: null,
-        new_data: { stop_id: stopId, product_id: productId },
-        brand_id: null,
-      });
-    } catch {
-      setError("Network error while assigning product.");
-      setPendingId(null);
+      return;
     }
+
+    // Optimistic insert: build the entry from the product we already have
+    // locally, keyed by the row id returned from the RPC. Use functional
+    // setState so concurrent calls compose correctly.
+    setProducts((prev) => {
+      if (prev.some((p) => p.product_id === productId)) return prev;
+      return [
+        ...prev,
+        {
+          id: result.id,
+          product_id: productId,
+          products: {
+            name: product.name,
+            type: product.type,
+            price: product.price,
+            image_url: product.image_url ?? null,
+          },
+        },
+      ];
+    });
+    setPendingId(null);
+
+    logAuditEvent({
+      table_name: "product_stops",
+      record_id: result.id,
+      action: "INSERT",
+      old_data: null,
+      new_data: { stop_id: stopId, product_id: productId },
+      brand_id: null,
+    });
   }
 
   async function remove(productId: string) {
@@ -158,47 +137,25 @@ export default function StopProductAssignment({
     setRemovingId(productId);
     setError(null);
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/unassign_product_from_stop`,
-        {
-          method: "POST",
-          headers: {
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            p_stop_id: stopId,
-            p_product_id: productId,
-            p_caller_uid: callerUid,
-          }),
-        }
-      );
-      const data = await res.json();
+    const result = await unassignProductFromStop({ stopId, productId });
 
-      if (!res.ok || data.success === false) {
-        const errMsg = data?.error ?? data?.message ?? `HTTP ${res.status}`;
-        const errDetail = data?.details ?? data?.hint ?? data?.code ?? "";
-        setError(`Failed to remove: ${errMsg}${errDetail ? " — " + errDetail : ""}`);
-        setRemovingId(null);
-        return;
-      }
-
-      setProducts((prev) => prev.filter((p) => p.product_id !== productId));
+    if (!result.success) {
+      setError(`Failed to remove: ${result.error}`);
       setRemovingId(null);
-
-      logAuditEvent({
-        table_name: "product_stops",
-        record_id: entry.id,
-        action: "DELETE",
-        old_data: { stop_id: stopId, product_id: productId },
-        new_data: null,
-        brand_id: null,
-      });
-    } catch {
-      setError("Network error while removing product.");
-      setRemovingId(null);
+      return;
     }
+
+    setProducts((prev) => prev.filter((p) => p.product_id !== productId));
+    setRemovingId(null);
+
+    logAuditEvent({
+      table_name: "product_stops",
+      record_id: entry.id,
+      action: "DELETE",
+      old_data: { stop_id: stopId, product_id: productId },
+      new_data: null,
+      brand_id: null,
+    });
   }
 
   function toggle(productId: string) {

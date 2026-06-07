@@ -4,7 +4,7 @@
 import React, { useState, useTransition, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { publishStop } from "@/actions/stops";
+import { publishStop, deleteStop } from "@/actions/stops";
 import {
   AdminSearchInput,
   AdminFilterTabs,
@@ -449,26 +449,15 @@ function StopRowBase({
 
   async function handleDelete() {
     setDeletingId(stop.id);
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/delete_stop`,
-      {
-        method: "POST",
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ p_stop_id: stop.id, p_brand_id: stop.brand_id }),
-      }
-    );
-    const data = await res.json();
+    const result = await deleteStop(stop.id, stop.brand_id);
     setDeletingId(null);
     setConfirmDelete(null);
     setOpenMenu(null);
-    if (data.success) {
+    if (result.success) {
       showSuccess("Stop deleted", "The stop has been removed");
       onDeleted();
     } else {
-      onDeleteError(data.error ?? "Delete failed");
+      onDeleteError(result.error ?? "Delete failed");
     }
   }
 

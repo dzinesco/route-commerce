@@ -1,8 +1,22 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { getActiveBrandId } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+
+// TODO(migration): the water-log feature was built on Supabase RPCs
+// (`create_water_headgate`, `update_water_headgate`, `delete_water_headgate`,
+// `get_water_users`, `create_water_user`, `update_water_user`,
+// `delete_water_user`, `reset_water_user_pin`, `get_water_entries`,
+// `get_water_headgates_admin`, `regenerate_headgate_token`,
+// `update_water_entry`, `delete_water_entry`, `get_water_entry_by_id`,
+// `get_water_display_summary`, `get_water_alert_log`) and tables that
+// are not part of the SaaS rebuild's `db/schema/` (`water_headgates`,
+// `water_users`, `water_entries`, `water_sessions`,
+// `water_admin_sessions`, `water_admin_settings`, `water_alert_log`).
+// All actions below preserve their original signature and return
+// empty / no-op responses so the admin UI degrades gracefully. To
+// re-enable water log, add the tables to `db/schema/` and
+// re-implement these against Drizzle. Same pattern as
+// `actions/route-trace/lots.ts`.
 
 type Irrigator = {
   id: string;
@@ -42,414 +56,143 @@ type WaterEntry = {
   headgate_unit?: string;
 };
 
+const NOT_CONFIGURED = "Water log is not configured in the SaaS rebuild";
+
 // ── Headgate Admin ──────────────────────────────────────────
 
-export async function createWaterHeadgate(brandId: string, name: string, unit: string = "CFS"): Promise<{ success: boolean; headgate?: Headgate; error?: string }> {
-  const adminUser = await (await import("@/lib/admin-permissions")).getAdminUser();
+export async function createWaterHeadgate(
+  _brandId: string,
+  _name: string,
+  _unit: string = "CFS"
+): Promise<{ success: boolean; headgate?: Headgate; error?: string }> {
+  const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log && adminUser.role !== "platform_admin") {
     return { success: false, error: "Not authorized" };
   }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // prefer service for admin muts
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/create_water_headgate`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId, p_name: name, p_unit: unit }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.headgate) {
-    return { success: false, error: data?.message ?? "Failed to create headgate" };
-  }
-  return { success: true, headgate: data.headgate };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
 export async function updateWaterHeadgate(
-  headgateId: string,
-  name: string,
-  active: boolean,
-  unit?: string,
-  highThreshold?: number | null,
-  lowThreshold?: number | null
+  _headgateId: string,
+  _name: string,
+  _active: boolean,
+  _unit?: string,
+  _highThreshold?: number | null,
+  _lowThreshold?: number | null
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_water_headgate`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_headgate_id: headgateId,
-        p_name: name,
-        p_active: active,
-        p_unit: unit ?? null,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-        p_high_threshold: highThreshold ?? null,
-        p_low_threshold: lowThreshold ?? null,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to update headgate" };
-  }
-  return { success: true };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
 // ── Irrigator Admin ─────────────────────────────────────────
 
-export async function getWaterIrrigators(brandId: string): Promise<Irrigator[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_users`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data?.users ?? [];
+export async function getWaterIrrigators(_brandId: string): Promise<Irrigator[]> {
+  return [];
 }
 
 export async function createWaterIrrigator(
-  brandId: string,
-  name: string,
-  lang: string = "en"
+  _brandId: string,
+  _name: string,
+  _lang: string = "en"
 ): Promise<{ success: boolean; irrigator?: Irrigator; pin?: string; error?: string }> {
-  return createWaterUser(brandId, name, "irrigator", lang) as Promise<{ success: boolean; irrigator?: Irrigator; pin?: string; error?: string }>;
+  return createWaterUser(_brandId, _name, "irrigator", _lang) as Promise<{
+    success: boolean;
+    irrigator?: Irrigator;
+    pin?: string;
+    error?: string;
+  }>;
 }
 
 export async function createWaterUser(
-  brandId: string,
-  name: string,
-  role: "irrigator" | "water_admin",
-  lang: string = "en"
+  _brandId: string,
+  _name: string,
+  _role: "irrigator" | "water_admin",
+  _lang: string = "en"
 ): Promise<{ success: boolean; user?: Irrigator; pin?: string; error?: string }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/create_water_user`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId, p_name: name, p_role: role, p_lang: lang }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to create user" };
-  }
-  return { success: true, user: data.user, pin: data.pin };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
 export async function updateWaterIrrigator(
-  irrigatorId: string,
-  name: string,
-  active: boolean,
-  lang: string,
-  role: "irrigator" | "water_admin"
+  _irrigatorId: string,
+  _name: string,
+  _active: boolean,
+  _lang: string,
+  _role: "irrigator" | "water_admin"
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_water_user`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_user_id: irrigatorId,
-        p_name: name,
-        p_active: active,
-        p_lang: lang,
-        p_role: role,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to update user" };
-  }
-  return { success: true };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
 export async function resetWaterIrrigatorPin(
-  irrigatorId: string
+  _irrigatorId: string
 ): Promise<{ success: boolean; pin?: string; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/reset_water_user_pin`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_user_id: irrigatorId,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to reset PIN" };
-  }
-  return { success: true, pin: data.pin };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
-export async function deleteWaterUser(userId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteWaterUser(_userId: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_water_user`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_user_id: userId,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to delete user" };
-  }
-  return { success: true };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
-export async function deleteWaterHeadgate(headgateId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteWaterHeadgate(_headgateId: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_water_headgate`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_headgate_id: headgateId,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-      }),
-    }
-  );
-
-  // The RPC returns JSONB on success: { success: true } or { success: false, error: "..." }.
-  // On failure (HTTP non-2xx) Supabase returns { message: "...", code: "...", details: ... }.
-  // We try to extract the most useful message in both cases.
-  let data: { success?: boolean; error?: string; message?: string } | null = null;
-  try {
-    data = await response.json();
-  } catch {
-    // Non-JSON body — leave data as null, fall through to default error
-  }
-
-  if (response.ok && data?.success) {
-    return { success: true };
-  }
-
-  // Prefer the RPC's own error if it set one
-  const errorMessage =
-    data?.error ??
-    data?.message ??
-    (response.ok ? "Unknown error" : `HTTP ${response.status}: ${response.statusText || "request failed"}`);
-
-  if (process.env.NODE_ENV !== "production") {
-    console.error("[deleteWaterHeadgate] failed", {
-      headgateId,
-      status: response.status,
-      data,
-    });
-  }
-
-  return { success: false, error: errorMessage };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
 // ── Entries ────────────────────────────────────────────────
 
-export async function getWaterEntries(brandId: string, limit = 50): Promise<WaterEntry[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_entries`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId, p_limit: limit }),
-    }
-  );
-
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data?.entries ?? [];
+export async function getWaterEntries(_brandId: string, _limit = 50): Promise<WaterEntry[]> {
+  return [];
 }
 
-export async function getWaterHeadgatesAdmin(brandId: string): Promise<Headgate[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_headgates_admin`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data?.headgates ?? [];
+export async function getWaterHeadgatesAdmin(_brandId: string): Promise<Headgate[]> {
+  return [];
 }
 
-export async function regenerateHeadgateToken(headgateId: string): Promise<{ success: boolean; token?: string; error?: string }> {
+export async function regenerateHeadgateToken(
+  _headgateId: string
+): Promise<{ success: boolean; token?: string; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/regenerate_headgate_token`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_headgate_id: headgateId, p_brand_id: (await getActiveBrandId(adminUser)) ?? null }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to regenerate token" };
-  }
-  return { success: true, token: data.token };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
 // ── Entry edit/delete ─────────────────────────────────────
 
 export async function updateWaterEntry(
-  entryId: string,
-  measurement: number,
-  notes: string | null,
-  unit?: string
+  _entryId: string,
+  _measurement: number,
+  _notes: string | null,
+  _unit?: string
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_water_entry`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_entry_id: entryId,
-        p_measurement: measurement,
-        p_notes: notes,
-        p_unit: unit ?? null,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to update entry" };
-  }
-  return { success: true };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
-export async function deleteWaterEntry(
-  entryId: string
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteWaterEntry(_entryId: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_water_log) return { success: false, error: "Not authorized" };
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_water_entry`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_entry_id: entryId,
-        p_brand_id: (await getActiveBrandId(adminUser)) ?? null,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    return { success: false, error: data?.error ?? "Failed to delete entry" };
-  }
-  return { success: true };
+  return { success: false, error: NOT_CONFIGURED };
 }
 
-export async function getWaterEntryById(entryId: string): Promise<WaterEntry | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_entry_by_id`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_entry_id: entryId }),
-    }
-  );
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data?.entry ?? null;
+export async function getWaterEntryById(_entryId: string): Promise<WaterEntry | null> {
+  return null;
 }
 
 // ── Display summary ───────────────────────────────────
@@ -481,22 +224,8 @@ export type WaterDisplaySummary = {
   recent_entries: WaterDisplayEntry[];
 };
 
-export async function getWaterDisplaySummary(brandId: string): Promise<WaterDisplaySummary | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_display_summary`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data as WaterDisplaySummary;
+export async function getWaterDisplaySummary(_brandId: string): Promise<WaterDisplaySummary | null> {
+  return null;
 }
 
 export type AlertLogEntry = {
@@ -511,20 +240,6 @@ export type AlertLogEntry = {
   formatted_time: string;
 };
 
-export async function getWaterAlertLog(brandId: string, limit = 50): Promise<AlertLogEntry[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_alert_log`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId, p_limit: limit }),
-    }
-  );
-
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data?.alerts ?? [];
+export async function getWaterAlertLog(_brandId: string, _limit = 50): Promise<AlertLogEntry[]> {
+  return [];
 }

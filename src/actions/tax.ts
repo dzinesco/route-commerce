@@ -1,7 +1,10 @@
 "use server";
 
 import Stripe from "stripe";
-import { svcHeaders } from "@/lib/svc-headers";
+import { eq } from "drizzle-orm";
+import { withTenant } from "@/db/client";
+import { brandSettings } from "@/db/schema";
+import { pool } from "@/lib/db";
 
 export type TaxCalculationResult = {
   taxAmount: number;
@@ -9,6 +12,13 @@ export type TaxCalculationResult = {
   taxLocation: string;
 };
 
+/**
+ * Tax settings are stored on `brand_settings.feature_flags` (jsonb).
+ * The SaaS rebuild uses the same keys the legacy `get_brand_settings`
+ * RPC exposed: `collect_sales_tax` (boolean) and `nexus_states`
+ * (string[] of US state codes). Reading them out of the JSON column
+ * avoids a per-brand settings table for a few toggle fields.
+ */
 type BrandTaxSettings = {
   collect_sales_tax: boolean | null;
   nexus_states: string[] | null;
@@ -101,23 +111,163 @@ export async function calculateOrderTax(params: {
   }
 }
 
+/**
+ * Read tax-related feature flags for a brand. The two flags
+ * (`collect_sales_tax`, `nexus_states`) used to live in a dedicated
+ * `get_brand_settings` SECURITY DEFINER RPC; in the SaaS rebuild they
+ * live in `brand_settings.feature_flags` (jsonb). Tolerant of missing
+ * / malformed JSON by falling back to `null`.
+ */
 async function getBrandTaxSettings(brandId: string): Promise<BrandTaxSettings | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  try {
+    const rows = await withTenant(brandId, async (db) =>
+      db
+        .select({ featureFlags: brandSettings.featureFlags })
+        .from(brandSettings)
+        .where(eq(brandSettings.tenantId, brandId))
+        .limit(1),
+    );
+    const flags = rows[0]?.featureFlags as
+      | Partial<{
+          collect_sales_tax: boolean;
+          nexus_states: string[];
+        }>
+      | null
+      | undefined;
+    if (!flags) return null;
+    return {
+      collect_sales_tax:
+        typeof flags.collect_sales_tax === "boolean"
+          ? flags.collect_sales_tax
+          : null,
+      nexus_states: Array.isArray(flags.nexus_states)
+        ? flags.nexus_states.filter((s): s is string => typeof s === "string")
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_brand_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
+// ── Tax Dashboard read-side actions ───────────────────────────────────────────
+//
+// TODO(migration): the tax dashboard reads from the legacy `orders`
+// table via the `get_tax_summary` and `get_taxable_orders` SECURITY
+// DEFINER RPCs (supabase/migrations/095). Both the table and the RPCs
+// still exist; we call the RPCs through `pool.query` rather than the
+// Supabase REST gateway. When the SaaS rebuild's orders table grows a
+// `tax_amount` column or the tax dashboard is rebuilt against the new
+// schema, these helpers should be rewritten against the Drizzle
+// `orders` table directly.
 
-  if (!response.ok) return null;
-  const data = await response.json();
-  return {
-    collect_sales_tax: data?.collect_sales_tax ?? null,
-    nexus_states: data?.nexus_states ?? null,
-  };
+export type TaxByStateRow = {
+  state: string;
+  total_tax: number;
+  gross_sales: number;
+  order_count: number;
+};
+
+export type TaxSummaryData = {
+  total_tax_collected: number;
+  total_gross_sales: number;
+  order_count: number;
+  tax_by_state: TaxByStateRow[];
+};
+
+export type TaxOrderRow = {
+  order_id: string;
+  date: string;
+  customer_name: string;
+  city: string;
+  state: string;
+  taxable_amount: number;
+  tax_amount: number;
+  tax_rate: number;
+  tax_location: string;
+};
+
+export type GetTaxSummaryResult =
+  | { success: true; data: TaxSummaryData }
+  | { success: false; error: string };
+
+export type GetTaxableOrdersResult =
+  | { success: true; data: TaxOrderRow[] }
+  | { success: false; error: string };
+
+export async function getTaxSummaryAction(params: {
+  brandId: string;
+  startDate: string;
+  endDate: string;
+}): Promise<GetTaxSummaryResult> {
+  if (!params.brandId) return { success: false, error: "Brand required" };
+  try {
+    const { rows } = await pool.query<{
+      total_tax_collected: number | string;
+      total_gross_sales: number | string;
+      order_count: number | string;
+      tax_by_state: TaxByStateRow[] | null;
+    }>(
+      "SELECT * FROM get_tax_summary($1::uuid, $2::date, $3::date)",
+      [params.brandId, params.startDate, params.endDate]
+    );
+    const row = rows[0];
+    if (!row) return { success: false, error: "No data" };
+    return {
+      success: true,
+      data: {
+        total_tax_collected: Number(row.total_tax_collected ?? 0),
+        total_gross_sales: Number(row.total_gross_sales ?? 0),
+        order_count: Number(row.order_count ?? 0),
+        tax_by_state: Array.isArray(row.tax_by_state) ? row.tax_by_state : [],
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to load tax summary",
+    };
+  }
+}
+
+export async function getTaxableOrdersAction(params: {
+  brandId: string;
+  startDate: string;
+  endDate: string;
+}): Promise<GetTaxableOrdersResult> {
+  if (!params.brandId) return { success: false, error: "Brand required" };
+  try {
+    const { rows } = await pool.query<{
+      order_id: string;
+      date: string;
+      customer_name: string | null;
+      city: string | null;
+      state: string | null;
+      taxable_amount: number | string;
+      tax_amount: number | string;
+      tax_rate: number | string;
+      tax_location: string | null;
+    }>(
+      "SELECT * FROM get_taxable_orders($1::uuid, $2::date, $3::date)",
+      [params.brandId, params.startDate, params.endDate]
+    );
+    return {
+      success: true,
+      data: rows.map((r) => ({
+        order_id: String(r.order_id ?? ""),
+        date: String(r.date ?? ""),
+        customer_name: String(r.customer_name ?? ""),
+        city: String(r.city ?? ""),
+        state: String(r.state ?? ""),
+        taxable_amount: Number(r.taxable_amount ?? 0),
+        tax_amount: Number(r.tax_amount ?? 0),
+        tax_rate: Number(r.tax_rate ?? 0),
+        tax_location: String(r.tax_location ?? ""),
+      })),
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to load taxable orders",
+    };
+  }
 }

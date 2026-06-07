@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { assignProductToStop, unassignProductFromStop } from "@/actions/stops/manage-stop-products";
 
 type Product = {
   id: string;
@@ -34,25 +35,10 @@ export default function ProductAssignmentForm({
     setLoading(true);
     setError(null);
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/assign_product_to_stop`,
-      {
-        method: "POST",
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_stop_id: stopId,
-          p_product_id: selected,
-        }),
-      }
-    );
+    const result = await assignProductToStop({ stopId, productId: selected });
 
-    const data = await res.json();
-
-    if (!res.ok || data.success === false) {
-      setError(data.error ?? "Failed to assign product");
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
     }
@@ -63,25 +49,10 @@ export default function ProductAssignmentForm({
   }
 
   async function handleRemove(productId: string) {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/unassign_product_from_stop`,
-      {
-        method: "POST",
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_stop_id: stopId,
-          p_product_id: productId,
-        }),
-      }
-    );
+    const result = await unassignProductFromStop({ stopId, productId });
 
-    const data = await res.json();
-
-    if (!res.ok || data.success === false) {
-      setError(data.error ?? "Failed to remove");
+    if (!result.success) {
+      setError(result.error);
       return;
     }
 

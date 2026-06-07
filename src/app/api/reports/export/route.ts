@@ -1,6 +1,19 @@
+/**
+ * Orders report export endpoint.
+ *
+ * The legacy `get_orders_report` RPC is not in the database; this
+ * endpoint assembles an equivalent orders report directly from the
+ * `orders` + `customers` tables via a single Drizzle query, and
+ * returns it as either JSON or CSV.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
+import { eq, desc } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { assertBrandAccess } from "@/lib/brand-scope";
+import { withDb, withPlatformAdmin } from "@/db/client";
+import { orders } from "@/db/schema/orders";
+import { customers } from "@/db/schema/customers";
 
 export async function GET(req: NextRequest) {
   const adminUser = await getAdminUser();
@@ -13,47 +26,67 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const format = searchParams.get("format") ?? "json";
-  const brandId = searchParams.get("brand_id") ?? adminUser.brand_id;
+  const brandId = searchParams.get("brand_id") ?? adminUser.brand_id ?? null;
 
-  if (adminUser.role === "brand_admin" && adminUser.brand_id !== brandId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  // Fetch orders report data
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_orders_report?`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId }),
+  if (brandId) {
+    try { assertBrandAccess(adminUser, brandId); } catch {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  );
-
-  if (!response.ok) {
-    return NextResponse.json({ error: "Failed to fetch report data" }, { status: 500 });
   }
 
-  const data = await response.json();
+  // platform_admin with no brandId = cross-tenant report; everyone else
+  // must pass a brandId matching their membership.
+  const rows = brandId
+    ? await withDb((db) =>
+        db
+          .select({
+            id: orders.id,
+            tenantId: orders.tenantId,
+            customerId: orders.customerId,
+            customerName: customers.name,
+            customerEmail: customers.email,
+            status: orders.status,
+            totalCents: orders.totalCents,
+            placedAt: orders.placedAt,
+          })
+          .from(orders)
+          .leftJoin(customers, eq(customers.id, orders.customerId))
+          .where(eq(orders.tenantId, brandId))
+          .orderBy(desc(orders.placedAt))
+          .limit(1000),
+      )
+    : await withPlatformAdmin((db) =>
+        db
+          .select({
+            id: orders.id,
+            tenantId: orders.tenantId,
+            customerId: orders.customerId,
+            customerName: customers.name,
+            customerEmail: customers.email,
+            status: orders.status,
+            totalCents: orders.totalCents,
+            placedAt: orders.placedAt,
+          })
+          .from(orders)
+          .leftJoin(customers, eq(customers.id, orders.customerId))
+          .orderBy(desc(orders.placedAt))
+          .limit(1000),
+      );
 
   if (format === "csv") {
-    const rows = data.orders ?? [];
-    const headers = ["id", "customer_name", "customer_email", "status", "subtotal", "created_at"];
+    const headers = ["id", "customer_name", "customer_email", "status", "total_cents", "placed_at"];
     const csvRows = [headers.join(",")];
-    for (const row of rows) {
-      csvRows.push([
-        row.id,
-        `"${(row.customer_name ?? "").replace(/"/g, '""')}"`,
-        row.customer_email ?? "",
-        row.status ?? "",
-        row.subtotal ?? 0,
-        row.created_at ?? "",
-      ].join(","));
+    for (const r of rows) {
+      csvRows.push(
+        [
+          r.id,
+          `"${(r.customerName ?? "").replace(/"/g, '""')}"`,
+          r.customerEmail ?? "",
+          r.status ?? "",
+          r.totalCents ?? 0,
+          r.placedAt instanceof Date ? r.placedAt.toISOString() : "",
+        ].join(","),
+      );
     }
     return new NextResponse(csvRows.join("\n"), {
       headers: {
@@ -63,5 +96,5 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json({ orders: rows });
 }
