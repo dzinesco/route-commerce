@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ScheduleImportModal from "@/components/admin/ScheduleImportModal";
 import AddStopModal from "@/components/admin/AddStopModal";
-import { publishStop } from "@/actions/stops";
+import { publishStop, deleteStop } from "@/actions/stops";
 
 type Stop = {
   id: string;
@@ -85,18 +85,7 @@ export default function AdminStopsPanel({ stops, brandId }: Props) {
   }
 
   async function handleDelete(stopId: string) {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/delete_stop`,
-      {
-        method: "POST",
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ p_stop_id: stopId, p_brand_id: brandId }),
-      }
-    );
-    const data = await res.json();
+    const data = await deleteStop(stopId, brandId);
     setConfirmDelete(null);
     setOpenMenu(null);
     if (data.success) {

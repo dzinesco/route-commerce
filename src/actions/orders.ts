@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { mockOrders, mockStops } from "@/lib/mock-data";
 
 type AdminOrder = {
@@ -149,29 +149,29 @@ export async function getAdminOrders(): Promise<AdminOrdersResponse> {
   const adminUser = await getAdminUser();
   const brandId = adminUser?.brand_id ?? null;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_admin_orders`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) {
-    return { success: false, orders: [], stops: [], error: `HTTP ${response.status}: ${response.statusText}` };
+  // The legacy `get_admin_orders` RPC is a SECURITY DEFINER function that
+  // returns orders + stops joined with order_items. Call it directly via
+  // the shared pg pool so we don't go through Supabase REST.
+  try {
+    const { rows } = await pool.query<AdminOrdersResult>(
+      "SELECT * FROM get_admin_orders($1)",
+      [brandId],
+    );
+    const data = rows[0] ?? { orders: [], stops: [] };
+    return {
+      success: true,
+      orders: data.orders ?? [],
+      stops: data.stops ?? [],
+      error: null,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      orders: [],
+      stops: [],
+      error: err instanceof Error ? err.message : "Failed to fetch orders",
+    };
   }
-
-  const data = await response.json();
-  return {
-    success: true,
-    orders: data?.orders ?? [],
-    stops: data?.stops ?? [],
-    error: null,
-  };
 }
 
 export async function getAdminStops(): Promise<AdminStop[]> {
@@ -216,22 +216,13 @@ export async function getAdminOrderDetail(orderId: string): Promise<AdminOrderDe
   const adminUser = await getAdminUser();
   const brandId = adminUser?.brand_id ?? null;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_admin_order_detail`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_order_id: orderId, p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) {
+  try {
+    const { rows } = await pool.query<AdminOrderDetail>(
+      "SELECT * FROM get_admin_order_detail($1, $2)",
+      [orderId, brandId],
+    );
+    return rows[0] ?? null;
+  } catch {
     return null;
   }
-
-  const data = await response.json();
-  return data;
 }

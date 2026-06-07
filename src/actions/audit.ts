@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type AuditAction = "INSERT" | "UPDATE" | "DELETE";
 
@@ -22,12 +22,10 @@ type AuditResult =
  * Logs an audit event to the audit_logs table.
  *
  * Resolves the admin user from the Auth.js session via getAdminUser().
- * Audit writes bypass RLS via the SECURITY DEFINER log_audit_event RPC function.
+ * Audit writes go through the `log_audit_event` SECURITY DEFINER
+ * PL/pgSQL function via the shared pg pool — no Supabase REST hop.
  */
 export async function logAuditEvent(payload: AuditPayload): Promise<AuditResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   const adminUser = await getAdminUser();
 
   const performed_by = adminUser?.user_id ?? null;
@@ -49,26 +47,22 @@ export async function logAuditEvent(payload: AuditPayload): Promise<AuditResult>
     brand_id: payload.brand_id ?? null,
   };
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/log_audit_event`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify({ p_payload: rpcPayload }),
+  try {
+    const { rows } = await pool.query<{ id?: string }>(
+      "SELECT * FROM log_audit_event($1::jsonb)",
+      [JSON.stringify(rpcPayload)],
+    );
+    const auditId = typeof rows[0] === "string"
+      ? rows[0]
+      : rows[0]?.id;
+    if (!auditId) {
+      return { success: false, error: "Audit log written but ID not returned" };
     }
-  );
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ message: "Unknown error" }));
-    return { success: false, error: err.message ?? "Failed to write audit log" };
+    return { success: true, audit_id: auditId };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to write audit log",
+    };
   }
-
-  const data = await response.json();
-  const auditId = typeof data === "string" ? data : data?.[0]?.id ?? data?.id;
-
-  if (!auditId) {
-    return { success: false, error: "Audit log written but ID not returned" };
-  }
-
-  return { success: true, audit_id: auditId };
 }

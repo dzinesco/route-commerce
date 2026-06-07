@@ -1,12 +1,23 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type UploadLogoResult =
   | { success: true; logoUrl: string }
   | { success: false; error: string };
 
+/**
+ * Upload a brand logo (light or dark variant) to Supabase Storage and
+ * save the resulting public URL to the brand_settings row via the
+ * `upsert_brand_settings` SECURITY DEFINER RPC.
+ *
+ * NOTE: the storage PUT itself is not a database call, so it still
+ * goes through the Supabase Storage REST API. Storage migration to an
+ * S3-compatible backend is tracked separately; until that lands, the
+ * public URL pattern (`/storage/v1/object/public/...`) keeps working
+ * for any pre-existing bucket.
+ */
 export async function uploadBrandLogo(
   brandId: string,
   file: File,
@@ -43,7 +54,7 @@ export async function uploadBrandLogo(
     `${supabaseUrl}/storage/v1/object/brand-logos/${storagePath}`,
     {
       method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": file.type, "x-upsert": "true" },
+      headers: { apikey: supabaseKey, "Content-Type": file.type, "x-upsert": "true" },
       body: buffer,
     }
   );
@@ -54,20 +65,10 @@ export async function uploadBrandLogo(
 
   const publicUrl = `${supabaseUrl}/storage/v1/object/public/brand-logos/${storagePath}`;
 
-  // Save URL to brand_settings via RPC
-  const saveRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        [isDark ? "p_logo_url_dark" : "p_logo_url"]: publicUrl,
-      }),
-    }
-  );
-
-  if (!saveRes.ok) {
+  const saveOk = await callUpsertBrandSettings(brandId, {
+    [isDark ? "p_logo_url_dark" : "p_logo_url"]: publicUrl,
+  });
+  if (!saveOk) {
     return { success: false, error: "Upload succeeded but failed to save URL" };
   }
 
@@ -108,7 +109,7 @@ export async function uploadOlatheSweetLogo(
     `${supabaseUrl}/storage/v1/object/brand-logos/${storagePath}`,
     {
       method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": file.type, "x-upsert": "true" },
+      headers: { apikey: supabaseKey, "Content-Type": file.type, "x-upsert": "true" },
       body: buffer,
     }
   );
@@ -119,19 +120,10 @@ export async function uploadOlatheSweetLogo(
 
   const publicUrl = `${supabaseUrl}/storage/v1/object/public/brand-logos/${storagePath}`;
 
-  const saveRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        p_olathe_sweet_logo_url: publicUrl,
-      }),
-    }
-  );
-
-  if (!saveRes.ok) {
+  const saveOk = await callUpsertBrandSettings(brandId, {
+    p_olathe_sweet_logo_url: publicUrl,
+  });
+  if (!saveOk) {
     return { success: false, error: "Upload succeeded but failed to save URL" };
   }
 
@@ -172,7 +164,7 @@ export async function uploadOlatheSweetLogoDark(
     `${supabaseUrl}/storage/v1/object/brand-logos/${storagePath}`,
     {
       method: "PUT",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": file.type, "x-upsert": "true" },
+      headers: { apikey: supabaseKey, "Content-Type": file.type, "x-upsert": "true" },
       body: buffer,
     }
   );
@@ -183,23 +175,43 @@ export async function uploadOlatheSweetLogoDark(
 
   const publicUrl = `${supabaseUrl}/storage/v1/object/public/brand-logos/${storagePath}`;
 
-  const saveRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        p_olathe_sweet_logo_url_dark: publicUrl,
-      }),
-    }
-  );
-
-  if (!saveRes.ok) {
+  const saveOk = await callUpsertBrandSettings(brandId, {
+    p_olathe_sweet_logo_url_dark: publicUrl,
+  });
+  if (!saveOk) {
     return { success: false, error: "Upload succeeded but failed to save URL" };
   }
 
   return { success: true, logoUrl: publicUrl };
+}
+
+/**
+ * Internal helper: invoke the SECURITY DEFINER `upsert_brand_settings`
+ * RPC via the shared pg pool. Accepts a partial args object whose keys
+ * map to the function's `p_*` parameters.
+ */
+async function callUpsertBrandSettings(
+  brandId: string,
+  args: Record<string, unknown>
+): Promise<boolean> {
+  // Always set the brand id.
+  args.p_brand_id = brandId;
+
+  // Build a `$1, $2, ...` parameter list in deterministic key order so
+  // the positional binds line up with the named parameters.
+  const keys = Object.keys(args);
+  const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+  const params = keys.map((k) => args[k]);
+
+  try {
+    await pool.query(
+      `SELECT upsert_brand_settings(${placeholders})`,
+      params,
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export type BrandSettings = {
@@ -252,51 +264,35 @@ export type SaveBrandSettingsResult =
   | { success: false; error: string };
 
 export async function getBrandSettings(brandId: string): Promise<GetBrandSettingsResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_brand_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to fetch brand settings" };
-  const data = await response.json();
-  return { success: true, settings: data };
+  try {
+    const { rows } = await pool.query<BrandSettings>(
+      "SELECT * FROM get_brand_settings($1)",
+      [brandId],
+    );
+    return { success: true, settings: rows[0] ?? null };
+  } catch {
+    return { success: false, error: "Failed to fetch brand settings" };
+  }
 }
 
 // Public version for storefront pages — uses slug, no auth required
 export async function getBrandSettingsPublic(brandSlug: string): Promise<GetBrandSettingsResult & { wholesaleEnabled?: boolean | null }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    return { success: false, error: "Supabase not configured", wholesaleEnabled: undefined };
-  }
-
-  // Wrapped in try/catch so a build-time Supabase outage (ECONNREFUSED)
-  // doesn't crash the prerender — the page just falls back to its
-  // default brand name and revalidates from a real request later.
+  // Wrapped in try/catch so a build-time DB outage (ECONNREFUSED) doesn't
+  // crash the prerender — the page just falls back to its default brand
+  // name and revalidates from a real request later.
   try {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_brand_settings_by_slug`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_slug: brandSlug }),
-      }
+    const { rows } = await pool.query<BrandSettings & { wholesale_enabled?: boolean | null }>(
+      "SELECT * FROM get_brand_settings_by_slug($1)",
+      [brandSlug],
     );
-
-    if (!response.ok) return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
-    const data = await response.json();
+    const data = rows[0];
+    if (!data) {
+      return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
+    }
     return {
       success: true,
       settings: data,
-      wholesaleEnabled: data?.wholesale_enabled,
+      wholesaleEnabled: data.wholesale_enabled,
     };
   } catch {
     return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
@@ -348,60 +344,52 @@ export async function saveBrandSettings(params: {
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_brand_settings`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_legal_business_name: params.legalBusinessName ?? null,
-        p_phone: params.phone ?? null,
-        p_email: params.email ?? null,
-        p_website_url: params.websiteUrl ?? null,
-        p_street_address: params.streetAddress ?? null,
-        p_city: params.city ?? null,
-        p_state: params.state ?? null,
-        p_postal_code: params.postalCode ?? null,
-        p_country: params.country ?? null,
-        p_logo_url: params.logoUrl ?? null,
-        p_logo_url_dark: params.logoUrlDark ?? null,
-        p_olathe_sweet_logo_url: params.olatheSweetLogoUrl ?? null,
-        p_olathe_sweet_logo_url_dark: params.olatheSweetLogoUrlDark ?? null,
-        p_default_email_signature: params.defaultEmailSignature ?? null,
-        p_invoice_footer_notes: params.invoiceFooterNotes ?? null,
-        p_hero_tagline: params.heroTagline ?? null,
-        p_about_headline: params.aboutHeadline ?? null,
-        p_about_subheadline: params.aboutSubheadline ?? null,
-        p_custom_footer_text: params.customFooterText ?? null,
-        p_show_wholesale_link: params.showWholesaleLink ?? null,
-        p_show_zip_search: params.showZipSearch ?? null,
-        p_show_schedule_pdf: params.showSchedulePdf ?? null,
-        p_show_text_alerts: params.showTextAlerts ?? null,
-        p_schedule_pdf_notes: params.schedulePdfNotes ?? null,
-        p_hero_image_url: params.heroImageUrl ?? null,
-        p_brand_primary_color: params.brandPrimaryColor ?? null,
-        p_brand_secondary_color: params.brandSecondaryColor ?? null,
-        p_brand_bg_color: params.brandBgColor ?? null,
-        p_brand_text_color: params.brandTextColor ?? null,
-        p_collect_sales_tax: params.collectSalesTax ?? null,
-        p_nexus_states: params.nexusStates ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const err = await response.text();
-    return { success: false, error: `Failed to save: ${err.slice(0, 200)}` };
+  try {
+    const { rows } = await pool.query<BrandSettings>(
+      `SELECT * FROM upsert_brand_settings(
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+         $31, $32
+       )`,
+      [
+        params.brandId,
+        params.legalBusinessName ?? null,
+        params.phone ?? null,
+        params.email ?? null,
+        params.websiteUrl ?? null,
+        params.streetAddress ?? null,
+        params.city ?? null,
+        params.state ?? null,
+        params.postalCode ?? null,
+        params.country ?? null,
+        params.logoUrl ?? null,
+        params.logoUrlDark ?? null,
+        params.olatheSweetLogoUrl ?? null,
+        params.olatheSweetLogoUrlDark ?? null,
+        params.defaultEmailSignature ?? null,
+        params.invoiceFooterNotes ?? null,
+        params.heroTagline ?? null,
+        params.aboutHeadline ?? null,
+        params.aboutSubheadline ?? null,
+        params.customFooterText ?? null,
+        params.showWholesaleLink ?? null,
+        params.showZipSearch ?? null,
+        params.showSchedulePdf ?? null,
+        params.showTextAlerts ?? null,
+        params.schedulePdfNotes ?? null,
+        params.heroImageUrl ?? null,
+        params.brandPrimaryColor ?? null,
+        params.brandSecondaryColor ?? null,
+        params.brandBgColor ?? null,
+        params.brandTextColor ?? null,
+        params.collectSalesTax ?? null,
+        params.nexusStates ?? null,
+      ],
+    );
+    return { success: true, settings: rows[0] as BrandSettings };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to save";
+    return { success: false, error: `Failed to save: ${message.slice(0, 200)}` };
   }
-
-  const data = await response.json();
-  return { success: true, settings: data };
 }

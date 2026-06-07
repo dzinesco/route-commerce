@@ -2,7 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { assertBrandAccess } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type PaymentProvider = "stripe" | "square" | "manual";
 
@@ -26,21 +26,15 @@ export type GetPaymentSettingsResult =
   | { success: false; error: string };
 
 export async function getPaymentSettings(brandId: string): Promise<GetPaymentSettingsResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_payment_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to fetch payment settings" };
-  const data = await response.json();
-  return { success: true, settings: data };
+  try {
+    const { rows } = await pool.query<PaymentSettings>(
+      "SELECT * FROM get_payment_settings($1)",
+      [brandId],
+    );
+    return { success: true, settings: rows[0] ?? null };
+  } catch {
+    return { success: false, error: "Failed to fetch payment settings" };
+  }
 }
 
 export type SavePaymentSettingsResult =
@@ -72,30 +66,25 @@ export async function savePaymentSettings(params: {
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_payment_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_provider: params.provider,
-        p_stripe_publishable_key: params.stripePublishableKey ?? null,
-        p_stripe_secret_key: params.stripeSecretKey ?? null,
-        p_stripe_user_id: params.stripeUserId ?? null,
-        p_square_access_token: params.squareAccessToken ?? null,
-        p_square_location_id: params.squareLocationId ?? null,
-        p_square_sync_enabled: params.squareSyncEnabled ?? null,
-        p_square_inventory_mode: params.squareInventoryMode ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) {
+  try {
+    await pool.query(
+      `SELECT upsert_payment_settings(
+         $1, $2, $3, $4, $5, $6, $7, $8, $9
+       )`,
+      [
+        params.brandId,
+        params.provider,
+        params.stripePublishableKey ?? null,
+        params.stripeSecretKey ?? null,
+        params.stripeUserId ?? null,
+        params.squareAccessToken ?? null,
+        params.squareLocationId ?? null,
+        params.squareSyncEnabled ?? null,
+        params.squareInventoryMode ?? null,
+      ],
+    );
+    return { success: true };
+  } catch {
     return { success: false, error: "Failed to save payment settings" };
   }
-  return { success: true };
 }

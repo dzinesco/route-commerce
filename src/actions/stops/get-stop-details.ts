@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { createClient } from "@supabase/supabase-js";
+import { pool } from "@/lib/db";
 
 export type StopDetail = {
   id: string;
@@ -50,39 +50,32 @@ export async function getStopDetails(stopId: string): Promise<StopDetailsResult>
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
-  // Use a fresh server-side client (cookie-less) so RLS doesn't block reads
-  // for platform_admin dev sessions. The auth check above has already gated
-  // access.
-  const server = useMockData
-    ? null
-    : createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
-
-  // 1. Stop + brand
-  let stop: StopDetail | null = null;
-  let stopErr: string | null = null;
-
-  if (server) {
-    const { data, error } = await server
-      .from("stops")
-      .select("*, brands(name, slug)")
-      .eq("id", stopId)
-      .single();
-    if (error) stopErr = error.message;
-    else stop = (data ?? null) as StopDetail | null;
-  } else {
-    // Mock fallback — empty
-    stopErr = "Stop not found";
+  if (useMockData) {
+    return { success: false, error: "Stop not found" };
   }
 
-  if (!stop) {
-    return { success: false, error: stopErr ?? "Stop not found" };
+  // 1. Stop + brand — legacy schema, raw SQL (the Drizzle stops table
+  //    maps to the new schema which doesn't have city/state/date/etc).
+  const stopRes = await pool.query<StopDetail & { brand_name: string; brand_slug: string }>(
+    `SELECT s.*, b.name AS brand_name, b.slug AS brand_slug
+       FROM stops s
+       LEFT JOIN brands b ON b.id = s.brand_id
+      WHERE s.id = $1
+      LIMIT 1`,
+    [stopId],
+  );
+  const stopRow = stopRes.rows[0];
+  if (!stopRow) {
+    return { success: false, error: "Stop not found" };
   }
+  const stop: StopDetail = {
+    ...stopRow,
+    brands: stopRow.brand_name
+      ? { name: stopRow.brand_name, slug: stopRow.brand_slug }
+      : null,
+  };
 
   // Brand-scope check for brand_admin
   if (adminUser.brand_id && stop.brand_id !== adminUser.brand_id) {
@@ -90,26 +83,27 @@ export async function getStopDetails(stopId: string): Promise<StopDetailsResult>
   }
 
   // 2. Candidate products for this brand
-  const { data: allProducts } = server
-    ? await server
-        .from("products")
-        .select("id, name, type, price")
-        .eq("brand_id", stop.brand_id)
-        .eq("active", true)
-    : { data: [] as { id: string; name: string; type: string; price: number }[] };
+  const { rows: allProducts } = await pool.query<{ id: string; name: string; type: string; price: number }>(
+    `SELECT id, name, type, price
+       FROM products
+      WHERE brand_id = $1 AND active = true`,
+    [stop.brand_id],
+  );
 
   // 3. Assigned products (joined with product info)
-  const { data: productStops } = server
-    ? await server
-        .from("product_stops")
-        .select("id, product_id, products(id, name, type, price)")
-        .eq("stop_id", stopId)
-    : { data: [] as AssignedProduct[] };
+  const { rows: productStops } = await pool.query<AssignedProduct>(
+    `SELECT ps.id, ps.product_id,
+            json_build_object('id', p.id, 'name', p.name, 'type', p.type, 'price', p.price) AS products
+       FROM product_stops ps
+       LEFT JOIN products p ON p.id = ps.product_id
+      WHERE ps.stop_id = $1`,
+    [stopId],
+  );
 
   // 4. Brands for the brand switcher
-  const { data: brands } = server
-    ? await server.from("brands").select("id, name, slug")
-    : { data: [] as { id: string; name: string; slug: string }[] };
+  const { rows: brands } = await pool.query<{ id: string; name: string; slug: string }>(
+    `SELECT id, name, slug FROM brands ORDER BY name`,
+  );
 
   return {
     success: true,

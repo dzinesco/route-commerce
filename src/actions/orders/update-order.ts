@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { logAuditEvent } from "@/actions/audit";
 
 export type UpdateOrderResult =
@@ -36,33 +36,51 @@ export async function updateOrder(
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  // Build a partial SET clause. Each set column is added in the order
+  // the caller passed it; we don't care about column ordering.
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const push = (col: string, val: unknown) => {
+    params.push(val);
+    sets.push(`${col} = $${params.length}`);
+  };
 
-  const patchData: Record<string, unknown> = {};
-  if (data.customer_name !== undefined) patchData.customer_name = data.customer_name;
-  if (data.customer_email !== undefined) patchData.customer_email = data.customer_email;
-  if (data.customer_phone !== undefined) patchData.customer_phone = data.customer_phone;
-  if (data.status !== undefined) patchData.status = data.status;
-  if (data.discount_amount !== undefined) patchData.discount_amount = data.discount_amount;
-  if (data.discount_reason !== undefined) patchData.discount_reason = data.discount_reason;
-  if (data.internal_notes !== undefined) patchData.internal_notes = data.internal_notes;
-  if (data.pickup_complete !== undefined) patchData.pickup_complete = data.pickup_complete;
-  if (data.pickup_completed_at !== undefined) patchData.pickup_completed_at = data.pickup_completed_at;
-  if (data.subtotal !== undefined) patchData.subtotal = data.subtotal;
-  if (data.payment_processor !== undefined) patchData.payment_processor = data.payment_processor;
-  if (data.payment_status !== undefined) patchData.payment_status = data.payment_status;
-  if (data.payment_transaction_id !== undefined) patchData.payment_transaction_id = data.payment_transaction_id;
+  if (data.customer_name !== undefined) push("customer_name", data.customer_name);
+  if (data.customer_email !== undefined) push("customer_email", data.customer_email);
+  if (data.customer_phone !== undefined) push("customer_phone", data.customer_phone);
+  if (data.status !== undefined) push("status", data.status);
+  if (data.discount_amount !== undefined) push("discount_amount", data.discount_amount);
+  if (data.discount_reason !== undefined) push("discount_reason", data.discount_reason);
+  if (data.internal_notes !== undefined) push("internal_notes", data.internal_notes);
+  if (data.pickup_complete !== undefined) push("pickup_complete", data.pickup_complete);
+  if (data.pickup_completed_at !== undefined) push("pickup_completed_at", data.pickup_completed_at);
+  if (data.subtotal !== undefined) push("subtotal", data.subtotal);
+  if (data.payment_processor !== undefined) push("payment_processor", data.payment_processor);
+  if (data.payment_status !== undefined) push("payment_status", data.payment_status);
+  if (data.payment_transaction_id !== undefined) push("payment_transaction_id", data.payment_transaction_id);
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${orderId}`, {
-    method: "PATCH",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify(patchData),
-  });
+  if (sets.length === 0) {
+    return { success: true };
+  }
 
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed: ${err}` };
+  params.push(orderId);
+  const patchData = Object.fromEntries(
+    sets.map((s, i) => {
+      const col = s.split(" = ")[0];
+      return [col, params[i]];
+    }),
+  );
+
+  try {
+    await pool.query(
+      `UPDATE orders SET ${sets.join(", ")} WHERE id = $${params.length}`,
+      params,
+    );
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed",
+    };
   }
 
   logAuditEvent({
@@ -85,25 +103,33 @@ export async function updateOrderItem(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const push = (col: string, val: unknown) => {
+    params.push(val);
+    sets.push(`${col} = $${params.length}`);
+  };
 
-  const patchData: Record<string, unknown> = {};
-  if (data.quantity !== undefined) patchData.quantity = data.quantity;
-  if (data.price !== undefined) patchData.price = data.price;
+  if (data.quantity !== undefined) push("quantity", data.quantity);
+  if (data.price !== undefined) push("price", data.price);
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/order_items?id=eq.${itemId}`, {
-    method: "PATCH",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify(patchData),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed: ${err}` };
+  if (sets.length === 0) {
+    return { success: true };
   }
 
-  return { success: true };
+  params.push(itemId);
+  try {
+    await pool.query(
+      `UPDATE order_items SET ${sets.join(", ")} WHERE id = $${params.length}`,
+      params,
+    );
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed",
+    };
+  }
 }
 
 export async function deleteOrderItem(itemId: string): Promise<UpdateOrderResult> {
@@ -111,18 +137,13 @@ export async function deleteOrderItem(itemId: string): Promise<UpdateOrderResult
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/order_items?id=eq.${itemId}`, {
-    method: "DELETE",
-    headers: { ...svcHeaders(supabaseKey) },
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed: ${err}` };
+  try {
+    await pool.query("DELETE FROM order_items WHERE id = $1", [itemId]);
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed",
+    };
   }
-
-  return { success: true };
 }

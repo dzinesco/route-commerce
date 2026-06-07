@@ -2,7 +2,8 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
+import { logAuditEvent } from "@/actions/audit";
 
 export async function deleteProduct(
   productId: string,
@@ -23,27 +24,23 @@ export async function deleteProduct(
   }
   const effectiveBrandId = activeBrandId;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_product`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_product_id: productId,
-        p_brand_id: effectiveBrandId,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ message: "Request failed" }));
-    return { success: false, error: err.message ?? "Delete failed" };
+  // `delete_product` is a SECURITY DEFINER RPC that soft-deletes the row
+  // (sets `deleted_at`) and guards against products referenced by
+  // existing order_items. It returns JSONB {success, error?}.
+  let result: { success?: boolean; error?: string } = {};
+  try {
+    const { rows } = await pool.query<{ success: boolean; error?: string }>(
+      "SELECT * FROM delete_product($1, $2)",
+      [productId, effectiveBrandId],
+    );
+    result = rows[0] ?? {};
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Delete failed",
+    };
   }
 
-  const result = await response.json();
   if (!result.success) {
     return { success: false, error: result.error ?? "Delete failed" };
   }
@@ -58,25 +55,4 @@ export async function deleteProduct(
   });
 
   return { success: true };
-}
-
-async function logAuditEvent(event: {
-  table_name: string;
-  record_id: string;
-  action: string;
-  old_data: Record<string, unknown>;
-  new_data: Record<string, unknown>;
-  brand_id: string | null;
-}) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  await fetch(
-    `${supabaseUrl}/rest/v1/rpc.log_audit_event`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify(event),
-    }
-  );
 }

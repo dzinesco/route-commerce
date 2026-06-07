@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { logAuditEvent } from "@/actions/audit";
 
 export type CreateRefundResult =
@@ -22,37 +22,39 @@ export async function createRefund(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/refunds`, {
-    method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify({
-      order_id: orderId,
-      amount: data.amount,
-      reason: data.reason ?? null,
-      processor: data.processor ?? null,
-      processor_refund_id: data.processor_refund_id ?? null,
-      status: "pending",
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed: ${err}` };
+  let inserted: { id: string } | null = null;
+  try {
+    const { rows } = await pool.query<{ id: string }>(
+      `INSERT INTO refunds (order_id, amount, reason, processor, processor_refund_id, status)
+       VALUES ($1, $2, $3, $4, $5, 'pending')
+       RETURNING id`,
+      [
+        orderId,
+        data.amount,
+        data.reason ?? null,
+        data.processor ?? null,
+        data.processor_refund_id ?? null,
+      ],
+    );
+    inserted = rows[0] ?? null;
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed",
+    };
   }
-
-  const inserted = await res.json();
+  if (!inserted) {
+    return { success: false, error: "Insert returned no row" };
+  }
 
   logAuditEvent({
     table_name: "refunds",
-    record_id: inserted[0]?.id ?? "",
+    record_id: inserted.id,
     action: "INSERT",
     old_data: {},
     new_data: { order_id: orderId, amount: data.amount },
     brand_id: brandId,
   });
 
-  return { success: true, id: inserted[0]?.id ?? "" };
+  return { success: true, id: inserted.id };
 }

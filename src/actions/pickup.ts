@@ -2,7 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { logAuditEvent } from "@/actions/audit";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 type MarkPickupResult =
   | { success: true; pickup_completed_at: string; pickup_completed_by: string | null }
@@ -30,67 +30,44 @@ export async function markPickupComplete(
 
   // brand_admin: verify the order belongs to their brand
   if (adminUser.role === "brand_admin" && adminUser.brand_id) {
-    const brandRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=stop_id,brand_id`,
-      {
-        headers: svcHeaders(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
-      }
+    const orderRes = await pool.query<{ brand_id: string | null; stop_id: string | null }>(
+      "SELECT brand_id, stop_id FROM orders WHERE id = $1 LIMIT 1",
+      [orderId],
     );
-
-    if (!brandRes.ok) {
-      return { success: false, error: "Failed to verify order ownership" };
-    }
-
-    const orderData = await brandRes.json();
-    if (!Array.isArray(orderData) || orderData.length === 0) {
+    if (orderRes.rows.length === 0) {
       return { success: false, error: "Order not found" };
     }
+    const order = orderRes.rows[0];
 
-    const order = orderData[0];
-
-    // Check brand_id on the order first, then fall back to stop brand
     if (order.brand_id && order.brand_id !== adminUser.brand_id) {
       return { success: false, error: "Not authorized for this order" };
     }
 
     if (!order.brand_id && order.stop_id) {
-      const stopRes = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/stops?id=eq.${order.stop_id}&select=brand_id`,
-        {
-          headers: svcHeaders(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
-        }
+      const stopRes = await pool.query<{ brand_id: string | null }>(
+        "SELECT brand_id FROM stops WHERE id = $1 LIMIT 1",
+        [order.stop_id],
       );
-
-      if (stopRes.ok) {
-        const stopData = await stopRes.json();
-        if (Array.isArray(stopData) && stopData[0]?.brand_id !== adminUser.brand_id) {
-          return { success: false, error: "Not authorized for this order" };
-        }
+      if (
+        stopRes.rows[0] &&
+        stopRes.rows[0].brand_id !== adminUser.brand_id
+      ) {
+        return { success: false, error: "Not authorized for this order" };
       }
     }
   }
 
-  // PATCH the order
-  const patchRes = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,
-    {
-      method: "PATCH",
-      headers: {
-        ...svcHeaders(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify({
-        pickup_complete: true,
-        pickup_completed_at: now,
-        pickup_completed_by: performedBy,
-      }),
-    }
+  // UPDATE the order
+  const updateRes = await pool.query(
+    `UPDATE orders
+        SET pickup_complete = true,
+            pickup_completed_at = $1,
+            pickup_completed_by = $2
+      WHERE id = $3`,
+    [now, performedBy, orderId],
   );
-
-  if (!patchRes.ok) {
-    const err = await patchRes.json().catch(() => ({ message: "Patch failed" }));
-    return { success: false, error: err.message ?? "Failed to update pickup" };
+  if ((updateRes.rowCount ?? 0) === 0) {
+    return { success: false, error: "Order not found" };
   }
 
   // Fire-and-forget audit log
@@ -113,31 +90,19 @@ export async function markPickupComplete(
 
   // Emit pickup_completed event
   // Need brand_id — get it from the order we just patched
-  const orderRes = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=brand_id`,
-    {
-      headers: svcHeaders(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
-    }
+  const orderRes = await pool.query<{ brand_id: string | null }>(
+    "SELECT brand_id FROM orders WHERE id = $1",
+    [orderId],
   );
-  if (orderRes.ok) {
-    const orderData = await orderRes.json();
-    const orderBrandId = Array.isArray(orderData) && orderData[0]?.brand_id;
-    if (orderBrandId) {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/record_pickup_completed_event`,
-        {
-          method: "POST",
-          headers: {
-            ...svcHeaders(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            p_order_id: orderId,
-            p_brand_id: orderBrandId,
-            p_actor_id: performedBy,
-          }),
-        }
+  const orderBrandId = orderRes.rows[0]?.brand_id;
+  if (orderBrandId) {
+    try {
+      await pool.query(
+        "SELECT * FROM record_pickup_completed_event($1, $2, $3)",
+        [orderId, orderBrandId, performedBy],
       );
+    } catch {
+      // Event emission is best-effort.
     }
   }
 

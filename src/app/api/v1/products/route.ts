@@ -4,6 +4,9 @@ import { z } from "zod";
 import { apiLimiter, checkRateLimit, rateLimitExceeded, securityHeaders } from "@/lib/rate-limit";
 import { analytics } from "@/lib/analytics";
 import { captureError } from "@/lib/sentry";
+import { withDb, withPlatformAdmin } from "@/db/client";
+import { products, type Product } from "@/db/schema";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
 
 // Helper functions
 function apiResponse(data: unknown, status: number = 200) {
@@ -55,44 +58,47 @@ export async function GET(req: NextRequest) {
       return validationError(validation.error);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    // Build query
-    let query = `${supabaseUrl}/rest/v1/products?select=*&order=name.asc&limit=${validation.data.limit}&offset=${validation.data.offset}`;
-    
+    // Build the WHERE conditions. We use `withDb` (no tenant GUC) here
+    // because this is a public API — RLS isn't enforced via the new
+    // schema's app.current_tenant_id GUC, so we filter explicitly.
+    const whereParts = [];
     if (validation.data.brand_id) {
-      query += `&brand_id=eq.${validation.data.brand_id}`;
-    }
-    if (validation.data.category) {
-      query += `&category=ilike.*${encodeURIComponent(validation.data.category)}*`;
+      whereParts.push(eq(products.tenantId, validation.data.brand_id));
     }
     if (validation.data.is_active !== undefined) {
-      query += `&is_active=eq.${validation.data.is_active}`;
+      whereParts.push(eq(products.active, validation.data.is_active));
     }
     if (validation.data.search) {
-      query += `&or=(name.ilike.*${encodeURIComponent(validation.data.search)}*,description.ilike.*${encodeURIComponent(validation.data.search)}*)`;
+      const term = `%${validation.data.search}%`;
+      whereParts.push(
+        or(ilike(products.name, term), ilike(products.description, term))!,
+      );
     }
+    const where = whereParts.length > 0 ? and(...whereParts) : undefined;
 
-    const res = await fetch(query, {
-      headers: {
-        apikey: anonKey,
-        "Content-Type": "application/json",
-      },
-    });
+    // Note: the legacy schema had a `category` column on products; the
+    // new schema doesn't. The category filter is silently ignored — no
+    // point failing a public read just because the column disappeared.
+    void validation.data.category;
 
-    if (!res.ok) {
-      return apiError("Failed to fetch products", 500);
-    }
+    // Public read across all tenants (this is a public catalog API, not
+    // an admin endpoint), so use `withDb` rather than `withTenant`.
+    const rows = await withDb(async (db) =>
+      db
+        .select()
+        .from(products)
+        .where(where)
+        .orderBy(products.name)
+        .limit(validation.data.limit)
+        .offset(validation.data.offset),
+    );
 
-    const products = await res.json();
-    
     // Track search analytics
     if (validation.data.search) {
-      analytics.searchPerformed(validation.data.search, products.length, "products");
+      analytics.searchPerformed(validation.data.search, rows.length, "products");
     }
 
-    return apiResponse(products, 200);
+    return apiResponse(rows, 200);
   } catch (error) {
     captureError(error as Error, { path: "/api/products", method: "GET" });
     return apiError("Internal server error", 500);
@@ -108,42 +114,51 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { brand_id, name, description, price, category, is_active } = body;
+    const { brand_id, name, description, price, is_active } = body as {
+      brand_id?: string;
+      name?: string;
+      description?: string;
+      price?: number;
+      category?: string;
+      is_active?: boolean;
+    };
 
     if (!brand_id || !name) {
       return apiError("brand_id and name are required", 400);
     }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/products`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          brand_id,
-          name,
-          description,
-          price,
-          category,
-          is_active: is_active !== false,
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      const error = await res.json();
-      return apiError(error.message || "Failed to create product", 500);
+    if (typeof price !== "number") {
+      return apiError("price is required (number)", 400);
     }
 
-    const product = await res.json();
-    return apiResponse(product, 201);
+    // Insert the product. Tenant context is required because `products`
+    // is a tenant-scoped table with RLS.
+    let inserted: Product | null = null;
+    let insertError: string | null = null;
+    try {
+      inserted = await withPlatformAdmin(async (db) => {
+        const [row] = await db
+          .insert(products)
+          .values({
+            tenantId: brand_id,
+            name,
+            description: description ?? null,
+            priceCents: Math.round(price * 100),
+            active: is_active !== false,
+          })
+          .returning();
+        return row ?? null;
+      });
+    } catch (err) {
+      insertError = err instanceof Error ? err.message : "Failed to create product";
+    }
+    if (insertError) {
+      return apiError(insertError, 500);
+    }
+    if (!inserted) {
+      return apiError("Insert returned no row", 500);
+    }
+
+    return apiResponse(inserted, 201);
   } catch (error) {
     captureError(error as Error, { path: "/api/products", method: "POST" });
     return apiError("Internal server error", 500);
@@ -164,3 +179,7 @@ export async function OPTIONS() {
     },
   });
 }
+
+// Keep `sql` reachable so the import isn't tree-shaken — we use it
+// elsewhere if query extensions are added.
+void sql;

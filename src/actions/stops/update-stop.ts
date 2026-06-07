@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { logAuditEvent } from "@/actions/audit";
 
 const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
@@ -37,32 +37,51 @@ export async function updateStop(
     return { success: true };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
   const slug = `${data.city.toLowerCase().replace(/\s+/g, "-")}-${data.date}`;
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/stops?id=eq.${stopId}`, {
-    method: "PATCH",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      city: data.city,
-      state: data.state,
-      location: data.location,
-      date: data.date,
-      time: data.time,
-      slug,
-      active: data.active,
-      brand_id: brandId,
-      address: data.address ?? null,
-      zip: data.zip ?? null,
-      cutoff_time: data.cutoff_time ?? null,
-    }),
-  });
+  // Direct UPDATE on the legacy stops table — the new-schema Drizzle
+  // stops table doesn't have the columns we need to write.
+  const { rowCount, error } = await pool
+    .query(
+      `UPDATE stops SET
+         city = $1,
+         state = $2,
+         location = $3,
+         date = $4,
+         time = $5,
+         slug = $6,
+         active = $7,
+         brand_id = $8,
+         address = $9,
+         zip = $10,
+         cutoff_time = $11
+       WHERE id = $12`,
+      [
+        data.city,
+        data.state,
+        data.location,
+        data.date,
+        data.time,
+        slug,
+        data.active,
+        brandId,
+        data.address ?? null,
+        data.zip ?? null,
+        data.cutoff_time ?? null,
+        stopId,
+      ],
+    )
+    .then((r) => ({ rowCount: r.rowCount ?? 0, error: null }))
+    .catch((e: unknown) => ({
+      rowCount: 0,
+      error: e instanceof Error ? e : new Error(String(e)),
+    }));
 
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed: ${err}` };
+  if (error || !rowCount) {
+    return {
+      success: false,
+      error: error ? error.message : "Stop not found",
+    };
   }
 
   logAuditEvent({

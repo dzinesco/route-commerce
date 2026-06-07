@@ -2,7 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { randomUUID } from "crypto";
 
 export type AdminCreateOrderItem = {
@@ -58,9 +58,6 @@ export async function createAdminOrder(
     return { success: false, error: "At least one item is required" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
   // Build items for RPC (match checkout shape)
   const rpcItems = input.items.map((i) => ({
     product_id: i.product_id,
@@ -77,33 +74,23 @@ export async function createAdminOrder(
   const taxLocation = null;
 
   try {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/create_order_with_items`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-        body: JSON.stringify({
-          p_idempotency_key: idempotencyKey,
-          p_customer_name: input.customer_name.trim(),
-          p_customer_email: input.customer_email?.trim() || null,
-          p_customer_phone: input.customer_phone?.trim() || null,
-          p_stop_id: input.stop_id || null,
-          p_items: rpcItems,
-          p_tax_amount: taxAmount,
-          p_tax_rate: taxRate,
-          p_tax_location: taxLocation,
-          // The RPC may also accept brand scoping internally via stop or we can extend later.
-        }),
-      }
+    const { rows } = await pool.query<{ id: string }>(
+      `SELECT * FROM create_order_with_items(
+         $1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9
+       )`,
+      [
+        idempotencyKey,
+        input.customer_name.trim(),
+        input.customer_email?.trim() || null,
+        input.customer_phone?.trim() || null,
+        input.stop_id || null,
+        JSON.stringify(rpcItems),
+        taxAmount,
+        taxRate,
+        taxLocation,
+      ],
     );
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "Unknown error");
-      return { success: false, error: `Failed to create order: ${errText}` };
-    }
-
-    const data = await response.json();
-
+    const data = rows[0];
     if (!data || !data.id) {
       return { success: false, error: "Order created but no ID returned" };
     }
@@ -112,18 +99,20 @@ export async function createAdminOrder(
     if (input.internal_notes?.trim()) {
       // Best-effort; don't fail the whole create if this secondary update fails.
       try {
-        await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${data.id}`, {
-          method: "PATCH",
-          headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-          body: JSON.stringify({ internal_notes: input.internal_notes.trim() }),
-        });
+        await pool.query(
+          "UPDATE orders SET internal_notes = $1 WHERE id = $2",
+          [input.internal_notes.trim(), data.id],
+        );
       } catch {
         // ignore
       }
     }
 
     return { success: true, orderId: data.id, order: data };
-  } catch (err: any) {
-    return { success: false, error: err?.message ?? "Unexpected error creating order" };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unexpected error creating order",
+    };
   }
 }
