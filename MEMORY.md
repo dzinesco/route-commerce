@@ -286,3 +286,207 @@ Follow-up pass on the original Codex review covering public site, buyer path, bi
 ### Migration 203 — applied via Supabase CLI
 
 `203_plan_usage_active_products.sql` updates `get_brand_plan_info` to count `products` where `active = true AND deleted_at IS NULL`, matching the dashboard's "Active Products" stat. The `NOTIFY pgrst, 'reload schema'` ensures PostgREST picks up the change without restart.
+
+## Gitea build fix — 2026-06-06
+
+Gitea runner (`https://git.crispygoat.com/tyler/route-commerce.git`, branch `main`) was failing `next build` with two errors:
+
+1. **DYNAMIC_SERVER_USAGE** on `/admin/settings/square-sync` (and the whole admin tree): `getAdminUser()` reads `cookies()` via `next/headers`. The admin layout tried to prerender statically, so the first child page that hit cookies aborted the build.
+2. **Prerender ECONNREFUSED** on `/indian-river-direct/stops`: `getPublicStopsForBrand` / `getActiveStopsForSitemap` / `getBrandSettingsPublic` fetch `NEXT_PUBLIC_SUPABASE_URL` at build time. The Gitea runner passes a Supabase URL that resolves but is unreachable, so `fetch` throws `ECONNREFUSED` and the prerender aborts.
+
+The earlier commit `2f3be54 fix(actions): skip Supabase fetch at build time when env vars unset` only added `if (!supabaseUrl || !supabaseKey) return [];` — but in CI the env vars **are** set, so the guard passed and the fetch was still attempted.
+
+### Fixes applied
+
+- `src/actions/stops.ts` — wrapped `getActiveStopsForSitemap` and `getPublicStopsForBrand` fetches in `try/catch` returning `[]` on error. Env-var guard kept as fast path.
+- `src/actions/brand-settings.ts` — wrapped `getBrandSettingsPublic` fetch in `try/catch` returning `{ success: false }` on error.
+- `src/app/admin/settings/square-sync/page.tsx` — added `export const dynamic = "force-dynamic";` (was missing).
+- `src/app/admin/layout.tsx` — added `export const dynamic = "force-dynamic";` so the entire admin tree opts out of static prerender (layout calls `getAdminUser()` which reads cookies).
+- `.gitea/workflows/deploy.yml` was simplified earlier in commit `2d837bc` to a thin wrapper around `deploy/deploy.sh`.
+
+### Remote
+
+- The crispygoat repo (`git@git.crispygoat.com:tyler/route-commerce.git`) and the GitHub `origin` repo are separate forks — `tyler/main` is the self-hosted Auth.js + Postgres branch, `origin/main` is the Supabase branch. Don't merge them; they share no deploy workflow.
+- Push targets `tyler/main` to trigger the Gitea build.
+
+## Build green — 2026-06-06
+
+Push `32396af` to `origin/main` triggered a successful Gitea deploy. Fixes that landed:
+- `force-dynamic` on `src/app/admin/layout.tsx` + `src/app/admin/settings/square-sync/page.tsx`
+- try/catch around Supabase REST fetches in `src/actions/stops.ts` and `src/actions/brand-settings.ts`
+- `.gitea/workflows/deploy.yml` paths updated to `deploy/docker-compose.yml`
+
+## Production prep — next steps
+
+1. **Verify the stack is actually running.** SSH to the deploy host, `docker compose -p prod-app ps` in `$APP_DIR` (`/home/tyler/route-commerce`). All services should be `healthy`.
+2. **Test Postgres connectivity.** `docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c '\dt'` should list tables from migrations. `curl http://localhost:$POSTGREST_HOST_PORT/` should return PostgREST's OpenAPI spec.
+3. **Test app → PostgREST.** Hit any public page that reads from PostgREST (e.g. `/indian-river-direct/stops` after the revalidate window). If it returns stops, the chain works.
+4. **Replace dummy secrets** in Gitea:
+   - `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321` + `NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-supabase-anon-ke` — either set real Supabase project values, or remove entirely once the Postgres-direct migration is complete (CLAUDE.md direction).
+   - `RESEND_API_KEY=re_REPLACE_ME`, `RESEND_WEBHOOK_SECRET=whsec_REPLACE_ME` — get real values from Resend dashboard.
+   - `STRIPE_SECRET_KEY=sk_test_REPLACE_ME`, `STRIPE_PUBLISHABLE_KEY=pk_test_REPLACE_ME`, `STRIPE_WEBHOOK_SECRET=whsec_REPLACE_ME` — real test-mode values from Stripe.
+5. **Supabase → direct Postgres migration.** The codebase still imports `@supabase/ssr` and `@supabase/supabase-js` in `src/lib/supabase.ts`, `src/lib/supabase/server.ts`, `src/actions/login.ts`, `src/actions/admin/users.ts`, `src/actions/admin/force-login.ts`, `src/actions/wholesale-auth.ts`. CLAUDE.md says these should be purged. The deploy stack already has PostgREST, so the path is: replace `supabase.from(...)` calls with `fetch` to `NEXT_PUBLIC_API_URL/rest/v1/...` or direct `pg` queries, then drop the `@supabase/*` deps.
+6. **Auth.js hardening.** `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` aren't in the secret list — the workflow falls back to `BETTER_AUTH_*` names which exist. Set the canonical `AUTH_*` names too so the fallback isn't load-bearing.
+
+## Login flow consolidated — 2026-06-06
+
+Push `e499139` fixes the "dev login redirects back to /login" bug and
+removes the three-mode login page.
+
+**Root cause:** `src/middleware.ts` didn't exist, so the `authorized`
+callback in `auth.config.ts` never ran at the edge. The demo buttons at
+`/login?demo=1` set `dev_session` via `document.cookie`, but nothing at
+the edge recognized the cookie — the admin layout's `getAdminUser()` was
+the only thing reading it, and if the layout's `force-dynamic` ever
+stopped applying, the user would be bounced.
+
+**Fix:**
+- **New `src/middleware.ts`** — plain middleware (NOT the `auth()`
+  wrapper). Gates `/admin/*` and `/login`:
+  - If `dev_session`, `rc_auth_uid`, or `rc_uid` cookie is present →
+    `NextResponse.next()`.
+  - If no auth cookie, on `/admin/*`, and `ALLOW_DEV_LOGIN !== "false"`
+    (on by default) → set `dev_session=platform_admin` cookie and
+    `NextResponse.next()`. Invisible auto-login.
+  - If no auth and dev disabled → redirect to `/login`.
+  - If authenticated and on `/login` → redirect to `/admin`.
+- **`src/app/login/LoginClient.tsx`** — stripped to a single Google
+  OAuth button. Removed:
+  - Email/password form (was hitting dummy Supabase and 500'ing).
+  - Dev credentials form (`signInWithDev`).
+  - `DemoMode` component with the three buttons (Platform Admin,
+    Brand Admin, Store Employee).
+  - `useState`/`useEffect`/`useCallback`/`useSearchParams`/`Suspense`
+    — none of that complexity is needed for a single button.
+- **`src/actions/auth-signin.ts`** — removed `signInWithDev`. Kept
+  `signInWithGoogle` and `signOutAction`.
+- **Deleted `src/app/dev-login/page.tsx`** and
+  **`src/app/api/dev-login/route.ts`** — dead routes, middleware
+  handles it.
+
+**What "one way to log in" looks like now:**
+- Dev/demo: visit `/admin` → middleware sets `dev_session` cookie →
+  `getAdminUser()` returns platform_admin → you're in.
+- Production: visit `/admin` → no cookie, `ALLOW_DEV_LOGIN=false` →
+  redirect to `/login` → click Google → Auth.js OAuth flow.
+
+**Note for Auth.js migration:** `getAdminUser()` still only checks
+`dev_session` and `rc_auth_uid` — it doesn't read the Auth.js JWT.
+After Google sign-in succeeds, the user has a valid Auth.js session
+but `getAdminUser()` returns null. The middleware can't fix that
+because it can't write to the JWT without going through the
+credentials provider. This is the next piece of the Auth.js migration
+(see CLAUDE.md "Auth.js migration — in progress"). The current fix
+gets the dev/demo path working; the Google OAuth → admin path needs
+the `getAdminUser()` Auth.js check wired up.
+
+## Auth.js v5 wiring complete — 2026-06-06
+
+Push `1e9f9c0` completes the Auth.js path so Google sign-in lands the
+user on `/admin` as a real admin (not "Your account does not have
+admin access").
+
+**What landed:**
+
+- **`src/lib/db.ts` (NEW)** — shared `pg.Pool` singleton. The single
+  connection pool for the whole app. Extracted from `src/lib/auth.ts`
+  (which had its own private pool). Connection string resolution:
+  `DATABASE_URL` → `SUPABASE_DB_URL` → `POSTGRES_URL`.
+
+- **`src/lib/auth.ts`** — imports the shared pool. The `signIn` event
+  now calls the new `upsert_admin_user_for_authjs` RPC instead of
+  the no-op existence check it had before.
+
+- **`supabase/migrations/209_authjs_auto_create_admin.sql` (NEW)** —
+  pushed automatically by the deploy workflow (line 130 of
+  `.gitea/workflows/deploy.yml` does `cat supabase/migrations/[0-9]*.sql
+  | $PG`). Contains:
+  - `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS
+    can_manage_settings BOOLEAN NOT NULL DEFAULT false` — defensive,
+    since this column is in the TypeScript `AdminUser` type but not
+    in any tracked migration (was likely dashboard-added).
+  - SECURITY DEFINER RPC `upsert_admin_user_for_authjs(p_user_id UUID)`
+    that inserts a `platform_admin` row with all `can_manage_*` flags
+    true, `ON CONFLICT (user_id) DO NOTHING`.
+  - `NOTIFY pgrst, 'reload schema'` so PostgREST picks up the new RPC.
+
+- **`src/lib/admin-permissions.ts`** — new Auth.js session check
+  between `dev_session` and `rc_auth_uid`. Uses `auth()` from
+  `@/lib/auth` to decrypt the JWT cookie server-side, then
+  `getAdminUserFromPool()` queries `admin_users` + `admin_user_brands`
+  via the shared pool. The legacy `rc_auth_uid` path is unchanged
+  (deferred — it still hits the dummy Supabase URL in prod).
+
+- **`src/middleware.ts`** — recognizes `authjs.session-token` and
+  `__Secure-authjs.session-token` cookies at the edge so signed-in
+  users aren't bounced to `/login`.
+
+**Key insight: same ID space.** Both `admin_users.user_id` (UUID, per
+`028_fix_caller_uid_type.sql`) and Auth.js `users.id` (UUID, per
+`204_authjs_tables.sql:18`) are in the same UUID space. The
+`@auth/pg-adapter` auto-generates a fresh UUID per new user on first
+sign-in; the Google `sub` claim is stored separately in
+`accounts."providerAccountId"`. So no schema change was needed —
+just a `user_id` lookup in `getAdminUserFromPool()`.
+
+**Full sign-in flow now:**
+
+1. Dev/demo: visit `/admin` → middleware auto-issues `dev_session`
+   cookie → `getAdminUser()` returns platform_admin. (No DB call.)
+2. Production: click "Sign in with Google" → Auth.js OAuth →
+   `signIn` event fires → `upsert_admin_user_for_authjs` creates
+   the `admin_users` row → redirect to `/admin` → `getAdminUser()`
+   reads JWT, queries pool via `auth.js.user.id`, returns
+   platform_admin.
+
+**What's still broken (out of scope for this push):**
+
+- Legacy `rc_auth_uid` path in `getAdminUser()` still fetches from
+  `${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/...` which is a dummy
+  `http://localhost:54321` in prod. Any pre-existing user with a
+  `rc_auth_uid` cookie will get null. Defer until the Supabase →
+  direct Postgres migration of the REST calls.
+- `getCurrentAdminUser` (client-side variant) still reads from
+  server-passed props — no change needed.
+- The `signIn` event RPC call will fail silently if `DATABASE_URL`
+  is not set. The user would see "Your account does not have admin
+  access" and need to sign out and back in once the env is fixed.
+
+## Deploy fix — PostgREST env + dead nextjs service — 2026-06-06
+
+Push `2d55791` fixes two issues that broke the "Start Docker stack" step:
+
+1. **`PGRST_DB_URI` not set** — the env var was only in the "Deploy"
+   step's env, which runs after PostgREST has already started.
+   PostgREST booted with a blank DB URI. Now set in the "Start
+   Docker stack" step's env and written to `$APP_DIR/.env` (the
+   file docker compose auto-loads).
+
+2. **`docker-compose.yml` had a dead `nextjs` service** with
+   `env_file: ../.env.production`. That file is written by the
+   "Deploy" step (later in the workflow), so at "Start Docker stack"
+   time the path doesn't exist. `docker compose up` validates the
+   whole compose file and bailed.
+
+   The `nextjs` service is dead code anyway — PM2 runs Next.js
+   directly from `$APP_DIR`, never through docker. Removed it.
+
+**Other fixes in the same push:**
+
+- `docker compose up -d db postgrest minio minio_init` referenced
+  services that don't exist in the compose file. Postgres runs on
+  the host (the migrations step uses `psql -h 127.0.0.1`), not in
+  docker. Changed to just `postgrest`.
+
+- The `pg_isready` check was `docker compose exec -T db pg_isready`.
+  Since `db` is a host service, changed to
+  `PGPASSWORD=... psql -h 127.0.0.1 -U ... -d ... -c "SELECT 1"`.
+
+**Architecture (now consistent):**
+
+- Postgres: host (127.0.0.1:5432), migrations via `psql -h 127.0.0.1`
+- PostgREST: docker, connects to host Postgres via `PGRST_DB_URI`
+- Next.js: host, PM2 process, reads `DATABASE_URL` from `.env.production`
+- MinIO: not yet wired up (the `MINIO_ROOT_USER`/`PASSWORD` env vars
+  are written to `.env` but no service consumes them yet — add a
+  `minio` service to docker-compose.yml when storage goes live)

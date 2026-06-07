@@ -1,0 +1,325 @@
+name: Deploy to route.crispygoat.com
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Start Docker stack
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          POSTGREST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
+
+          # PostgREST — needs the DB URI at start time (it reads env
+          # from the container, not from .env.production which is
+          # written later by the Deploy step).
+          PGRST_DB_URI: ${{ secrets.PGRST_DB_URI }}
+          PGRST_DB_ANON_ROLE: ${{ secrets.PGRST_DB_ANON_ROLE }}
+          PGRST_SERVER_PORT: ${{ secrets.PGRST_SERVER_PORT }}
+        run: |
+          APP_DIR=/home/tyler/route-commerce
+          mkdir -p $APP_DIR
+
+          # Seed config files into APP_DIR FIRST, before any docker compose
+          # command. The `docker compose down` below validates the compose
+          # file (including `env_file` paths) — if the old copy is still
+          # on the server with a broken `env_file`, the step fails before
+          # we get a chance to overwrite it.
+          #   - docker-compose.yml: copied UNCONDITIONALLY so deploys pick
+          #     up compose changes. The previous `[ -f ... ] ||` guard
+          #     kept stale copies on the server.
+          #   - .env.example: copied on first deploy only (it's a template;
+          #     the real `.env` is built from it below).
+          [ -f $APP_DIR/.env.example ] || cp .env.example $APP_DIR/.env.example
+          cp -f deploy/docker-compose.yml $APP_DIR/docker-compose.yml
+
+          # Free the dev-stack port (3001) and the port the previous deploy used
+          # (so a new deploy can pick it back up if it's the lowest free port)
+          PREV_PORT=$(cat .postgrest-port 2>/dev/null || echo "")
+          for port in 3001 $PREV_PORT; do
+            if [ -n "$port" ] && ss -tln 2>/dev/null | grep -qE "[[:space:]]127\.0\.0\.1:${port}[[:space:]]"; then
+              echo "Port $port in use, freeing..."
+              fuser -k -9 $port/tcp 2>/dev/null || true
+              docker ps -aq --filter "publish=$port" 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
+            fi
+          done
+
+          # Hard-stop the previous stack. Errors are NOT swallowed: if down
+          # fails, picking a port against a half-torn-down stack is exactly
+          # what produces the TOCTOU "address already in use" we keep hitting.
+          docker compose -f $APP_DIR/docker-compose.yml down --remove-orphans
+          # Belt-and-braces: anything with the postgrest name that survived.
+          docker ps -aq --filter "name=route_commerce_postgrest" | xargs -r docker rm -f >/dev/null 2>&1 || true
+          # docker-proxy sometimes leaves a listener behind for the published port.
+          pkill -9 -f 'docker-proxy.*3011' 2>/dev/null || true
+          pkill -9 -f 'docker-proxy.*3012' 2>/dev/null || true
+          pkill -9 -f 'docker-proxy.*3013' 2>/dev/null || true
+          sleep 3
+
+          # Verify the postgrest container is actually gone before we pick a port.
+          if docker ps -aq --filter "name=route_commerce_postgrest" | grep -q .; then
+            echo "ERROR: route_commerce_postgrest still running after down"
+            docker ps --filter "name=route_commerce_postgrest"
+            exit 1
+          fi
+
+          # Find the first free host port starting from 3011. Persist the choice
+          # so the Build and Deploy steps below can use the same URL.
+          POSTGREST_HOST_PORT=3011
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if ! ss -tln 2>/dev/null | grep -qE "[[:space:]]127\.0\.0\.1:${POSTGREST_HOST_PORT}[[:space:]]"; then
+              break
+            fi
+            echo "Port $POSTGREST_HOST_PORT in use, trying next... (attempt $attempt)"
+            POSTGREST_HOST_PORT=$((POSTGREST_HOST_PORT + 1))
+            if [ $POSTGREST_HOST_PORT -gt 30200 ]; then
+              echo "ERROR: no free port in 3011-30200 range"
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "Using PostgREST host port: $POSTGREST_HOST_PORT"
+          echo "$POSTGREST_HOST_PORT" > .postgrest-port
+          export NEXT_PUBLIC_API_URL="http://localhost:$POSTGREST_HOST_PORT"
+          export POSTGREST_HOST_PORT
+
+          cd $APP_DIR
+          [ -f .env ] || cp .env.example .env
+          # Append production secrets to .env (overriding .env.example defaults)
+          {
+            echo "POSTGRES_USER=${POSTGRES_USER}"
+            echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+            echo "POSTGRES_DB=${POSTGRES_DB}"
+            echo "MINIO_ROOT_USER=${MINIO_ROOT_USER}"
+            echo "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}"
+            echo "POSTGREST_JWT_SECRET=${POSTGREST_JWT_SECRET}"
+            echo "PGRST_DB_URI=${PGRST_DB_URI}"
+            echo "PGRST_DB_ANON_ROLE=${PGRST_DB_ANON_ROLE:-anon}"
+            echo "PGRST_SERVER_PORT=${PGRST_SERVER_PORT:-3000}"
+            echo "POSTGREST_HOST_PORT=$POSTGREST_HOST_PORT"
+            echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL"
+          } >> .env
+          # Bring the stack up fresh — --force-recreate ensures no stale
+          # network/container references from prior failed attempts.
+          # Only `postgrest` lives in docker; Postgres itself runs on the
+          # host (see the migrations step below, which uses
+          # `psql -h 127.0.0.1`).
+          docker compose up -d --force-recreate postgrest
+          # Wait for Postgres to accept connections on the host.
+          # The DB is on 127.0.0.1, not in a docker service.
+          for i in $(seq 1 30); do
+            if PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT 1" > /dev/null 2>&1; then
+              echo "Postgres is ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Apply migrations
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        run: |
+          APP_DIR=/home/tyler/route-commerce
+          # Seed supabase/ into APP_DIR if missing (the deploy step copies it after, but
+          # we need it here for migrations)
+          [ -d $APP_DIR/supabase ] || cp -r supabase $APP_DIR/supabase
+          cd $APP_DIR
+          # PAGER= prevents psql from launching less/more in a non-interactive shell,
+          # which hangs indefinitely waiting for keypress. Batch all files into one
+          # connection for speed instead of one psql invocation per file.
+          export PAGER=
+          export PGPASSWORD="${POSTGRES_PASSWORD}"
+          PG="psql -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB} --no-psqlrc -v ON_ERROR_STOP=0 -q"
+          $PG -f supabase/migrations/000_preflight_supabase_compat.sql || true
+          [ -f supabase/captured_schema.sql ] && $PG -f supabase/captured_schema.sql || true
+          # Concatenate all numbered migrations and run in one session
+          cat supabase/migrations/[0-9]*.sql | $PG
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+          # Auth.js v5 (NextAuth). Fall back to Better Auth names if the
+          # Gitea secret hasn't been renamed yet.
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET || secrets.BETTER_AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.AUTH_URL || secrets.BETTER_AUTH_URL }}
+          NEXT_PUBLIC_AUTH_URL: ${{ secrets.NEXT_PUBLIC_AUTH_URL || secrets.NEXT_PUBLIC_BETTER_AUTH_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || secrets.AUTH_GOOGLE_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.AUTH_GOOGLE_SECRET }}
+          ALLOW_DEV_LOGIN: ${{ secrets.ALLOW_DEV_LOGIN }}
+          ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
+
+          # Supabase (legacy, still used by admin pages/server actions until
+          # the Auth.js migration is finished)
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+          # Storage (MinIO / S3)
+          NEXT_PUBLIC_STORAGE_BASE_URL: ${{ secrets.NEXT_PUBLIC_STORAGE_BASE_URL }}
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_REGION: ${{ secrets.STORAGE_REGION }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_BUCKET_PREFIX: ${{ secrets.STORAGE_BUCKET_PREFIX }}
+
+          # Stripe
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+
+          # Resend
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
+
+          # AI providers
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
+
+          # Email sender
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: |
+          POSTGREST_HOST_PORT=$(cat .postgrest-port)
+          export NEXT_PUBLIC_API_URL="http://localhost:$POSTGREST_HOST_PORT"
+          npm run build
+
+      - name: Deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          POSTGREST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
+
+          # Auth.js v5 (with Better Auth fallback for the secret name)
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET || secrets.BETTER_AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.AUTH_URL || secrets.BETTER_AUTH_URL }}
+          NEXT_PUBLIC_AUTH_URL: ${{ secrets.NEXT_PUBLIC_AUTH_URL || secrets.NEXT_PUBLIC_BETTER_AUTH_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || secrets.AUTH_GOOGLE_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.AUTH_GOOGLE_SECRET }}
+          ALLOW_DEV_LOGIN: ${{ secrets.ALLOW_DEV_LOGIN }}
+          ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
+
+          # Storage
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_REGION: ${{ secrets.STORAGE_REGION }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          STORAGE_BUCKET_PREFIX: ${{ secrets.STORAGE_BUCKET_PREFIX }}
+          NEXT_PUBLIC_STORAGE_BASE_URL: ${{ secrets.NEXT_PUBLIC_STORAGE_BASE_URL }}
+
+          # PostgREST
+          PGRST_SERVER_PORT: ${{ secrets.PGRST_SERVER_PORT }}
+          PGRST_DB_URI: ${{ secrets.PGRST_DB_URI }}
+          PGRST_DB_ANON_ROLE: ${{ secrets.PGRST_DB_ANON_ROLE }}
+          PGRST_JWT_SECRET: ${{ secrets.POSTGREST_JWT_SECRET }}
+
+          # Supabase (legacy)
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+          # Stripe
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+
+          # Resend
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
+
+          # AI
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
+
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: |
+          APP_DIR=/home/tyler/route-commerce
+          mkdir -p $APP_DIR
+          # Use the port chosen by Start Docker stack (persisted to .postgrest-port)
+          POSTGREST_HOST_PORT=$(cat .postgrest-port)
+          export NEXT_PUBLIC_API_URL="http://localhost:$POSTGREST_HOST_PORT"
+
+          # Write env file from secrets (preserves existing .env for docker compose)
+          {
+            printf "DATABASE_URL=%s\n" "$DATABASE_URL"
+            printf "NEXT_PUBLIC_API_URL=%s\n" "$NEXT_PUBLIC_API_URL"
+            printf "POSTGRES_USER=%s\n" "$POSTGRES_USER"
+            printf "POSTGRES_PASSWORD=%s\n" "$POSTGRES_PASSWORD"
+            printf "POSTGRES_DB=%s\n" "$POSTGRES_DB"
+            printf "MINIO_ROOT_USER=%s\n" "$MINIO_ROOT_USER"
+            printf "MINIO_ROOT_PASSWORD=%s\n" "$MINIO_ROOT_PASSWORD"
+            printf "POSTGREST_JWT_SECRET=%s\n" "$POSTGREST_JWT_SECRET"
+            printf "AUTH_SECRET=%s\n" "$AUTH_SECRET"
+            printf "AUTH_URL=%s\n" "$AUTH_URL"
+            printf "NEXT_PUBLIC_AUTH_URL=%s\n" "$NEXT_PUBLIC_AUTH_URL"
+            printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID"
+            printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET"
+            printf "ALLOW_DEV_LOGIN=%s\n" "$ALLOW_DEV_LOGIN"
+            printf "ADMIN_ALLOWED_EMAILS=%s\n" "$ADMIN_ALLOWED_EMAILS"
+            printf "STORAGE_ENDPOINT=%s\n" "$STORAGE_ENDPOINT"
+            printf "STORAGE_REGION=%s\n" "$STORAGE_REGION"
+            printf "STORAGE_ACCESS_KEY=%s\n" "$STORAGE_ACCESS_KEY"
+            printf "STORAGE_SECRET_KEY=%s\n" "$STORAGE_SECRET_KEY"
+            printf "STORAGE_BUCKET_PREFIX=%s\n" "$STORAGE_BUCKET_PREFIX"
+            printf "NEXT_PUBLIC_STORAGE_BASE_URL=%s\n" "$NEXT_PUBLIC_STORAGE_BASE_URL"
+            printf "PGRST_SERVER_PORT=%s\n" "$PGRST_SERVER_PORT"
+            printf "PGRST_DB_URI=%s\n" "$PGRST_DB_URI"
+            printf "PGRST_DB_ANON_ROLE=%s\n" "$PGRST_DB_ANON_ROLE"
+            printf "PGRST_JWT_SECRET=%s\n" "$POSTGREST_JWT_SECRET"
+            printf "NEXT_PUBLIC_SUPABASE_URL=%s\n" "$NEXT_PUBLIC_SUPABASE_URL"
+            printf "NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n" "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            printf "STRIPE_SECRET_KEY=%s\n" "$STRIPE_SECRET_KEY"
+            printf "STRIPE_WEBHOOK_SECRET=%s\n" "$STRIPE_WEBHOOK_SECRET"
+            printf "STRIPE_PUBLISHABLE_KEY=%s\n" "$STRIPE_PUBLISHABLE_KEY"
+            printf "RESEND_API_KEY=%s\n" "$RESEND_API_KEY"
+            printf "RESEND_WEBHOOK_SECRET=%s\n" "$RESEND_WEBHOOK_SECRET"
+            printf "MINIMAX_API_KEY=%s\n" "$MINIMAX_API_KEY"
+            printf "MINIMAX_BASE_URL=%s\n" "$MINIMAX_BASE_URL"
+            printf "FROM_EMAIL=%s\n" "$FROM_EMAIL"
+          } > $APP_DIR/.env.production
+
+          # Copy build output and required files
+          rsync -a --delete .next/ $APP_DIR/.next/
+          rsync -a --delete public/ $APP_DIR/public/
+          cp package.json $APP_DIR/
+          cp deploy/docker-compose.yml $APP_DIR/
+          cp -r supabase/ $APP_DIR/
+          cp next.config.ts $APP_DIR/ 2>/dev/null || cp next.config.js $APP_DIR/ 2>/dev/null || true
+
+          # Install production deps only
+          cd $APP_DIR
+          npm install --omit=dev
+
+          # Start or restart PM2 process
+          if pm2 describe route-commerce > /dev/null 2>&1; then
+            pm2 restart route-commerce
+          else
+            pm2 start npm --name route-commerce -- start -- -p 3100
+            pm2 save
+          fi
+
+          echo "Deployed successfully"

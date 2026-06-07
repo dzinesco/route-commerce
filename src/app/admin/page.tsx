@@ -27,16 +27,21 @@ export default async function AdminPage() {
   // Resolve active brand via the canonical resolver (URL > cookie > legacy brand_id
   // > first of brand_ids). For platform_admin in dev mode this is null, so we
   // fall back to the first brand in the brands table to keep the dashboard's
-  // "Active Products" stat in sync with the billing page.
+  // "Active Products" stat in sync with the billing page. Wrapped in try/catch
+  // so a transient DB/network failure can't crash the whole admin page.
   let dashboardBrandId: string | null = adminUser ? await getActiveBrandId(adminUser) : null;
   if (!dashboardBrandId && adminUser?.role === "platform_admin") {
-    const { data: firstBrand } = await supabase
-      .from("brands")
-      .select("id")
-      .limit(1)
-      .single();
-    if (firstBrand?.id) {
-      dashboardBrandId = firstBrand.id;
+    try {
+      const { data: firstBrand } = await supabase
+        .from("brands")
+        .select("id")
+        .limit(1)
+        .single();
+      if (firstBrand?.id) {
+        dashboardBrandId = firstBrand.id;
+      }
+    } catch (err) {
+      console.error("[admin/page] supabase brands lookup failed:", err);
     }
   }
 

@@ -1,0 +1,38 @@
+# =============================================================================
+# docker-compose.yml — production stack consumed by deploy.sh
+# =============================================================================
+#
+# Only `postgrest` lives in docker. Postgres itself runs on the host
+# (the deploy workflow applies migrations via `psql -h 127.0.0.1`).
+# Next.js runs under PM2 on the host — it is NOT a docker service.
+#
+# The host-side port (POSTGREST_HOST_PORT) is written by the deploy
+# workflow into $APP_DIR/.env. We interpolate from there with
+# ${VAR:-3011} so a manual `docker compose up` without the deploy
+# script still works.
+# =============================================================================
+
+name: prod-app  # default project name; deploy.sh overrides with -p
+
+services:
+  postgrest:
+    image: postgrest/postgrest:latest
+    container_name: prod-app-postgrest
+    restart: unless-stopped
+    # The host port is dynamic. The container always listens on 3000.
+    ports:
+      - "${POSTGREST_HOST_PORT:-3011}:3000"
+    environment:
+      PGRST_DB_URI: ${PGRST_DB_URI}
+      PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE:-anon}
+      PGRST_DB_SCHEMA: ${PGRST_DB_SCHEMA:-public}
+      PGRST_SERVER_PORT: 3000
+      # Optional: tighten CORS for your real domain
+      PGRST_DB_TXN_END: "commit-allow-overwrite"
+    # Healthcheck lets `docker compose ps` show healthy state.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+

@@ -8,6 +8,11 @@ import "@/styles/admin-design-system.css";
 import { ToastProvider } from "@/components/admin/Toast";
 import { ToastContainer } from "@/components/admin/ToastContainer";
 
+// Admin layout calls getAdminUser() which reads cookies(). Without this,
+// Next.js tries to prerender the entire /admin/* tree statically and the
+// first page that hits cookies() aborts the build with DYNAMIC_SERVER_USAGE.
+export const dynamic = "force-dynamic";
+
 // Toast provider wrapper component
 function ToastProviderWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -59,13 +64,25 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/change-password");
   }
 
-  // Resolve the active brand (URL > cookie > legacy > first of brand_ids)
-  const activeBrandId = await getActiveBrandId(adminUser);
+  // Resolve the active brand (URL > cookie > legacy > first of brand_ids).
+  // Wrapped in try/catch so a transient brand-resolution failure can't
+  // crash the whole admin shell — we fall back to null (no active brand).
+  let activeBrandId: string | null = null;
+  try {
+    activeBrandId = await getActiveBrandId(adminUser);
+  } catch (err) {
+    console.error("[admin/layout] getActiveBrandId failed:", err);
+  }
 
-  // Fetch accessible brands for the sidebar BrandSelector. We do this
-  // unconditionally — `listBrandsForAdmin` is cheap and the sidebar
-  // decides whether to show the dropdown.
-  const brands = await listBrandsForAdmin();
+  // Fetch accessible brands for the sidebar BrandSelector. Wrapped in
+  // try/catch so the sidebar renders empty rather than crashing the page
+  // if the brands query fails.
+  let brands: Awaited<ReturnType<typeof listBrandsForAdmin>> = [];
+  try {
+    brands = await listBrandsForAdmin();
+  } catch (err) {
+    console.error("[admin/layout] listBrandsForAdmin failed:", err);
+  }
 
   return (
     <ToastProviderWrapper>

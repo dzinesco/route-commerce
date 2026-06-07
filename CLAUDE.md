@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Canonical Remote
+
+There is exactly one remote — `origin` — pointing to the self-hosted Gitea repo:
+
+- **URL:** `git@git.crispygoat.com:tyler/route-commerce.git`
+- **Default branch:** `main`
+- **Deploy:** push to `origin/main` triggers `.gitea/workflows/deploy.yml`
+
+Do **not** add GitHub remotes. There is no `origin` on github.com and no separate "dev" repo. If you see `github.com/dzinesco/*` URLs in `.git/config`, that is stale configuration from a previous fork and should be removed (`git remote remove`).
+
 ## Project Overview
 
 Route Commerce is a multi-tenant B2B e-commerce platform for fresh produce wholesale distribution. Brands sell to customers who pick up at scheduled stops or receive shipments. The platform includes admin dashboards for order management, stop/route scheduling, product catalogs, payment processing (Stripe + Square), and a communications module ("Harvest Reach") for email/SMS campaigns.
