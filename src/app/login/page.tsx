@@ -32,7 +32,19 @@ export default async function LoginPage({
   // The Google provider is only added to the Auth.js config when these
   // two env vars are set. Pass the flag down so the client can hide the
   // button (and surface a helpful message) when Google is unavailable.
-  const hasGoogle = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+  //
+  // We also require the client ID to look like a real Google OAuth client
+  // ID (ends in `.apps.googleusercontent.com`). This guards against
+  // dev/CI environments where the env vars are set to placeholder strings
+  // like "dummy-google-client-id" — those would otherwise surface a
+  // Google button that immediately 401s on Google's end.
+  const googleId = process.env.AUTH_GOOGLE_ID ?? "";
+  const googleSecret = process.env.AUTH_GOOGLE_SECRET ?? "";
+  const hasGoogle = !!(
+    googleId &&
+    googleSecret &&
+    googleId.endsWith(".apps.googleusercontent.com")
+  );
   const hasCredentials = isDevLoginEnabled();
   const params = await searchParams;
   const error =
