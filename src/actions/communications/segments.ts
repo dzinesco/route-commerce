@@ -1,8 +1,21 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { brandSettings } from "@/db/schema";
 import type { AudienceRules } from "./campaigns";
+
+/**
+ * The new schema does not have a `communication_segments` table.
+ * Segments are stored as JSON inside `brand_settings.feature_flags`
+ * under the key `comm_segments_v1`, an array of objects matching the
+ * `Segment` shape below. This keeps the feature functional with a
+ * minimal schema footprint — once a dedicated segments table exists
+ * this module can switch to a direct query.
+ */
+
+const SEGMENTS_FLAG_KEY = "comm_segments_v1";
 
 export type Segment = {
   id: string;
@@ -23,6 +36,55 @@ export type UpsertSegmentResult =
   | { success: true; segment: Segment }
   | { success: false; error: string };
 
+function readSegments(flags: Record<string, unknown> | null): Segment[] {
+  if (!flags) return [];
+  const raw = flags[SEGMENTS_FLAG_KEY];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isSegment);
+}
+
+function isSegment(v: unknown): v is Segment {
+  if (typeof v !== "object" || v === null) return false;
+  const s = v as Record<string, unknown>;
+  return (
+    typeof s.id === "string" &&
+    typeof s.brand_id === "string" &&
+    typeof s.name === "string" &&
+    typeof s.rules === "object" &&
+    s.rules !== null
+  );
+}
+
+async function loadSegments(brandId: string): Promise<Segment[]> {
+  const rows = await withTenant(brandId, (db) =>
+    db
+      .select({ flags: brandSettings.featureFlags })
+      .from(brandSettings)
+      .where(eq(brandSettings.tenantId, brandId))
+      .limit(1),
+  );
+  return readSegments((rows[0]?.flags ?? null) as Record<string, unknown> | null);
+}
+
+async function saveSegments(brandId: string, segments: Segment[]): Promise<void> {
+  await withTenant(brandId, async (db) => {
+    const existing = await db
+      .select({ flags: brandSettings.featureFlags })
+      .from(brandSettings)
+      .where(eq(brandSettings.tenantId, brandId))
+      .limit(1);
+    const baseFlags = (existing[0]?.flags ?? {}) as Record<string, unknown>;
+    const nextFlags: Record<string, unknown> = {
+      ...baseFlags,
+      [SEGMENTS_FLAG_KEY]: segments,
+    };
+    await db
+      .update(brandSettings)
+      .set({ featureFlags: nextFlags, updatedAt: new Date() })
+      .where(eq(brandSettings.tenantId, brandId));
+  });
+}
+
 export async function getCommunicationSegments(
   brandId: string
 ): Promise<ListSegmentsResult> {
@@ -33,21 +95,15 @@ export async function getCommunicationSegments(
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_segments`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to fetch segments" };
-  const data = await response.json();
-  return { success: true, segments: data?.segments ?? [] };
+  try {
+    const segments = await loadSegments(brandId);
+    return { success: true, segments };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch segments",
+    };
+  }
 }
 
 export async function upsertSegment(params: {
@@ -64,28 +120,44 @@ export async function upsertSegment(params: {
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_communication_segment`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: params.id ?? null,
-        p_brand_id: params.brand_id,
-        p_name: params.name,
-        p_description: params.description ?? null,
-        p_rules: params.rules,
-        p_created_by: adminUser.user_id,
-      }),
+  try {
+    const segments = await loadSegments(params.brand_id);
+    const now = new Date().toISOString();
+    let saved: Segment;
+    if (params.id) {
+      const idx = segments.findIndex((s) => s.id === params.id);
+      if (idx === -1) {
+        return { success: false, error: "Segment not found" };
+      }
+      saved = {
+        ...segments[idx],
+        name: params.name,
+        description: params.description ?? null,
+        rules: params.rules,
+        updated_at: now,
+      };
+      segments[idx] = saved;
+    } else {
+      saved = {
+        id: crypto.randomUUID(),
+        brand_id: params.brand_id,
+        name: params.name,
+        description: params.description ?? null,
+        rules: params.rules,
+        created_by: adminUser.id,
+        created_at: now,
+        updated_at: now,
+      };
+      segments.push(saved);
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to save segment" };
-  const data = await response.json();
-  return { success: true, segment: data };
+    await saveSegments(params.brand_id, segments);
+    return { success: true, segment: saved };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save segment",
+    };
+  }
 }
 
 export async function deleteSegment(
@@ -99,18 +171,18 @@ export async function deleteSegment(
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_communication_segment`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_segment_id: segmentId, p_brand_id: brandId }),
+  try {
+    const segments = await loadSegments(brandId);
+    const filtered = segments.filter((s) => s.id !== segmentId);
+    if (filtered.length === segments.length) {
+      return { success: false, error: "Segment not found" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete segment" };
-  return { success: true };
+    await saveSegments(brandId, filtered);
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to delete segment",
+    };
+  }
 }

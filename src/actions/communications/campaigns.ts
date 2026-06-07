@@ -1,8 +1,10 @@
 "use server";
 
+import { and, desc, eq, SQL } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant, withPlatformAdmin } from "@/db/client";
+import { campaigns, emailTemplates } from "@/db/schema";
 
 export type CampaignType = "marketing" | "operational" | "transactional";
 export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "canceled";
@@ -20,6 +22,16 @@ export type AudienceRules = {
   customer_ids?: string[];
 };
 
+/**
+ * The denormalized Campaign shape consumed by the admin UI. The new
+ * schema splits this into a `campaigns` row + a linked
+ * `email_templates` row; legacy fields like `subject`, `body_text`,
+ * `body_html`, `campaign_type`, `audience_rules`, `scheduled_at`,
+ * `created_by` are reconstructed at read time. Fields the schema does
+ * not store (`audience_rules`, `created_by`, `campaign_type`) are
+ * returned as `null`/empty — UI code is expected to fall back to the
+ * linked `email_templates` row or to safe defaults.
+ */
 export type Campaign = {
   id: string;
   brand_id: string;
@@ -54,6 +66,40 @@ export type ListCampaignsResult = {
   error: string;
 };
 
+type CampaignRow = typeof campaigns.$inferSelect;
+type TemplateRow = typeof emailTemplates.$inferSelect;
+
+function stripHtml(html: string | null): string {
+  if (!html) return "";
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function rowToCampaign(c: CampaignRow, t?: TemplateRow | null): Campaign {
+  return {
+    id: c.id,
+    brand_id: c.tenantId,
+    name: c.name,
+    subject: t?.subject ?? null,
+    body_text: stripHtml(t?.bodyHtml ?? null),
+    body_html: t?.bodyHtml ?? null,
+    template_id: c.templateId,
+    campaign_type: "operational",
+    status: c.status as CampaignStatus,
+    audience_rules: {},
+    scheduled_at: c.scheduledFor ? c.scheduledFor.toISOString() : null,
+    sent_at: c.sentAt ? c.sentAt.toISOString() : null,
+    created_by: null,
+    created_at: c.createdAt.toISOString(),
+    updated_at: c.updatedAt.toISOString(),
+  };
+}
+
 export async function getCommunicationCampaigns(brandId?: string): Promise<ListCampaignsResult> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
@@ -62,25 +108,50 @@ export async function getCommunicationCampaigns(brandId?: string): Promise<ListC
   if (!activeBrandId && adminUser.role !== "platform_admin") {
     return { success: false, error: "Brand access required" };
   }
-  const effectiveBrandId = activeBrandId;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  try {
+    const rows = activeBrandId
+      ? await withTenant(activeBrandId, (db) =>
+          db
+            .select({
+              campaign: campaigns,
+              template: emailTemplates,
+            })
+            .from(campaigns)
+            .leftJoin(emailTemplates, eq(emailTemplates.id, campaigns.templateId))
+            .orderBy(desc(campaigns.createdAt)),
+        )
+      : await withPlatformAdmin((db) =>
+          db
+            .select({
+              campaign: campaigns,
+              template: emailTemplates,
+            })
+            .from(campaigns)
+            .leftJoin(emailTemplates, eq(emailTemplates.id, campaigns.templateId))
+            .orderBy(desc(campaigns.createdAt)),
+        );
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_campaigns`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: effectiveBrandId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to fetch campaigns" };
-  const data = await response.json();
-  return { success: true, campaigns: data?.campaigns ?? [] };
+    return {
+      success: true,
+      campaigns: rows.map((r) => rowToCampaign(r.campaign, r.template)),
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch campaigns",
+    };
+  }
 }
 
+/**
+ * The `subject`/`body_html`/`body_text` arguments are persisted on a
+ * linked `email_templates` row: if `template_id` is supplied, that row
+ * is updated; otherwise a new template is created and the campaign
+ * links to it. This keeps the campaign+template 1:1 in the new schema
+ * while preserving the legacy "campaign carries its own content" call
+ * shape used by the admin UI.
+ */
 export async function upsertCampaign(params: {
   id?: string;
   brand_id: string;
@@ -97,93 +168,173 @@ export async function upsertCampaign(params: {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  // Brand scoping: brand_admin can only modify their own brand's campaigns
   if (adminUser.role === "brand_admin" && adminUser.brand_id !== params.brand_id) {
     return { success: false, error: "Not authorized to operate on this brand's campaigns" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  try {
+    const scheduled = params.scheduled_at ? new Date(params.scheduled_at) : null;
+    const status: CampaignStatus = params.status ?? "draft";
+    const subject = params.subject ?? "";
+    const bodyHtml = params.body_html ?? (params.body_text ? `<p style="white-space:pre-wrap">${escapeHtml(params.body_text)}</p>` : "<p></p>");
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_communication_campaign`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: params.id ?? null,
-        p_brand_id: params.brand_id,
-        p_name: params.name,
-        p_subject: params.subject ?? null,
-        p_body_text: params.body_text ?? null,
-        p_body_html: params.body_html ?? null,
-        p_template_id: params.template_id ?? null,
-        p_campaign_type: params.campaign_type,
-        p_status: params.status ?? "draft",
-        p_audience_rules: params.audience_rules ?? {},
-        p_scheduled_at: params.scheduled_at ?? null,
-        p_created_by: adminUser.user_id,
-      }),
-    }
-  );
+    const { row, template } = await withTenant(params.brand_id, async (db) => {
+      // Resolve / create the linked email_templates row.
+      let templateId: string | null = params.template_id ?? null;
+      let templateRow: TemplateRow | null = null;
 
-  const data = await response.json();
-  if (!response.ok || !data?.id) {
-    return { success: false, error: data?.message ?? "Failed to save campaign" };
+      if (templateId) {
+        const existing = await db
+          .select()
+          .from(emailTemplates)
+          .where(and(eq(emailTemplates.id, templateId), eq(emailTemplates.tenantId, params.brand_id)))
+          .limit(1);
+        if (existing[0]) {
+          const updated = await db
+            .update(emailTemplates)
+            .set({ name: params.name, subject, bodyHtml, updatedAt: new Date() })
+            .where(eq(emailTemplates.id, templateId))
+            .returning();
+          templateRow = updated[0] ?? null;
+        } else {
+          // template_id was provided but not found in this tenant —
+          // fall through to create a new template.
+          templateId = null;
+        }
+      }
+
+      if (!templateId) {
+        const inserted = await db
+          .insert(emailTemplates)
+          .values({
+            tenantId: params.brand_id,
+            name: params.name,
+            subject,
+            bodyHtml,
+          })
+          .returning();
+        templateId = inserted[0]?.id ?? null;
+        templateRow = inserted[0] ?? null;
+      }
+
+      // Upsert the campaign row.
+      let campaignRow: CampaignRow;
+      if (params.id) {
+        const updated = await db
+          .update(campaigns)
+          .set({
+            name: params.name,
+            templateId,
+            status,
+            scheduledFor: scheduled,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(campaigns.id, params.id), eq(campaigns.tenantId, params.brand_id)))
+          .returning();
+        if (!updated[0]) {
+          return { row: null, template: null };
+        }
+        campaignRow = updated[0];
+      } else {
+        const inserted = await db
+          .insert(campaigns)
+          .values({
+            tenantId: params.brand_id,
+            name: params.name,
+            templateId,
+            status,
+            scheduledFor: scheduled,
+          })
+          .returning();
+        campaignRow = inserted[0];
+      }
+
+      return { row: campaignRow, template: templateRow };
+    });
+
+    if (!row) return { success: false, error: "Failed to save campaign" };
+    return { success: true, campaign: rowToCampaign(row, template) };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save campaign",
+    };
   }
-
-  return { success: true, campaign: data };
 }
 
 export async function deleteCampaign(campaignId: string, brandId?: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  // Brand scoping: brand_admin can only delete their own brand's campaigns
-  if (adminUser.role === "brand_admin" && brandId && adminUser.brand_id !== brandId) {
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
+
+  if (adminUser.role === "brand_admin" && activeBrandId && adminUser.brand_id !== activeBrandId) {
     return { success: false, error: "Not authorized to delete this brand's campaigns" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_communication_campaign`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_campaign_id: campaignId, p_brand_id: (await getActiveBrandId(adminUser)) ?? null }),
+  try {
+    if (activeBrandId) {
+      await withTenant(activeBrandId, (db) =>
+        db.delete(campaigns).where(and(eq(campaigns.id, campaignId), eq(campaigns.tenantId, activeBrandId))),
+      );
+    } else {
+      await withPlatformAdmin((db) => db.delete(campaigns).where(eq(campaigns.id, campaignId)));
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete campaign" };
-  return { success: true };
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to delete campaign",
+    };
+  }
 }
 
 export async function getCampaignById(campaignId: string, brandId?: string): Promise<Campaign | null> {
   const adminUser = await getAdminUser();
   if (!adminUser) return null;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const activeBrandId = await getActiveBrandId(adminUser, brandId);
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_campaign_by_id`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_campaign_id: campaignId, p_brand_id: (await getActiveBrandId(adminUser, brandId)) ?? null }),
+  try {
+    const result = activeBrandId
+      ? await withTenant(activeBrandId, (db) =>
+          db
+            .select({ campaign: campaigns, template: emailTemplates })
+            .from(campaigns)
+            .leftJoin(emailTemplates, eq(emailTemplates.id, campaigns.templateId))
+            .where(and(eq(campaigns.id, campaignId), eq(campaigns.tenantId, activeBrandId)))
+            .limit(1)
+            .then((r) => r[0] ?? null),
+        )
+      : await withPlatformAdmin((db) =>
+          db
+            .select({ campaign: campaigns, template: emailTemplates })
+            .from(campaigns)
+            .leftJoin(emailTemplates, eq(emailTemplates.id, campaigns.templateId))
+            .where(eq(campaigns.id, campaignId))
+            .limit(1)
+            .then((r) => r[0] ?? null),
+        );
+
+    if (!result) return null;
+
+    if (adminUser.role === "brand_admin" && result.campaign.tenantId !== adminUser.brand_id) {
+      return null;
     }
-  );
 
-  if (!response.ok) return null;
-  const data = await response.json();
-  const campaign = data?.campaign ?? null;
-
-  // Client-side brand validation
-  if (campaign && adminUser.role === "brand_admin" && campaign.brand_id !== adminUser.brand_id) {
+    return rowToCampaign(result.campaign, result.template);
+  } catch {
     return null;
   }
-
-  return campaign;
 }
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+void SQL;

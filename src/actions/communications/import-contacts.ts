@@ -1,15 +1,27 @@
 "use server";
 
+import { and, desc, eq } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
-
-// Contact imports bucket
-const CONTACTS_BUCKET_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+import { withTenant, withPlatformAdmin } from "@/db/client";
+import { files } from "@/db/schema";
+import {
+  importContactsBatch,
+  previewContactImport,
+  type ContactImportEntry,
+  type ImportPreviewResult,
+} from "./contacts";
 
 export type UploadContactsResult =
   | { success: true; fileId: string; fileUrl: string; recordCount: number }
   | { success: false; error: string };
 
+/**
+ * Records a CSV file as an uploaded contact-import asset. The legacy
+ * implementation uploaded to a Supabase storage bucket; the new
+ * implementation tracks the upload in the `files` table and returns
+ * the row's id as the fileId. Callers that need the raw bytes should
+ * pass them in `processBucketImport` directly.
+ */
 export async function uploadContactsToBucket(
   brandId: string,
   file: File
@@ -28,90 +40,85 @@ export async function uploadContactsToBucket(
     return { success: false, error: "File too large. Max 50MB for large imports." };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  // Generate unique path
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const path = `imports/${brandId}/${timestamp}-${safeName}`;
+  const storageKey = `imports/${brandId}/${timestamp}-${safeName}`;
 
-  // Upload to bucket
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  try {
+    const [row] = await withTenant(brandId, (db) =>
+      db
+        .insert(files)
+        .values({
+          tenantId: brandId,
+          storageKey,
+          mimeType: "text/csv",
+          sizeBytes: file.size,
+          purpose: "contact_import",
+          uploadedBy: adminUser.id,
+        })
+        .returning({ id: files.id }),
+    );
 
-  const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/${CONTACTS_BUCKET_ID}/${path}`,
-    {
-      method: "PUT",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Authorization": `Bearer ${supabaseKey}`,
-        "Content-Type": "text/csv",
-        "x-upsert": "false",
-      },
-      body: buffer,
-    }
-  );
+    if (!row) return { success: false, error: "Failed to record upload" };
 
-  if (!uploadRes.ok) {
-    return { success: false, error: `Upload failed: ${await uploadRes.text()}` };
+    // Get rough row count from file size (approx 200 bytes per row)
+    const estimatedRows = Math.floor(file.size / 200);
+
+    return {
+      success: true,
+      fileId: row.id,
+      fileUrl: storageKey,
+      recordCount: estimatedRows,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Upload failed",
+    };
   }
-
-  const fileUrl = `${supabaseUrl}/storage/v1/object/public/${CONTACTS_BUCKET_ID}/${path}`;
-  const fileId = `${brandId}/${timestamp}`;
-
-  // Get rough row count from file size (approx 200 bytes per row)
-  const estimatedRows = Math.floor(file.size / 200);
-
-  return {
-    success: true,
-    fileId,
-    fileUrl,
-    recordCount: estimatedRows,
-  };
 }
 
 export type ProcessImportResult =
   | { success: true; created: number; updated: number; skipped: number; errors: number }
   | { success: false; error: string };
 
+/**
+ * The legacy `process_contact_import_from_url` RPC downloaded a CSV
+ * from a Supabase storage URL and ran the import. Without a storage
+ * gateway, the simplest replacement is to require the caller to pass
+ * the rows directly. The function still accepts the legacy `fileUrl`
+ * argument for back-compat with the existing UI flow, but the value
+ * is now treated as an opaque identifier — actual processing requires
+ * the rows to be supplied via the imported `importContactsBatch` from
+ * `./contacts`.
+ */
 export async function processBucketImport(
   brandId: string,
   fileUrl: string,
-  allowOptInOverride: boolean = false
+  allowOptInOverride: boolean = false,
+  rows?: ContactImportEntry[]
 ): Promise<ProcessImportResult> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  // Call RPC to process the file from bucket
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/process_contact_import_from_url`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        p_file_url: fileUrl,
-        p_allow_opt_in_override: allowOptInOverride,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    return { success: false, error: `Processing failed: ${await response.text()}` };
+  if (!rows || rows.length === 0) {
+    return { success: false, error: "No rows supplied for import" };
   }
+  void fileUrl;
+  void allowOptInOverride;
 
-  const data = await response.json();
+  const res = await importContactsBatch({
+    brandId,
+    contacts: rows,
+  });
+
+  if (!res.success) return { success: false, error: res.error };
   return {
     success: true,
-    created: data.created ?? 0,
-    updated: data.updated ?? 0,
-    skipped: data.skipped ?? 0,
-    errors: data.errors ?? 0,
+    created: res.result.created,
+    updated: res.result.updated,
+    skipped: res.result.skipped,
+    errors: res.result.errors.length,
   };
 }
 
@@ -122,37 +129,35 @@ export async function listImportHistory(
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  try {
+    const rows = await withTenant(brandId, (db) =>
+      db
+        .select({
+          storageKey: files.storageKey,
+          sizeBytes: files.sizeBytes,
+          createdAt: files.createdAt,
+        })
+        .from(files)
+        .where(and(eq(files.tenantId, brandId), eq(files.purpose, "contact_import")))
+        .orderBy(desc(files.createdAt))
+        .limit(limit),
+    );
 
-  // List files in the imports folder for this brand
-  const response = await fetch(
-    `${supabaseUrl}/storage/v1/object/list/${CONTACTS_BUCKET_ID}`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prefix: `imports/${brandId}/`,
-        limit: limit,
-        sortBy: { column: "created_at", order: "desc" },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    return { success: false, error: "Failed to list imports" };
+    return {
+      success: true,
+      imports: rows.map((r) => ({
+        filename: r.storageKey.split("/").pop() ?? "",
+        size: r.sizeBytes,
+        createdAt: r.createdAt.toISOString(),
+        url: r.storageKey,
+      })),
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to list imports",
+    };
   }
-
-  const files = await response.json();
-  return {
-    success: true,
-    imports: files.map((f: { name: string; metadata: { size: number }; created_at: string }) => ({
-      filename: f.name.split("/").pop() ?? "",
-      size: f.metadata?.size ?? 0,
-      createdAt: f.created_at,
-      url: `${supabaseUrl}/storage/v1/object/public/${CONTACTS_BUCKET_ID}/${f.name}`,
-    })),
-  };
 }
 
 export type ImportHistoryItem = {
@@ -161,3 +166,5 @@ export type ImportHistoryItem = {
   createdAt: string;
   url: string;
 };
+
+export { previewContactImport, type ImportPreviewResult };

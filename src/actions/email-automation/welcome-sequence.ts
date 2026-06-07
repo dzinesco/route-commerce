@@ -1,12 +1,14 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+/**
+ * The new schema does not have a `welcome_sequence` table. The legacy
+ * "enroll a contact in a multi-step onboarding email sequence" feature
+ * has been retired; the mailer functions below still build and send
+ * Resend messages, but the persistence layer is gone. The functions
+ * now return empty data and no-op on updates.
+ */
 
 export type WelcomeSequenceEntry = {
   id: string;
@@ -112,27 +114,15 @@ export async function getWelcomeSequence(brandId: string): Promise<GetWelcomeSeq
     return { success: false, error: "Not authorized" };
   }
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_welcome_sequence`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-  if (!res.ok) return { success: false, error: "Failed to fetch welcome sequence" };
-  const data = await res.json();
-  const row = Array.isArray(data) ? data[0] : data;
-  const entries: WelcomeSequenceEntry[] = row?.entries ?? [];
+  // The welcome_sequence table has been retired; return an empty list
+  // and zeroed stats. The cron API route in
+  // `src/app/api/email-automation/welcome-sequence/route.ts` will see
+  // an empty result and skip the per-brand work.
+  void brandId;
   return {
     success: true,
-    entries,
-    stats: {
-      total: entries.length,
-      completed: entries.filter(e => e.status === "completed").length,
-      active: entries.filter(e => e.status === "active").length,
-      unsubscribed: entries.filter(e => e.status === "unsubscribed").length,
-    },
+    entries: [],
+    stats: { total: 0, completed: 0, active: 0, unsubscribed: 0 },
   };
 }
 
@@ -228,26 +218,8 @@ export async function sendWelcomeEmail(
       return { success: false, error: err };
     }
 
-    const data = await res.json();
-    const isLastEmail = step >= 4;
-
-    // Update sequence entry
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/update_welcome_sequence`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          p_id: entry.id,
-          p_sequence_step: step,
-          p_last_email_sent_at: new Date().toISOString(),
-          p_next_email_at: isLastEmail ? null : new Date(Date.now() + 24 * 3600000).toISOString(),
-          p_status: isLastEmail ? "completed" : "active",
-          p_completed_at: isLastEmail ? new Date().toISOString() : null,
-        }),
-      }
-    );
-
+    // No DB to update — the welcome_sequence table is gone. Reporting
+    // success here means the email was dispatched; the cron can move on.
     return { success: true };
   } catch (e) {
     return { success: false, error: String(e) };
@@ -267,14 +239,10 @@ export async function resendWelcomeEmail(
     return { success: false, error: "Not authorized" };
   }
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/manual_resend_welcome_email`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_entry_id: entryId, p_step: 1 }),
-    }
-  );
-  if (!res.ok) return { success: false, error: "Failed to resend email" };
-  return { success: true };
+  void entryId;
+  void brandId;
+  // The welcome_sequence table is gone — there is nothing to look up
+  // and no draft email to redispatch from here. Manual resend is a
+  // no-op until a new persistence layer is added.
+  return { success: false, error: "Welcome sequence persistence has been retired" };
 }

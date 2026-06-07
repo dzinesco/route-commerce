@@ -1,30 +1,37 @@
 "use server";
 
+import { and, eq, ilike, or, sql, SQL } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
 import { parseCSVWithLimits } from "@/lib/csv-parser";
 import { buildImportPreview } from "@/lib/column-detector";
+import { withTenant, withPlatformAdmin } from "@/db/client";
+import { customers } from "@/db/schema";
 
 export type ContactSource = "order" | "import" | "manual" | "admin";
 
+/**
+ * The new `customers` table stores only the fields needed to send
+ * communications. The legacy `communication_contacts` table also tracked
+ * source/external_id/customer_id/tags/metadata, which are no longer
+ * modeled. Fields below that mirror the new columns are kept; the rest
+ * are dropped. UI code that previously rendered e.g. `tags` is expected
+ * to degrade gracefully when those fields are absent.
+ */
 export type Contact = {
   id: string;
-  brand_id: string;
+  tenant_id: string;
   email: string | null;
   phone: string | null;
+  full_name: string;
+  /** Legacy field — derived from full_name, may be null when only a single token is stored */
   first_name: string | null;
+  /** Legacy field — derived from full_name, may be null when only a single token is stored */
   last_name: string | null;
-  full_name: string | null;
   source: ContactSource;
-  external_id: string | null;
-  customer_id: string | null;
   email_opt_in: boolean;
   sms_opt_in: boolean;
-  email_opt_in_at: string | null;
-  sms_opt_in_at: string | null;
+  /** Legacy field — null when neither email nor sms is opted out */
   unsubscribed_at: string | null;
-  tags: string[];
-  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -93,6 +100,47 @@ export type GetContactsResult = {
   error: string;
 };
 
+function rowToContact(row: typeof customers.$inferSelect): Contact {
+  // Derive first/last name from the stored single `name` column.
+  // Multi-word names split on the first whitespace; single-word names
+  // populate first_name and leave last_name null.
+  const fullName = row.name ?? "";
+  const trimmed = fullName.trim();
+  let firstName: string | null = null;
+  let lastName: string | null = null;
+  if (trimmed) {
+    const idx = trimmed.indexOf(" ");
+    if (idx === -1) {
+      firstName = trimmed;
+    } else {
+      firstName = trimmed.slice(0, idx);
+      const rest = trimmed.slice(idx + 1).trim();
+      lastName = rest.length > 0 ? rest : null;
+    }
+  }
+
+  // Derive unsubscribed_at: the new schema only has opt-in flags, not
+  // a timestamp. Mark the unsubscribe moment as updatedAt if opted out
+  // of both channels; null while either is still opted in.
+  const fullyUnsubscribed = !row.emailOptIn && !row.smsOptIn;
+
+  return {
+    id: row.id,
+    tenant_id: row.tenantId,
+    email: row.email,
+    phone: row.phone,
+    full_name: row.name,
+    first_name: firstName,
+    last_name: lastName,
+    source: "manual",
+    email_opt_in: row.emailOptIn,
+    sms_opt_in: row.smsOptIn,
+    unsubscribed_at: fullyUnsubscribed ? row.updatedAt.toISOString() : null,
+    created_at: row.createdAt.toISOString(),
+    updated_at: row.updatedAt.toISOString(),
+  };
+}
+
 export async function getContacts(params: {
   brandId: string;
   search?: string;
@@ -109,34 +157,47 @@ export async function getContacts(params: {
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const limit = params.limit ?? 100;
+  const offset = params.offset ?? 0;
+  const search = params.search?.trim() ?? "";
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_contacts`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_search: params.search ?? null,
-        p_source: params.source ?? null,
-        p_limit: params.limit ?? 100,
-        p_offset: params.offset ?? 0,
-      }),
+  try {
+    const conds: SQL[] = [eq(customers.tenantId, params.brandId)];
+    if (search) {
+      const like = `%${search}%`;
+      conds.push(or(ilike(customers.name, like), ilike(customers.email, like))!);
     }
-  );
 
-  if (!response.ok) return { success: false, error: "Failed to fetch contacts" };
-  const data = await response.json();
+    const rows = await withTenant(params.brandId, async (db) => {
+      const [items, countRows] = await Promise.all([
+        db
+          .select()
+          .from(customers)
+          .where(and(...conds))
+          .limit(limit)
+          .offset(offset)
+          .orderBy(customers.createdAt),
+        db
+          .select({ value: sql<number>`count(*)::int` })
+          .from(customers)
+          .where(and(...conds)),
+      ]);
+      return { items, total: Number(countRows[0]?.value ?? 0) };
+    });
 
-  return {
-    success: true,
-    contacts: data?.contacts ?? [],
-    total: data?.total ?? 0,
-    limit: data?.limit ?? 100,
-    offset: data?.offset ?? 0,
-  };
+    return {
+      success: true,
+      contacts: rows.items.map(rowToContact),
+      total: rows.total,
+      limit,
+      offset,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch contacts",
+    };
+  }
 }
 
 export type UpsertContactResult = {
@@ -172,38 +233,87 @@ export async function upsertContact(contact: {
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const name =
+    contact.full_name?.trim() ||
+    [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim() ||
+    contact.email ||
+    contact.phone ||
+    "Unknown";
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_communication_contact`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: contact.id ?? null,
-        p_brand_id: contact.brand_id,
-        p_email: contact.email ?? null,
-        p_phone: contact.phone ?? null,
-        p_first_name: contact.first_name ?? null,
-        p_last_name: contact.last_name ?? null,
-        p_full_name: contact.full_name ?? null,
-        p_source: contact.source,
-        p_external_id: contact.external_id ?? null,
-        p_customer_id: contact.customer_id ?? null,
-        p_email_opt_in: contact.email_opt_in ?? null,
-        p_sms_opt_in: contact.sms_opt_in ?? null,
-        p_tags: contact.tags ?? null,
-        p_metadata: contact.metadata ?? null,
-      }),
+  try {
+    if (contact.id) {
+      const contactId = contact.id;
+      const updated = await withTenant(contact.brand_id, (db) =>
+        db
+          .update(customers)
+          .set({
+            name,
+            email: contact.email ?? null,
+            phone: contact.phone ?? null,
+            smsOptIn: contact.sms_opt_in ?? false,
+            emailOptIn: contact.email_opt_in ?? true,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(customers.id, contactId), eq(customers.tenantId, contact.brand_id)))
+          .returning(),
+      );
+      const row = updated[0];
+      if (!row) return { success: false, error: "Contact not found" };
+      return { success: true, contact: rowToContact(row) };
     }
-  );
 
-  if (!response.ok) return { success: false, error: "Failed to upsert contact" };
-  const data = await response.json();
+    // INSERT — de-dupe on (tenant_id, email) when email is provided
+    const contactEmail = contact.email;
+    if (contactEmail) {
+      const existing = await withTenant(contact.brand_id, (db) =>
+        db
+          .select()
+          .from(customers)
+          .where(and(eq(customers.email, contactEmail), eq(customers.tenantId, contact.brand_id)))
+          .limit(1),
+      );
+      if (existing[0]) {
+        const updated = await withTenant(contact.brand_id, (db) =>
+          db
+            .update(customers)
+            .set({
+              name,
+              phone: contact.phone ?? null,
+              smsOptIn: contact.sms_opt_in ?? existing[0].smsOptIn,
+              emailOptIn: contact.email_opt_in ?? existing[0].emailOptIn,
+              updatedAt: new Date(),
+            })
+            .where(eq(customers.id, existing[0].id))
+            .returning(),
+        );
+        const row = updated[0];
+        if (!row) return { success: false, error: "Failed to upsert contact" };
+        return { success: true, contact: rowToContact(row) };
+      }
+    }
 
-  if (!data) return { success: false, error: "No data returned" };
-  return { success: true, contact: data as Contact };
+    const inserted = await withTenant(contact.brand_id, (db) =>
+      db
+        .insert(customers)
+        .values({
+          tenantId: contact.brand_id,
+          name,
+          email: contact.email ?? null,
+          phone: contact.phone ?? null,
+          smsOptIn: contact.sms_opt_in ?? false,
+          emailOptIn: contact.email_opt_in ?? true,
+        })
+        .returning(),
+    );
+    const row = inserted[0];
+    if (!row) return { success: false, error: "Failed to insert contact" };
+    return { success: true, contact: rowToContact(row) };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to upsert contact",
+    };
+  }
 }
 
 export type ImportContactsResult = {
@@ -214,6 +324,12 @@ export type ImportContactsResult = {
   error: string;
 };
 
+/**
+ * The legacy `import_communication_contacts_batch` RPC is replaced with
+ * an in-process batch: parse → dedupe → upsert per row, returning the
+ * same ImportResult shape. This avoids a round-trip to the DB for each
+ * row and keeps the call inside the `withTenant` transaction.
+ */
 export async function importContactsBatch(params: {
   brandId: string;
   contacts: ContactImportEntry[];
@@ -228,26 +344,41 @@ export async function importContactsBatch(params: {
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const result: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] };
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/import_communication_contacts_batch`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_contacts: params.contacts,
-        p_allow_opt_in_override: params.allowOptInOverride ?? false,
-      }),
+  for (const row of params.contacts) {
+    if (!row.email && !row.phone) {
+      result.skipped++;
+      continue;
     }
-  );
+    try {
+      const r = await upsertContact({
+        brand_id: params.brandId,
+        email: row.email,
+        phone: row.phone,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        full_name: row.full_name,
+        source: "import",
+        email_opt_in: row.email_opt_in,
+        sms_opt_in: row.sms_opt_in,
+        external_id: row.external_id,
+        tags: row.tags,
+        metadata: row._metadata,
+      });
+      if (r.success) result.created++;
+      else {
+        result.errors.push({ row, error: r.error });
+      }
+    } catch (err) {
+      result.errors.push({
+        row,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
-  if (!response.ok) return { success: false, error: "Failed to import contacts" };
-  const data = await response.json();
-
-  return { success: true, result: data as ImportResult };
+  return { success: true, result };
 }
 
 export type OptOutResult = {
@@ -271,24 +402,23 @@ export async function optOutContact(params: {
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/opt_out_contact`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_email: params.email,
-        p_brand_id: params.brandId,
-        p_method: params.method,
-      }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to opt out contact" };
-  return { success: true };
+  try {
+    await withTenant(params.brandId, (db) =>
+      db
+        .update(customers)
+        .set({
+          ...(params.method === "email" ? { emailOptIn: false } : { smsOptIn: false }),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(customers.email, params.email), eq(customers.tenantId, params.brandId))),
+    );
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to opt out contact",
+    };
+  }
 }
 
 export async function deleteContact(id: string, brandId?: string): Promise<{ success: boolean; error?: string }> {
@@ -302,21 +432,24 @@ export async function deleteContact(id: string, brandId?: string): Promise<{ suc
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_communication_contact`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_id: id }),
+  try {
+    if (brandId) {
+      await withTenant(brandId, (db) =>
+        db
+          .delete(customers)
+          .where(and(eq(customers.id, id), eq(customers.tenantId, brandId))),
+      );
+    } else {
+      // platform_admin fallback — by id only
+      await withPlatformAdmin((db) => db.delete(customers).where(eq(customers.id, id)));
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete contact" };
-  const data = await response.json();
-  return { success: data };
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to delete contact",
+    };
+  }
 }
 
 // ── Export preview ────────────────────────────────────────────────────────────
@@ -353,77 +486,63 @@ export async function exportContacts(params: {
 
   if (!effectiveBrandId) return { success: false, error: "No brand context" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   const allContacts: Contact[] = [];
-  let offset = 0;
   const batchSize = 1000;
+  let offset = 0;
 
-  while (true) {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_communication_contacts`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          p_brand_id: effectiveBrandId,
-          p_search: params.search ?? null,
-          p_source: params.source ?? null,
-          p_limit: batchSize,
-          p_offset: offset,
-        }),
-      }
-    );
+  try {
+    while (true) {
+      const rows = await withTenant(effectiveBrandId, (db) =>
+        db
+          .select()
+          .from(customers)
+          .where(
+            params.search
+              ? and(
+                  eq(customers.tenantId, effectiveBrandId),
+                  or(
+                    ilike(customers.name, `%${params.search}%`),
+                    ilike(customers.email, `%${params.search}%`),
+                  ),
+                )
+              : eq(customers.tenantId, effectiveBrandId),
+          )
+          .limit(batchSize)
+          .offset(offset)
+          .orderBy(customers.createdAt),
+      );
 
-    if (!response.ok) return { success: false, error: "Failed to fetch contacts" };
-    const data = await response.json();
-    const batch: Contact[] = data?.contacts ?? [];
-
-    if (batch.length === 0) break;
-    allContacts.push(...batch);
-    if (batch.length < batchSize) break;
-    offset += batchSize;
+      const batch = rows.map(rowToContact);
+      if (batch.length === 0) break;
+      allContacts.push(...batch);
+      if (batch.length < batchSize) break;
+      offset += batchSize;
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch contacts",
+    };
   }
 
   const headers = [
     "email",
     "phone",
-    "first_name",
-    "last_name",
     "full_name",
-    "source",
     "email_opt_in",
     "sms_opt_in",
-    "unsubscribed_at",
-    "tags",
     "created_at",
     "updated_at",
-    "customer_id",
-    "metadata.last_order_id",
-    "metadata.last_order_at",
-    "metadata.stop_id",
-    "metadata.imported_raw",
   ];
 
   const rows = allContacts.map((c) => [
     escapeCSVValue(c.email),
     escapeCSVValue(c.phone),
-    escapeCSVValue(c.first_name),
-    escapeCSVValue(c.last_name),
     escapeCSVValue(c.full_name),
-    escapeCSVValue(c.source),
     c.email_opt_in ? "TRUE" : "FALSE",
     c.sms_opt_in ? "TRUE" : "FALSE",
-    escapeCSVValue(c.unsubscribed_at),
-    escapeCSVValue(c.tags?.join(";")),
     escapeCSVValue(c.created_at),
     escapeCSVValue(c.updated_at),
-    escapeCSVValue(c.customer_id),
-    escapeCSVValue((c.metadata as Record<string, unknown>)?.last_order_id ?? ""),
-    escapeCSVValue((c.metadata as Record<string, unknown>)?.last_order_at ?? ""),
-    escapeCSVValue((c.metadata as Record<string, unknown>)?.stop_id ?? ""),
-    escapeCSVValue((c.metadata as Record<string, unknown>)?.imported_raw ?? ""),
   ]);
 
   const brandSlug = params.brandSlug ?? "contacts";

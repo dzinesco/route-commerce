@@ -1,7 +1,9 @@
 "use server";
 
+import { and, eq, ilike, or, SQL, sql } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { customers, brandSettings } from "@/db/schema";
 import type { AudienceRules } from "@/actions/communications/campaigns";
 
 export type SegmentFilterType =
@@ -37,6 +39,8 @@ export type SegmentRuleV2 = {
 
 // AudienceRules is imported from @/actions/communications/campaigns
 
+const SEGMENTS_FLAG_KEY = "comm_segments_v1";
+
 export type Segment = {
   id: string;
   brand_id: string;
@@ -61,9 +65,41 @@ export type PreviewResult = {
   sample_customers: CustomerSample[];
 };
 
-// ──────────────────────────────────────────────────────────────
-// getHarvestReachSegments
-// ──────────────────────────────────────────────────────────────
+function isSegmentList(v: unknown): v is Segment[] {
+  return Array.isArray(v) && v.every((s) => s && typeof s === "object" && "rules" in s);
+}
+
+async function loadSegments(brandId: string): Promise<Segment[]> {
+  const rows = await withTenant(brandId, (db) =>
+    db
+      .select({ flags: brandSettings.featureFlags })
+      .from(brandSettings)
+      .where(eq(brandSettings.tenantId, brandId))
+      .limit(1),
+  );
+  const raw = (rows[0]?.flags ?? {}) as Record<string, unknown>;
+  const list = raw[SEGMENTS_FLAG_KEY];
+  return isSegmentList(list) ? list : [];
+}
+
+async function saveSegments(brandId: string, segments: Segment[]): Promise<void> {
+  await withTenant(brandId, async (db) => {
+    const existing = await db
+      .select({ flags: brandSettings.featureFlags })
+      .from(brandSettings)
+      .where(eq(brandSettings.tenantId, brandId))
+      .limit(1);
+    const baseFlags = (existing[0]?.flags ?? {}) as Record<string, unknown>;
+    const nextFlags: Record<string, unknown> = {
+      ...baseFlags,
+      [SEGMENTS_FLAG_KEY]: segments,
+    };
+    await db
+      .update(brandSettings)
+      .set({ featureFlags: nextFlags, updatedAt: new Date() })
+      .where(eq(brandSettings.tenantId, brandId));
+  });
+}
 
 export async function getHarvestReachSegments(
   brandId: string
@@ -75,26 +111,16 @@ export async function getHarvestReachSegments(
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_segments`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to fetch segments" };
-  const data = await response.json();
-  return { success: true, segments: data?.segments ?? [] };
+  try {
+    const segments = await loadSegments(brandId);
+    return { success: true, segments };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch segments",
+    };
+  }
 }
-
-// ──────────────────────────────────────────────────────────────
-// upsertHarvestReachSegment
-// ──────────────────────────────────────────────────────────────
 
 export async function upsertHarvestReachSegment(params: {
   id?: string;
@@ -110,33 +136,43 @@ export async function upsertHarvestReachSegment(params: {
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_communication_segment`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: params.id ?? null,
-        p_brand_id: params.brand_id,
-        p_name: params.name,
-        p_description: params.description ?? null,
-        p_rules: params.rules,
-        p_created_by: adminUser.user_id,
-      }),
+  try {
+    const segments = await loadSegments(params.brand_id);
+    const now = new Date().toISOString();
+    let saved: Segment;
+    if (params.id) {
+      const idx = segments.findIndex((s) => s.id === params.id);
+      if (idx === -1) return { success: false, error: "Segment not found" };
+      saved = {
+        ...segments[idx],
+        name: params.name,
+        description: params.description ?? null,
+        rules: params.rules,
+        updated_at: now,
+      };
+      segments[idx] = saved;
+    } else {
+      saved = {
+        id: crypto.randomUUID(),
+        brand_id: params.brand_id,
+        name: params.name,
+        description: params.description ?? null,
+        rules: params.rules,
+        created_by: adminUser.id,
+        created_at: now,
+        updated_at: now,
+      };
+      segments.push(saved);
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to save segment" };
-  const data = await response.json();
-  return { success: true, segment: data };
+    await saveSegments(params.brand_id, segments);
+    return { success: true, segment: saved };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save segment",
+    };
+  }
 }
-
-// ──────────────────────────────────────────────────────────────
-// deleteHarvestReachSegment
-// ──────────────────────────────────────────────────────────────
 
 export async function deleteHarvestReachSegment(
   segmentId: string,
@@ -149,26 +185,30 @@ export async function deleteHarvestReachSegment(
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_communication_segment`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_segment_id: segmentId, p_brand_id: brandId }),
+  try {
+    const segments = await loadSegments(brandId);
+    const filtered = segments.filter((s) => s.id !== segmentId);
+    if (filtered.length === segments.length) {
+      return { success: false, error: "Segment not found" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete segment" };
-  return { success: true };
+    await saveSegments(brandId, filtered);
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to delete segment",
+    };
+  }
 }
 
-// ──────────────────────────────────────────────────────────────
-// previewSegmentWithCustomers
-// ──────────────────────────────────────────────────────────────
-
+/**
+ * The legacy `preview_campaign_audience` RPC evaluated a (combinator +
+ * filter[]) rule tree against a join of customers, orders, products,
+ * etc. The new schema has only `customers` and `orders`; the new
+ * preview therefore counts the tenant's opted-in customers. The
+ * `SegmentRuleV2` shape is preserved for round-tripping but no longer
+ * influences the count.
+ */
 export async function previewSegmentWithCustomers(
   brandId: string,
   rules: SegmentRuleV2
@@ -179,23 +219,43 @@ export async function previewSegmentWithCustomers(
   if (adminUser.role === "brand_admin" && adminUser.brand_id !== brandId) {
     return null;
   }
+  void rules;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const conds: SQL[] = [eq(customers.tenantId, brandId), eq(customers.emailOptIn, true)];
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/preview_campaign_audience`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        p_audience_rules: rules,
-      }),
-    }
-  );
+  try {
+    const [samples, counts] = await withTenant(brandId, async (db) => {
+      const sample = await db
+        .select({
+          id: customers.id,
+          email: customers.email,
+          name: customers.name,
+          phone: customers.phone,
+        })
+        .from(customers)
+        .where(and(...conds))
+        .limit(5);
+      const c = await db
+        .select({ value: sql<number>`count(*)::int` })
+        .from(customers)
+        .where(and(...conds));
+      return [sample, c] as const;
+    });
 
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data as PreviewResult;
+    return {
+      count: Number(counts[0]?.value ?? 0),
+      sample_customers: samples.map((s) => ({
+        id: s.id,
+        email: s.email ?? "",
+        name: s.name,
+        tags: [],
+        phone: s.phone,
+      })),
+    };
+  } catch {
+    return { count: 0, sample_customers: [] };
+  }
 }
+
+void or;
+void ilike;

@@ -1,12 +1,14 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+/**
+ * The new schema does not have an `abandoned_carts` table. The legacy
+ * "detect abandoned wholesale carts, enroll them, and run a 3-step
+ * recovery email sequence" feature has been retired. The mailer
+ * functions below still build and dispatch Resend messages, but the
+ * detection, enrollment, and persistence layer are gone.
+ */
 
 export type AbandonedCart = {
   id: string;
@@ -38,7 +40,6 @@ export type GetAbandonedCartsResult = {
 
 // ── Sequence email intervals ───────────────────────────────────────────────────
 
-const EMAIL_INTERVALS_HOURS = [1, 24, 48] as const;
 const LOCALE_CART_SUBJECT: Record<string, Record<number, { subject: string; heading: string; body: string }>> = {
   en: {
     1: {
@@ -65,7 +66,7 @@ const LOCALE_CART_SUBJECT: Record<string, Record<number, { subject: string; head
     },
     2: {
       subject: "¿Aún lo estás pensando? Tu carrito sigue aquí",
-      heading: "Un pequeño recordatorio",
+      heading: "Un pequeño record",
       body: "Tu pedido al por mayor aún está esperando. Reserva tu fecha de recogida antes de que se llene.",
     },
     3: {
@@ -86,28 +87,13 @@ export async function getAbandonedCarts(brandId: string): Promise<GetAbandonedCa
     return { success: false, error: "Not authorized" };
   }
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_abandoned_carts`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-  if (!res.ok) return { success: false, error: "Failed to fetch abandoned carts" };
-  const data = await res.json();
-  // Supabase TABLE(func) returns [{carts: ...}] — extract from first row
-  const row = Array.isArray(data) ? data[0] : data;
-  const carts: AbandonedCart[] = row?.carts ?? [];
+  void brandId;
+  // The abandoned_carts table has been retired. Return an empty list
+  // and zeroed stats. The admin dashboard degrades to the empty state.
   return {
     success: true,
-    carts,
-    stats: {
-      total: carts.length,
-      recovered: carts.filter(c => c.status === "recovered").length,
-      active: carts.filter(c => c.status === "active").length,
-      expired: carts.filter(c => c.status === "expired").length,
-    },
+    carts: [],
+    stats: { total: 0, recovered: 0, active: 0, expired: 0 },
   };
 }
 
@@ -124,20 +110,9 @@ export async function manuallyCloseAbandonedCart(
     return { success: false, error: "Not authorized" };
   }
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_abandoned_cart`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: cartId,
-        p_status: "manually_closed",
-        p_manually_closed_by: adminUser.id,
-      }),
-    }
-  );
-  if (!res.ok) return { success: false, error: "Failed to close cart" };
-  return { success: true };
+  void cartId;
+  void brandId;
+  return { success: false, error: "Abandoned-cart persistence has been retired" };
 }
 
 // ── Build email HTML ───────────────────────────────────────────────────────────
@@ -217,6 +192,7 @@ export async function sendAbandonedCartEmail(
     adminUrl,
   });
 
+  void brandId;
   const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
   if (!RESEND_API_KEY) return { success: false, error: "Resend not configured" };
 
@@ -241,25 +217,6 @@ export async function sendAbandonedCartEmail(
       return { success: false, error: err };
     }
 
-    const data = await res.json();
-
-    // Update cart record
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/update_abandoned_cart`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          p_id: cart.id,
-          p_sequence_step: step,
-          p_last_email_sent_at: new Date().toISOString(),
-          p_next_email_at: step < 3 ? new Date(Date.now() + EMAIL_INTERVALS_HOURS[step] * 3600000).toISOString() : null,
-          p_status: step >= 3 ? "expired" : "active",
-          p_expired_at: step >= 3 ? new Date().toISOString() : null,
-        }),
-      }
-    );
-
     return { success: true };
   } catch (e) {
     return { success: false, error: String(e) };
@@ -279,32 +236,15 @@ export async function resendAbandonedCartEmail(
     return { success: false, error: "Not authorized" };
   }
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/manual_resend_abandoned_cart_email`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_cart_id: cartId, p_step: 1 }),
-    }
-  );
-  if (!res.ok) return { success: false, error: "Failed to resend email" };
-  return { success: true };
+  void cartId;
+  void brandId;
+  return { success: false, error: "Abandoned-cart persistence has been retired" };
 }
 
 // ── Mark cart as recovered when order is placed ────────────────────────────────
 
 export async function markCartRecovered(cartId: string, orderId: string): Promise<void> {
-  await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_abandoned_cart`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: cartId,
-        p_status: "recovered",
-        p_recovered_order_id: orderId,
-        p_recovered_at: new Date().toISOString(),
-      }),
-    }
-  );
+  void cartId;
+  void orderId;
+  // No DB call — abandoned_carts persistence is gone.
 }
