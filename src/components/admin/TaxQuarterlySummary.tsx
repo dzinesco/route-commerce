@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getTaxSummaryAction } from "@/actions/tax";
 
 type TaxSummaryData = {
   total_tax_collected: number;
@@ -29,31 +30,26 @@ export default function TaxQuarterlySummary({ brandId }: { brandId: string }) {
 
   useEffect(() => {
     const range = quarterDateRange();
-    fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/get_tax_summary`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-        body: JSON.stringify({
-          p_brand_id: brandId,
-          p_start_date: range.start,
-          p_end_date: range.end,
-        }),
-      }
-    )
-      .then((r) => r.json())
-      .then((d) => {
+    let cancelled = false;
+    (async () => {
+      const result = await getTaxSummaryAction({
+        brandId,
+        startDate: range.start,
+        endDate: range.end,
+      });
+      if (cancelled) return;
+      if (result.success) {
         setData({
-          total_tax_collected: Number(d?.total_tax_collected ?? 0),
-          total_gross_sales: Number(d?.total_gross_sales ?? 0),
-          order_count: Number(d?.order_count ?? 0),
+          total_tax_collected: result.data.total_tax_collected,
+          total_gross_sales: result.data.total_gross_sales,
+          order_count: result.data.order_count,
         });
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [brandId]);
 
   if (loading) {

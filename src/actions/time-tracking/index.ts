@@ -1,18 +1,26 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
 import { mockWorkers, mockTasks, mockTimeEntries } from "@/lib/mock-data";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// TODO(migration): the time-tracking admin RPCs (get_time_tracking_workers,
+// create_time_worker, reset_time_worker_pin, update_time_worker,
+// delete_time_worker, create_time_task, update_time_task,
+// delete_time_task, get_worker_time_logs, update_worker_time_log,
+// delete_worker_time_log, get_time_tracking_summary,
+// get_time_tracking_settings, update_time_tracking_settings,
+// get_time_tracking_notification_log, check_and_notify_overtime) and
+// the underlying tables (`time_workers`, `time_tasks`, `time_logs`,
+// `time_tracking_settings`, `time_tracking_notification_log`) were
+// not carried over into the SaaS rebuild's `db/schema/`. The actions
+// below preserve the original signatures and return mock data when
+// `NEXT_PUBLIC_USE_MOCK_DATA === "true"`, but the real RPC paths now
+// return empty/empty-list results. To bring time tracking back, add
+// the tables to `db/schema/` and re-implement against Drizzle. See
+// `actions/route-trace/lots.ts` for the same pattern.
 
 // Mock mode flag - only enabled when explicitly set
 const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
-
-function rpcBody(body: Record<string, unknown>) {
-  return JSON.stringify(body);
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -76,107 +84,43 @@ export async function getTimeTrackingWorkers(brandId: string): Promise<TimeWorke
       worker_number: null,
     }));
   }
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_time_tracking_workers`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId }),
-    }
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data?.workers ?? []).map((w: Record<string, unknown>) => ({
-    id: w.id as string,
-    brand_id: w.brand_id as string,
-    name: w.name as string,
-    role: w.role as string,
-    lang: w.lang as string,
-    pin: w.pin as string,
-    active: w.active as boolean,
-    last_used_at: w.last_used_at as string | null,
-    created_at: w.created_at as string,
-    worker_number: w.worker_number as number | null,
-  }));
+  // Time tracking tables not in SaaS rebuild — return empty list.
+  return [];
 }
 
 export async function createTimeWorker(
-  brandId: string,
-  name: string,
-  role = "worker",
-  lang = "en"
+  _brandId: string,
+  _name: string,
+  _role = "worker",
+  _lang = "en"
 ): Promise<{ success: boolean; worker?: TimeWorker; pin?: string; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/create_time_worker`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId, p_name: name, p_role: role, p_lang: lang }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true, worker: data.worker, pin: data.pin };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
-export async function resetTimeWorkerPin(workerId: string): Promise<{ success: boolean; pin?: string; error?: string }> {
+export async function resetTimeWorkerPin(_workerId: string): Promise<{ success: boolean; pin?: string; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/reset_time_worker_pin`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_worker_id: workerId }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true, pin: data.pin };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
 export async function updateTimeWorker(
-  workerId: string,
-  name: string,
-  role: string,
-  lang: string,
-  active: boolean
+  _workerId: string,
+  _name: string,
+  _role: string,
+  _lang: string,
+  _active: boolean
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_time_worker`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_worker_id: workerId, p_name: name, p_role: role, p_lang: lang, p_active: active }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
-export async function deleteTimeWorker(workerId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteTimeWorker(_workerId: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_time_worker`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_worker_id: workerId }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
 // ── Tasks ────────────────────────────────────────────────────────────────────
@@ -192,88 +136,45 @@ export async function getTimeTrackingTasks(brandId: string, activeOnly = false):
       sort_order: t.sort_order,
     }));
   }
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_time_tracking_tasks`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId, p_active_only: activeOnly }),
-    }
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data?.tasks ?? [];
+  return [];
 }
 
 export async function createTimeTask(
-  brandId: string,
-  name: string,
-  nameEs: string | null = null,
-  unit = "hours",
-  sortOrder = 0
+  _brandId: string,
+  _name: string,
+  _nameEs: string | null = null,
+  _unit = "hours",
+  _sortOrder = 0
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/create_time_task`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId, p_name: name, p_name_es: nameEs, p_unit: unit, p_sort_order: sortOrder }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true, id: data.id };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
 export async function updateTimeTask(
-  taskId: string,
-  name: string,
-  nameEs: string,
-  unit: string,
-  active: boolean,
-  sortOrder: number
+  _taskId: string,
+  _name: string,
+  _nameEs: string,
+  _unit: string,
+  _active: boolean,
+  _sortOrder: number
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_time_task`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_task_id: taskId, p_name: name, p_name_es: nameEs, p_unit: unit, p_active: active, p_sort_order: sortOrder }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
-export async function deleteTimeTask(taskId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteTimeTask(_taskId: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_time_task`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_task_id: taskId }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
 // ── Time Logs ─────────────────────────────────────────────────────────────────
 
 export async function getWorkerTimeLogs(
   brandId: string,
-  options: {
+  _options: {
     workerId?: string;
     taskId?: string;
     start?: string;
@@ -285,8 +186,8 @@ export async function getWorkerTimeLogs(
   if (useMockData) {
     // Filter by worker, task, date range
     let entries = mockTimeEntries.filter(e => e.brand_id === brandId);
-    if (options.workerId) entries = entries.filter(e => e.worker_id === options.workerId);
-    
+    if (_options.workerId) entries = entries.filter(e => e.worker_id === _options.workerId);
+
     return entries.map(e => {
       const worker = mockWorkers.find(w => w.id === e.worker_id);
       const task = mockTasks.find(t => t.id === e.task_id);
@@ -306,83 +207,36 @@ export async function getWorkerTimeLogs(
       };
     });
   }
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_worker_time_logs`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({
-        p_brand_id: brandId,
-        p_worker_id: options.workerId ?? null,
-        p_task_id: options.taskId ?? null,
-        p_start: options.start ?? null,
-        p_end: options.end ?? null,
-        p_limit: options.limit ?? 200,
-        p_offset: options.offset ?? 0,
-      }),
-    }
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data?.logs ?? [];
+  return [];
 }
 
 export async function updateWorkerTimeLog(
-  logId: string,
-  taskName: string,
-  clockIn: string,
-  clockOut: string | null,
-  lunchMinutes: number,
-  notes: string | null
+  _logId: string,
+  _taskName: string,
+  _clockIn: string,
+  _clockOut: string | null,
+  _lunchMinutes: number,
+  _notes: string | null
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_worker_time_log`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({
-        p_log_id: logId,
-        p_task_name: taskName,
-        p_clock_in: clockIn,
-        p_clock_out: clockOut,
-        p_lunch_minutes: lunchMinutes,
-        p_notes: notes,
-      }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
-export async function deleteWorkerTimeLog(logId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteWorkerTimeLog(_logId: string): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_worker_time_log`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_log_id: logId }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
 export async function getTimeTrackingSummary(
   brandId: string,
-  start: string,
-  end: string
+  _start: string,
+  _end: string
 ): Promise<TimeSummary> {
   if (useMockData) {
     const entries = mockTimeEntries.filter(e => e.brand_id === brandId);
-    
+
     // Calculate by worker
     const workerMap = new Map<string, { id: string; name: string; total_hours: number; entry_count: number }>();
     entries.forEach(e => {
@@ -392,7 +246,7 @@ export async function getTimeTrackingSummary(
       existing.entry_count += 1;
       workerMap.set(e.worker_id, existing);
     });
-    
+
     // Calculate by task
     const taskMap = new Map<string, { id: string; name: string; name_es: string | null; total_hours: number; entry_count: number }>();
     entries.forEach(e => {
@@ -402,7 +256,7 @@ export async function getTimeTrackingSummary(
       existing.entry_count += 1;
       taskMap.set(e.task_id, existing);
     });
-    
+
     return {
       by_worker: Array.from(workerMap.values()),
       by_task: Array.from(taskMap.values()),
@@ -413,16 +267,7 @@ export async function getTimeTrackingSummary(
       },
     };
   }
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_time_tracking_summary`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId, p_start: start, p_end: end }),
-    }
-  );
-  if (!res.ok) return { by_worker: [], by_task: [], totals: { entry_count: 0, total_hours: 0, open_count: 0 } };
-  return res.json();
+  return { by_worker: [], by_task: [], totals: { entry_count: 0, total_hours: 0, open_count: 0 } };
 }
 
 // ── Time Tracking Settings ─────────────────────────────────────────────────────
@@ -467,22 +312,13 @@ export async function getTimeTrackingSettings(brandId: string): Promise<TimeTrac
       brand_name: "Tuxedo Corn",
     };
   }
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_time_tracking_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId }),
-    }
-  );
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data;
+  // Real RPC not in SaaS rebuild.
+  return null;
 }
 
 export async function updateTimeTrackingSettings(
-  brandId: string,
-  settings: {
+  _brandId: string,
+  _settings: {
     pay_period_start_day: number;
     pay_period_length_days: number;
     daily_overtime_threshold: number;
@@ -501,34 +337,7 @@ export async function updateTimeTrackingSettings(
 ): Promise<{ success: boolean; error?: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_time_tracking_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({
-        p_brand_id: brandId,
-        p_pay_period_start_day: settings.pay_period_start_day,
-        p_pay_period_length_days: settings.pay_period_length_days,
-        p_daily_threshold: settings.daily_overtime_threshold,
-        p_weekly_threshold: settings.weekly_overtime_threshold,
-        p_overtime_multiplier: settings.overtime_multiplier,
-        p_overtime_notifications: settings.overtime_notifications,
-        p_notification_emails: settings.notification_emails ?? null,
-        p_notification_sms_numbers: settings.notification_sms_numbers ?? null,
-        p_enable_daily_alerts: settings.enable_daily_alerts ?? null,
-        p_enable_weekly_alerts: settings.enable_weekly_alerts ?? null,
-        p_daily_alert_threshold: settings.daily_alert_threshold ?? null,
-        p_weekly_alert_threshold: settings.weekly_alert_threshold ?? null,
-        p_send_end_of_period_summary: settings.send_end_of_period_summary ?? null,
-        p_brand_name: settings.brand_name ?? null,
-      }),
-    }
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return { success: false, error: data?.error ?? "Failed" };
-  return { success: true };
+  return { success: false, error: "Time tracking is not configured" };
 }
 
 // ── Notification Log ─────────────────────────────────────────────────────────
@@ -549,22 +358,8 @@ export type NotificationLogEntry = {
 };
 
 export async function getTimeTrackingNotificationLog(
-  brandId: string,
-  limit = 100
+  _brandId: string,
+  _limit = 100
 ): Promise<NotificationLogEntry[]> {
-  if (useMockData) {
-    // Return empty log in mock mode
-    return [];
-  }
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_time_tracking_notification_log`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: rpcBody({ p_brand_id: brandId, p_limit: limit }),
-    }
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data ?? [];
+  return [];
 }

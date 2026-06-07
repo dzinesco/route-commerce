@@ -1,10 +1,13 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// TODO(migration): the `check_and_notify_overtime` SECURITY DEFINER
+// RPC and the time-tracking notification tables are not part of the
+// SaaS rebuild schema. The function below is a stub that returns
+// `{ sent: false }` so the cron-style caller (`/api/time-tracking/notify`)
+// degrades gracefully. See `actions/route-trace/lots.ts` for the
+// same pattern.
 
 export type OvertimeCheckResult = {
   sent: boolean;
@@ -14,35 +17,18 @@ export type OvertimeCheckResult = {
 };
 
 export async function checkAndNotifyOvertime(
-  brandId: string,
-  workerId: string,
-  workerName: string,
-  dailyHours: number,
-  weeklyHours: number
+  _brandId: string,
+  _workerId: string,
+  _workerName: string,
+  _dailyHours: number,
+  _weeklyHours: number
 ): Promise<OvertimeCheckResult> {
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/check_and_notify_overtime`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        p_worker_id: workerId,
-        p_worker_name: workerName,
-        p_daily_hours: dailyHours,
-        p_weekly_hours: weeklyHours,
-      }),
-    }
-  );
-  if (!res.ok) {
-    const err = await res.text();
-    return { sent: false, message: err };
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
+    return { sent: false, message: "Not authenticated" };
   }
-  const data = await res.json();
   return {
-    sent: Boolean(data?.sent),
-    trigger_type: data?.trigger_type,
-    message: data?.message,
-    notification_log_id: data?.notification_log_id,
+    sent: false,
+    message: "Time tracking is not configured in the SaaS rebuild",
   };
 }

@@ -1,8 +1,21 @@
+/**
+ * Wholesale price-sheet sender.
+ *
+ * TODO(migration): wholesale_customers and the
+ * `enqueue_wholesale_notification` SECURITY DEFINER RPC live in the
+ * legacy schema. Reads are converted to `pool.query`; the
+ * `enqueue_wholesale_notification` RPC is still in the database
+ * (supabase/migrations/054) and is called via `pool.query` rather
+ * than the Supabase REST gateway. When wholesale is reactivated,
+ * move the tables into `db/schema/wholesale.ts` and switch reads to
+ * typed Drizzle.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { getWholesaleSettings, getWholesaleProducts } from "@/actions/wholesale";
-import { getWholesaleCustomer } from "@/actions/wholesale-register";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { assertBrandAccess } from "@/lib/brand-scope";
+import { pool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -31,16 +44,13 @@ export async function POST(req: NextRequest) {
   if (!effectiveBrandId) {
     return NextResponse.json({ error: "Brand ID required" }, { status: 400 });
   }
-  if (adminUser.role === "brand_admin" && adminUser.brand_id !== brandId) {
+  try { assertBrandAccess(adminUser, effectiveBrandId); } catch {
     return NextResponse.json({ error: "Not authorized for this brand" }, { status: 403 });
   }
 
   if (!customerIds?.length || !effectiveBrandId) {
     return NextResponse.json({ error: "customerIds array and brandId are required" }, { status: 400 });
   }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   // Fetch brand settings for branding + pickup location
   const settings = await getWholesaleSettings(effectiveBrandId);
@@ -142,44 +152,48 @@ ${hasCustomNote ? `      <p style="margin: 0 0 12px; color: #1e293b; font-size: 
   let failed = 0;
 
   for (const customerId of customerIds) {
-    // Fetch customer email
-    const custRes = await fetch(
-      `${supabaseUrl}/rest/v1/wholesale_customers?id=eq.${customerId}&select=id,email,company_name,brand_id`,
-      { headers: { ...svcHeaders(supabaseKey) } }
+    // Fetch customer email via raw SQL
+    const { rows: customers } = await pool.query<{
+      id: string;
+      email: string | null;
+      company_name: string | null;
+      brand_id: string | null;
+    }>(
+      `SELECT id::text AS id, email, company_name, brand_id::text AS brand_id
+       FROM wholesale_customers
+       WHERE id = $1
+       LIMIT 1`,
+      [customerId]
     );
-    if (!custRes.ok) { failed++; continue; }
-    const customers = await custRes.json() as Array<{ id: string; email: string; company_name: string; brand_id: string }>;
     const customer = customers[0];
     if (!customer?.email) { failed++; continue; }
 
-    const enqueueRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/enqueue_wholesale_notification`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          p_brand_id: effectiveBrandId,
-          p_customer_id: customerId,
-          p_order_id: null,
-          p_type: "price_sheet",
-          p_email_to: customer.email,
-          p_email_cc: settings.notification_email ?? null,
-          p_subject: emailSubject,
-          p_body_html: html,
-          p_body_text: text,
-        }),
-      }
-    );
-
-    if (enqueueRes.ok) {
+    try {
+      await pool.query(
+        "SELECT enqueue_wholesale_notification($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        [
+          effectiveBrandId,
+          customerId,
+          null,
+          "price_sheet",
+          customer.email,
+          settings.notification_email ?? null,
+          emailSubject,
+          html,
+          text,
+        ]
+      );
       enqueued++;
-    } else {
+    } catch {
       failed++;
     }
   }
 
   // Fire-and-forget trigger to process the queue
-  fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL!}/api/wholesale/notifications/send`, {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ??
+    (req.nextUrl ? `${req.nextUrl.protocol}//${req.nextUrl.host}` : "http://localhost:3000");
+  fetch(`${baseUrl}/api/wholesale/notifications/send`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
   }).catch(() => {});

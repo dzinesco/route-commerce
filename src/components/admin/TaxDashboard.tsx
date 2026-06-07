@@ -8,6 +8,11 @@ import {
   type TaxOrderRow,
   type TaxByStateRow,
 } from "@/lib/reports-export";
+import {
+  getTaxSummaryAction,
+  getTaxableOrdersAction,
+  type TaxSummaryData,
+} from "@/actions/tax";
 import { AdminButton, AdminFilterTabs } from "@/components/admin/design-system";
 
 type DatePreset = "month" | "quarter" | "this_year" | "custom";
@@ -44,17 +49,7 @@ function quarterLabel(start: string, end: string): string {
   return `Q${q} ${s.getFullYear()}`;
 }
 
-type TaxSummaryData = {
-  total_tax_collected: number;
-  total_gross_sales: number;
-  order_count: number;
-  tax_by_state: Array<{
-    state: string;
-    total_tax: number;
-    gross_sales: number;
-    order_count: number;
-  }>;
-};
+type TaxSummaryDataLocal = TaxSummaryData;
 
 function SummaryCard({
   label,
@@ -143,7 +138,7 @@ export default function TaxDashboard({
   const [customEnd, setCustomEnd] = useState("");
   const [selectedBrandId, setSelectedBrandId] = useState<string>(initialBrandId ?? "");
   const [activeTab, setActiveTab] = useState("summary");
-  const [summary, setSummary] = useState<TaxSummaryData | null>(null);
+  const [summary, setSummary] = useState<TaxSummaryDataLocal | null>(null);
   const [orders, setOrders] = useState<TaxOrderRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,29 +151,13 @@ export default function TaxDashboard({
     setError(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/get_tax_summary`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          },
-          body: JSON.stringify({
-            p_brand_id: selectedBrandId,
-            p_start_date: range.start,
-            p_end_date: range.end,
-          }),
-        }
-      );
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setSummary({
-        total_tax_collected: Number(data?.total_tax_collected ?? 0),
-        total_gross_sales: Number(data?.total_gross_sales ?? 0),
-        order_count: Number(data?.order_count ?? 0),
-        tax_by_state: data?.tax_by_state ?? [],
+      const result = await getTaxSummaryAction({
+        brandId: selectedBrandId,
+        startDate: range.start,
+        endDate: range.end,
       });
+      if (!result.success) throw new Error(result.error);
+      setSummary(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tax summary");
     } finally {
@@ -192,36 +171,13 @@ export default function TaxDashboard({
     setError(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/get_taxable_orders`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          },
-          body: JSON.stringify({
-            p_brand_id: selectedBrandId,
-            p_start_date: range.start,
-            p_end_date: range.end,
-          }),
-        }
-      );
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setOrders(
-        (data ?? []).map((row: Record<string, unknown>) => ({
-          order_id: String(row.order_id ?? ""),
-          date: String(row.date ?? ""),
-          customer_name: String(row.customer_name ?? ""),
-          city: String(row.city ?? ""),
-          state: String(row.state ?? ""),
-          taxable_amount: Number(row.taxable_amount ?? 0),
-          tax_amount: Number(row.tax_amount ?? 0),
-          tax_rate: Number(row.tax_rate ?? 0),
-          tax_location: String(row.tax_location ?? ""),
-        }))
-      );
+      const result = await getTaxableOrdersAction({
+        brandId: selectedBrandId,
+        startDate: range.start,
+        endDate: range.end,
+      });
+      if (!result.success) throw new Error(result.error);
+      setOrders(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load orders");
     } finally {

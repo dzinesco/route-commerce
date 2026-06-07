@@ -226,3 +226,37 @@ export async function getAdminOrderDetail(orderId: string): Promise<AdminOrderDe
     return null;
   }
 }
+
+/**
+ * Toggle the `pickup_complete` flag on the legacy `orders` table.
+ * TODO(migration): the SaaS rebuild's `orders` table (db/schema/orders.ts)
+ * doesn't carry a `pickup_complete` column. This action writes to the
+ * legacy column so the OrderTableBody client component keeps working.
+ * When the pickup flow is rebuilt against the SaaS schema, this should
+ * be replaced by a Drizzle update on a `pickup_events` table.
+ */
+export async function toggleOrderPickupComplete(params: {
+  orderId: string;
+  pickupComplete: boolean;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  const adminUser = await getAdminUser();
+  if (!adminUser) return { success: false, error: "Not authenticated" };
+  if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
+
+  try {
+    await pool.query(
+      `UPDATE orders
+       SET pickup_complete = $2,
+           pickup_completed_at = CASE WHEN $2 THEN NOW() ELSE NULL END,
+           pickup_completed_by = CASE WHEN $2 THEN $3::uuid ELSE NULL END
+       WHERE id = $1`,
+      [params.orderId, params.pickupComplete, adminUser.user_id],
+    );
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to update pickup status",
+    };
+  }
+}

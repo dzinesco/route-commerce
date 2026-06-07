@@ -1,128 +1,43 @@
 "use server";
 
+/**
+ * Wholesale customer authentication.
+ *
+ * TODO(migration): The original implementation used Supabase's
+ * `auth.signInWithPassword` for email/password login of wholesale
+ * customers. Now that Supabase is being removed, the wholesale
+ * customer auth needs to be rebuilt on top of Auth.js v5 (or a
+ * custom bcrypt + cookie session) before this module can be re-enabled.
+ *
+ * Until that lands, the actions below are stubbed: they preserve the
+ * original signatures so the login form renders without runtime
+ * errors, but always return a friendly "not available" error.
+ *
+ * Re-enable by:
+ *   1. Adding a `wholesale_customers` table (or extending
+ *      `db/schema/customers.ts` with `password_hash` + `auth_user_id`).
+ *   2. Wiring up the chosen auth provider in `src/lib/auth.ts`.
+ *   3. Setting the `wholesale_session` cookie with the resolved
+ *      customer id.
+ */
+
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
-import { pool } from "@/lib/db";
 
 export type WholesaleLoginResult =
   | { success: true; token: string; userId: string; customerId: string }
   | { success: false; error: string };
 
-export async function wholesaleLoginAction(formData: FormData): Promise<WholesaleLoginResult> {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+const NOT_AVAILABLE_ERROR =
+  "Wholesale customer login is temporarily unavailable while we rebuild authentication. Please contact your account manager.";
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const cookieStore = await cookies();
-  const request = new NextRequest("http://localhost/wholesale/login", {
-    headers: new Headers(),
-  });
-  const response = NextResponse.next({ request });
-
-  const { createServerClient } = await import("@supabase/ssr");
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet, headers) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-        Object.entries(headers).forEach(([key, value]) => {
-          response.headers.set(key, value);
-        });
-      },
-    },
-  });
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error || !data.user) {
-    return { success: false, error: error?.message ?? "Invalid credentials" };
-  }
-
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
-
-  if (!token) {
-    return { success: false, error: "No session returned from auth" };
-  }
-
-  // Find the wholesale customer record for this user (SECURITY DEFINER RPC).
-  // The result is intentionally not consumed here — the portal page resolves
-  // the actual customer on load using the cookie's access_token.
-  try {
-    await pool.query(
-      "SELECT * FROM get_wholesale_customer_by_user($1, $2)",
-      ["00000000-0000-0000-0000-000000000000", data.user.id]
-    );
-  } catch {
-    // Customer may not be linked yet; portal will resolve.
-  }
-
-  // If no brand_id known, try all brands — just use first active one found
-  // For now, set the cookie with user_id and a placeholder; portal will resolve proper customer
-  response.cookies.set("wholesale_session", JSON.stringify({
-    user_id: data.user.id,
-    access_token: token,
-  }), {
-    path: "/",
-    maxAge: 3600 * 24 * 7,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: false,
-  });
-
-  // Also set the standard auth token for RPC calls
-  response.cookies.set("sb-wnzkhezyhnfzhkhiflrp-auth-token", token, {
-    path: "/",
-    maxAge: 3600 * 24 * 7,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: false,
-  });
-
-  return {
-    success: true,
-    token,
-    userId: data.user.id,
-    customerId: "pending", // resolved by portal page on load
-  };
+export async function wholesaleLoginAction(_formData: FormData): Promise<WholesaleLoginResult> {
+  return { success: false, error: NOT_AVAILABLE_ERROR };
 }
 
-export async function wholesaleLogoutAction() {
+export async function wholesaleLogoutAction(): Promise<{ success: true } | { success: false; error: string }> {
   const cookieStore = await cookies();
-  const request = new NextRequest("http://localhost/wholesale/portal", {
-    headers: new Headers(),
-  });
-  const response = NextResponse.next({ request });
-
-  response.cookies.delete("wholesale_session");
-
-  const { createServerClient } = await import("@supabase/ssr");
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet, headers) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  await supabase.auth.signOut();
-
+  // Best-effort cookie cleanup so a returning customer doesn't see stale state
+  cookieStore.delete("wholesale_session");
+  cookieStore.delete("sb-wnzkhezyhnfzhkhiflrp-auth-token");
   return { success: true };
 }

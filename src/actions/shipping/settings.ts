@@ -1,7 +1,20 @@
 "use server";
 
+/**
+ * Shipping settings CRUD + FedEx connection test.
+ *
+ * TODO(migration): shipping is dormant in the SaaS rebuild. The
+ * `shipping_settings` table is still part of the legacy schema (see
+ * supabase/migrations/083_shipping_settings.sql) — the FedEx integration
+ * continues to read/write it via raw `pool.query` SQL rather than the
+ * Supabase REST gateway or Drizzle. When shipping is reactivated, move
+ * the table declaration into `db/schema/shipping.ts` and switch the
+ * reads to typed Drizzle queries.
+ */
+
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { assertBrandAccess } from "@/lib/brand-scope";
+import { pool } from "@/lib/db";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -31,7 +44,7 @@ export type TestConnectionResult =
   | { success: true; message: string }
   | { success: false; error: string };
 
-// ── FedEx Auth Helper (mirrors fedex-rates.ts) ─────────────────────────────────
+// ── FedEx Auth Helper (mirrors fedex-rates.ts / fedex-labels.ts) ───────────────
 
 const FEDEX_BASE_URL = "https://apis.fedex.com";
 const FEDEX_SANDBOX_URL = "https://apis-sandbox.fedex.com";
@@ -43,7 +56,11 @@ interface FedExAuthToken {
 
 let cachedToken: FedExAuthToken | null = null;
 
-async function getFedExToken(apiKey: string, apiSecret: string, useProduction: boolean): Promise<{ accessToken: string } | { error: string }> {
+async function getFedExToken(
+  apiKey: string,
+  apiSecret: string,
+  useProduction: boolean
+): Promise<{ accessToken: string } | { error: string }> {
   const base = useProduction ? FEDEX_BASE_URL : FEDEX_SANDBOX_URL;
 
   if (cachedToken && Date.now() < cachedToken.expiresAt - 5 * 60 * 1000) {
@@ -77,22 +94,29 @@ async function getFedExToken(apiKey: string, apiSecret: string, useProduction: b
 // ── Get Settings ─────────────────────────────────────────────────────────────
 
 export async function getShippingSettings(brandId: string): Promise<GetShippingSettingsResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const adminUser = await getAdminUser();
+  if (!adminUser) return { success: false, error: "Not authenticated" };
+  try { assertBrandAccess(adminUser, brandId); } catch { return { success: false, error: "Brand access denied" }; }
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/shipping_settings?brand_id=eq.${encodeURIComponent(brandId)}&limit=1`,
-    {
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-    }
+  const { rows } = await pool.query<ShippingSettings>(
+    `SELECT id::text AS id,
+            brand_id::text AS brand_id,
+            carrier,
+            fedex_account_number,
+            fedex_api_key,
+            fedex_api_secret,
+            COALESCE(fedex_use_production, false) AS fedex_use_production,
+            COALESCE(default_service_type, 'FEDEX_GROUND') AS default_service_type,
+            refrigerated_handling_notes,
+            fragile_handling_notes,
+            updated_at::text AS updated_at
+     FROM shipping_settings
+     WHERE brand_id = $1
+     LIMIT 1`,
+    [brandId]
   );
 
-  if (!response.ok) return { success: false, error: "Failed to fetch shipping settings" };
-  const data = await response.json();
-  return { success: true, settings: data[0] ?? null };
+  return { success: true, settings: rows[0] ?? null };
 }
 
 // ── Save Settings ────────────────────────────────────────────────────────────
@@ -110,59 +134,92 @@ export async function saveShippingSettings(params: {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
+  try { assertBrandAccess(adminUser, params.brandId); } catch { return { success: false, error: "Brand access denied" }; }
 
-  if (adminUser.role === "brand_admin" && adminUser.brand_id !== params.brandId) {
-    return { success: false, error: "Not authorized for this brand" };
+  // Look up the existing row's id, if any.
+  const { rows: existingRows } = await pool.query<{ id: string }>(
+    "SELECT id::text AS id FROM shipping_settings WHERE brand_id = $1 LIMIT 1",
+    [params.brandId]
+  );
+  const existingId = existingRows[0]?.id;
+
+  if (existingId) {
+    // Update the existing row
+    const { rows } = await pool.query<ShippingSettings>(
+      `UPDATE shipping_settings
+       SET carrier = 'fedex',
+           fedex_account_number = $2,
+           fedex_api_key = $3,
+           fedex_api_secret = $4,
+           fedex_use_production = $5,
+           default_service_type = $6,
+           refrigerated_handling_notes = $7,
+           fragile_handling_notes = $8,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id::text AS id,
+                 brand_id::text AS brand_id,
+                 carrier,
+                 fedex_account_number,
+                 fedex_api_key,
+                 fedex_api_secret,
+                 COALESCE(fedex_use_production, false) AS fedex_use_production,
+                 COALESCE(default_service_type, 'FEDEX_GROUND') AS default_service_type,
+                 refrigerated_handling_notes,
+                 fragile_handling_notes,
+                 updated_at::text AS updated_at`,
+      [
+        existingId,
+        params.fedexAccountNumber ?? null,
+        params.fedexApiKey ?? null,
+        params.fedexApiSecret ?? null,
+        params.fedexUseProduction ?? false,
+        params.defaultServiceType ?? "FEDEX_GROUND",
+        params.refrigeratedHandlingNotes ?? null,
+        params.fragileHandlingNotes ?? null,
+      ]
+    );
+
+    if (!rows[0]) return { success: false, error: "Failed to save shipping settings" };
+    return { success: true, settings: rows[0] };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  // Get existing settings to get ID for update
-  const existing = await fetch(
-    `${supabaseUrl}/rest/v1/shipping_settings?brand_id=eq.${encodeURIComponent(params.brandId)}&select=id`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
+  // Insert a new row
+  const { rows } = await pool.query<ShippingSettings>(
+    `INSERT INTO shipping_settings (
+       brand_id, carrier, fedex_account_number, fedex_api_key, fedex_api_secret,
+       fedex_use_production, default_service_type,
+       refrigerated_handling_notes, fragile_handling_notes, updated_at
+     ) VALUES (
+       $1, 'fedex', $2, $3, $4,
+       $5, $6,
+       $7, $8, NOW()
+     )
+     RETURNING id::text AS id,
+               brand_id::text AS brand_id,
+               carrier,
+               fedex_account_number,
+               fedex_api_key,
+               fedex_api_secret,
+               COALESCE(fedex_use_production, false) AS fedex_use_production,
+               COALESCE(default_service_type, 'FEDEX_GROUND') AS default_service_type,
+               refrigerated_handling_notes,
+               fragile_handling_notes,
+               updated_at::text AS updated_at`,
+    [
+      params.brandId,
+      params.fedexAccountNumber ?? null,
+      params.fedexApiKey ?? null,
+      params.fedexApiSecret ?? null,
+      params.fedexUseProduction ?? false,
+      params.defaultServiceType ?? "FEDEX_GROUND",
+      params.refrigeratedHandlingNotes ?? null,
+      params.fragileHandlingNotes ?? null,
+    ]
   );
 
-  const existingData: Array<{ id: string }> = await existing.json();
-  const existingId = existingData[0]?.id;
-
-  const payload = {
-    ...(existingId ? { id: existingId } : {}),
-    brand_id: params.brandId,
-    carrier: "fedex",
-    fedex_account_number: params.fedexAccountNumber ?? null,
-    fedex_api_key: params.fedexApiKey ?? null,
-    fedex_api_secret: params.fedexApiSecret ?? null,
-    fedex_use_production: params.fedexUseProduction ?? false,
-    default_service_type: params.defaultServiceType ?? "FEDEX_GROUND",
-    refrigerated_handling_notes: params.refrigeratedHandlingNotes ?? null,
-    fragile_handling_notes: params.fragileHandlingNotes ?? null,
-    updated_at: new Date().toISOString(),
-  };
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/shipping_settings`,
-    {
-      method: existingId ? "PATCH" : "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify(payload),
-    }
-  );
-
-  if (!response.ok) {
-    const err = await response.text();
-    return { success: false, error: `Failed to save: ${err.slice(0, 200)}` };
-  }
-
-  const data = await response.json();
-  return { success: true, settings: data[0] };
+  if (!rows[0]) return { success: false, error: "Failed to save shipping settings" };
+  return { success: true, settings: rows[0] };
 }
 
 // ── Test Connection ──────────────────────────────────────────────────────────
