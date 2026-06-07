@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getAIClient } from "@/actions/integrations/ai-providers";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 const SYSTEM = `You are a data analyst for a B2B produce wholesale platform.
 Given a natural language customer query, return a JSON response indicating which predefined query to run and what parameters to use.
@@ -82,40 +82,34 @@ Use "recent_orders" for recent order questions.`;
     const queryType = parsed.queryType ?? "recent_orders";
     const days = parsed.days ?? 30;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
     // Route to appropriate RPC based on query type
     let rpcName = "get_recent_orders_insights";
-    let rpcParams: Record<string, unknown> = { p_brand_id: effectiveBrandId, p_days: days };
+    let rpcArgs: unknown[] = [effectiveBrandId, days];
 
     if (queryType === "dormant") {
       rpcName = "get_dormant_customers_insights";
-      rpcParams = { p_brand_id: effectiveBrandId, p_days: days };
+      rpcArgs = [effectiveBrandId, days];
     } else if (queryType === "trending") {
       rpcName = "get_trending_products_insights";
-      rpcParams = { p_brand_id: effectiveBrandId, p_days: days };
+      rpcArgs = [effectiveBrandId, days];
     } else if (queryType === "top_customers") {
       rpcName = "get_top_customers_insights";
-      rpcParams = { p_brand_id: effectiveBrandId, p_days: days };
+      rpcArgs = [effectiveBrandId, days];
     } else if (queryType === "at_risk") {
       rpcName = "get_at_risk_customers_insights";
-      rpcParams = { p_brand_id: effectiveBrandId };
+      rpcArgs = [effectiveBrandId];
     }
 
-    const dbResponse = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/${rpcName}`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey!), "Content-Type": "application/json" },
-        body: JSON.stringify(rpcParams),
-      }
-    );
-
     let results: unknown[] = [];
-    if (dbResponse.ok) {
-      const data = await dbResponse.json();
+    try {
+      const { rows } = await pool.query(
+        `SELECT ${rpcName}(${rpcArgs.map((_, i) => `$${i + 1}`).join(", ")}) AS result`,
+        rpcArgs,
+      );
+      const data = rows[0]?.result;
       results = Array.isArray(data) ? data.slice(0, 100) : [];
+    } catch {
+      results = [];
     }
 
     return NextResponse.json({

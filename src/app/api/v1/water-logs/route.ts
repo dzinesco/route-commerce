@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiLimiter, checkRateLimit, rateLimitExceeded, securityHeaders } from "@/lib/rate-limit";
 import { captureError } from "@/lib/sentry";
+import { pool } from "@/lib/db";
 
 // Helper functions
 function apiResponse(data: unknown, status: number = 200) {
@@ -43,43 +44,29 @@ export async function POST(req: NextRequest) {
     // Parse and validate body
     const body = await req.json();
     const validation = createWaterLogSchema.safeParse(body);
-    
+
     if (!validation.success) {
       return validationError(validation.error);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
     // Create water log via RPC
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/create_water_log`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          p_brand_id: validation.data.brand_id,
-          p_field_id: validation.data.field_id,
-          p_field_name: validation.data.field_name,
-          p_gallons: validation.data.gallons,
-          p_duration_minutes: validation.data.duration_minutes,
-          p_water_method: validation.data.water_method,
-          p_notes: validation.data.notes,
-          p_logged_at: validation.data.logged_at,
-        }),
-      }
+    const { rows } = await pool.query<{ create_water_log: { id: string; [k: string]: unknown } | null }>(
+      `SELECT create_water_log($1, $2, $3, $4, $5, $6, $7, $8) AS create_water_log`,
+      [
+        validation.data.brand_id,
+        validation.data.field_id ?? null,
+        validation.data.field_name ?? null,
+        validation.data.gallons,
+        validation.data.duration_minutes ?? null,
+        validation.data.water_method ?? null,
+        validation.data.notes ?? null,
+        validation.data.logged_at ?? null,
+      ],
     );
-
-    if (!res.ok) {
-      const error = await res.json();
-      return apiError(error.message || "Failed to create water log", 500);
+    const waterLog = rows[0]?.create_water_log;
+    if (!waterLog) {
+      return apiError("Failed to create water log", 500);
     }
-
-    const waterLog = await res.json();
 
     return apiResponse(waterLog, 201);
   } catch (error) {
@@ -97,24 +84,14 @@ export async function GET(req: NextRequest) {
       return apiError("brand_id is required", 400);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/water_logs?brand_id=eq.${brand_id}&select=*&order=logged_at.desc&limit=100`,
-      {
-        headers: {
-          apikey: anonKey,
-          "Content-Type": "application/json",
-        },
-      }
+    const { rows: waterLogs } = await pool.query(
+      `SELECT * FROM water_logs
+       WHERE brand_id = $1
+       ORDER BY logged_at DESC
+       LIMIT 100`,
+      [brand_id],
     );
 
-    if (!res.ok) {
-      return apiError("Failed to fetch water logs", 500);
-    }
-
-    const waterLogs = await res.json();
     return apiResponse(waterLogs);
   } catch (error) {
     captureError(error as Error, { path: "/api/water-logs", method: "GET" });

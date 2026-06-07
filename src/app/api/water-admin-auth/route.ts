@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export async function POST(request: Request) {
   try {
@@ -9,34 +9,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Missing params" }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
     // Get admin settings
-    const settingsRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_water_admin_settings`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_id: brandId }),
-      }
+    const settingsRes = await pool.query<{
+      get_water_admin_settings: { enabled: boolean; session_duration_hours?: number } | null;
+    }>(
+      `SELECT get_water_admin_settings($1) AS "get_water_admin_settings"`,
+      [brandId],
     );
-    const settings = await settingsRes.json();
-    if (!settingsRes.ok || !settings?.enabled) {
+    const settings = settingsRes.rows[0]?.get_water_admin_settings;
+    if (!settings?.enabled) {
       return NextResponse.json({ success: false, error: "Admin portal not enabled" }, { status: 403 });
     }
 
     // Verify PIN
-    const verifyRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/verify_water_admin_pin`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_id: brandId, p_pin: pin }),
-      }
+    const verifyRes = await pool.query<{
+      verify_water_admin_pin: { success: boolean; session_id?: string } | null;
+    }>(
+      `SELECT verify_water_admin_pin($1, $2) AS "verify_water_admin_pin"`,
+      [brandId, pin],
     );
-    const verifyData = await verifyRes.json();
-    if (!verifyRes.ok || !verifyData?.success) {
+    const verifyData = verifyRes.rows[0]?.verify_water_admin_pin;
+    if (!verifyData?.success || !verifyData.session_id) {
       return NextResponse.json({ success: false, error: "Invalid PIN" }, { status: 401 });
     }
 

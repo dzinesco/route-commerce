@@ -4,6 +4,7 @@ import { z } from "zod";
 import { emailLimiter, checkRateLimit, rateLimitExceeded, securityHeaders } from "@/lib/rate-limit";
 import { analytics } from "@/lib/analytics";
 import { captureError } from "@/lib/sentry";
+import { pool } from "@/lib/db";
 
 // Helper functions
 function apiResponse(data: unknown, status: number = 200) {
@@ -44,44 +45,31 @@ export async function POST(req: NextRequest) {
     // Parse and validate body
     const body = await req.json();
     const validation = createCampaignSchema.safeParse(body);
-    
+
     if (!validation.success) {
       return validationError(validation.error);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
     // Create campaign via RPC
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/create_campaign`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          p_brand_id: validation.data.brand_id,
-          p_name: validation.data.name,
-          p_subject: validation.data.subject,
-          p_content: validation.data.content,
-          p_type: validation.data.type,
-          p_segment_id: validation.data.segment_id,
-          p_contact_ids: validation.data.contact_ids,
-          p_scheduled_at: validation.data.scheduled_at,
-        }),
-      }
+    const { rows: campaignRows } = await pool.query<{ create_campaign: { id: string; [k: string]: unknown } | null }>(
+      `SELECT create_campaign($1, $2, $3, $4, $5, $6, $7::uuid[], $8) AS create_campaign`,
+      [
+        validation.data.brand_id,
+        validation.data.name,
+        validation.data.subject,
+        validation.data.content,
+        validation.data.type,
+        validation.data.segment_id ?? null,
+        validation.data.contact_ids ?? null,
+        validation.data.scheduled_at ?? null,
+      ],
     );
 
-    if (!res.ok) {
-      const error = await res.json();
-      return apiError(error.message || "Failed to create campaign", 500);
+    const campaign = campaignRows[0]?.create_campaign;
+    if (!campaign) {
+      return apiError("Failed to create campaign", 500);
     }
 
-    const campaign = await res.json();
-    
     // Track analytics
     const audienceSize = validation.data.contact_ids?.length || 0;
     analytics.campaignCreated(campaign.id, validation.data.type, audienceSize);
@@ -102,24 +90,13 @@ export async function GET(req: NextRequest) {
       return apiError("brand_id is required", 400);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/communication_campaigns?brand_id=eq.${brand_id}&select=*&order=created_at.desc`,
-      {
-        headers: {
-          apikey: anonKey,
-          "Content-Type": "application/json",
-        },
-      }
+    const { rows: campaigns } = await pool.query(
+      `SELECT * FROM communication_campaigns
+       WHERE brand_id = $1
+       ORDER BY created_at DESC`,
+      [brand_id],
     );
 
-    if (!res.ok) {
-      return apiError("Failed to fetch campaigns", 500);
-    }
-
-    const campaigns = await res.json();
     return apiResponse(campaigns);
   } catch (error) {
     captureError(error as Error, { path: "/api/campaigns", method: "GET" });

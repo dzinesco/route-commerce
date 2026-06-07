@@ -1,15 +1,6 @@
 "use server";
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-
-function getServiceClient() {
-  const roleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!roleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    roleKey,
-  );
-}
+import { pool } from "@/lib/db";
 
 type AdminActionPayload = {
   action_type: "create" | "update" | "delete";
@@ -30,35 +21,33 @@ type UserActivityPayload = {
 
 export async function logAdminAction(payload: AdminActionPayload): Promise<void> {
   try {
-    const service = getServiceClient();
-    await service.rpc("log_admin_action", {
-      p_payload: {
+    await pool.query("SELECT log_admin_action($1::jsonb)", [
+      JSON.stringify({
         action_type: payload.action_type,
         admin_id: payload.admin_id ?? null,
         admin_email: payload.admin_email ?? null,
         affected_user_id: payload.affected_user_id ?? null,
         brand_id: payload.brand_id ?? null,
         details: payload.details ?? {},
-      },
-    });
-  } catch (e) {
+      }),
+    ]);
+  } catch {
     // logging failed silently
   }
 }
 
 export async function logUserActivity(payload: UserActivityPayload): Promise<void> {
   try {
-    const service = getServiceClient();
-    await service.rpc("log_user_activity", {
-      p_payload: {
+    await pool.query("SELECT log_user_activity($1::jsonb)", [
+      JSON.stringify({
         user_id: payload.user_id,
         activity_type: payload.activity_type,
         details: payload.details ?? {},
         ip_address: payload.ip_address ?? null,
         user_agent: payload.user_agent ?? null,
-      },
-    });
-  } catch (e) {
+      }),
+    ]);
+  } catch {
     // logging failed silently
   }
 }

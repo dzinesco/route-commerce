@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
-import { getTraceChain } from "@/actions/route-trace/lots";
+import { getTraceChain, getLotIdByNumber } from "@/actions/route-trace/lots";
 import ShareTraceButton from "@/components/route-trace/ShareTraceButton";
-import { svcHeaders } from "@/lib/svc-headers";
 
 export async function generateMetadata({ params }: { params: Promise<{ lotNumber: string }> }) {
   const { lotNumber } = await params;
@@ -70,25 +69,7 @@ function FieldIcon({ className }: { className?: string }) {
 export default async function TracePage({ params }: { params: Promise<{ lotNumber: string }> }) {
   const { lotNumber } = await params;
 
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const SUPABASE_PAT = process.env.SUPABASE_PAT!;
-
-  let lotId: string | null = null;
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/harvest_lots?lot_number=eq.${encodeURIComponent(lotNumber)}&select=id`,
-      {
-        headers: {
-          ...svcHeaders(SUPABASE_PAT),
-          "Content-Type": "application/json",
-        },
-        next: { revalidate: 60 },
-      }
-    );
-    const data = await res.json();
-    lotId = data?.[0]?.id ?? null;
-  } catch (_) {}
-
+  const lotId = await getLotIdByNumber(lotNumber);
   if (!lotId) notFound();
 
   const result = await getTraceChain(lotId);

@@ -5,16 +5,9 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import { getPublicStopsForBrand, checkStopProductAvailability, type PublicStop } from "@/actions/checkout";
 
-type Stop = {
-  id: string;
-  city: string;
-  state: string;
-  date: string;
-  time: string;
-  location: string;
-  brand_id: string;
-};
+type Stop = PublicStop;
 
 export default function CartClient() {
   const {
@@ -54,11 +47,7 @@ export default function CartClient() {
     if (hasPickupItems && showStopPicker && cartBrandId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingStops(true);
-      fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/stops?active=eq.true&brand_id=eq.${cartBrandId}&select=id,city,state,date,time,location,brand_id&order=date`,
-        { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! } }
-      )
-        .then((r) => r.json())
+      getPublicStopsForBrand(cartBrandId)
         .then((data) => setStops(data ?? []))
         .catch(() => setStops([]))
         .finally(() => setLoadingStops(false));
@@ -74,19 +63,8 @@ export default function CartClient() {
 
     if (hasPickupItems) {
       const pickupProductIds = cart.filter((i) => i.fulfillment === "pickup").map((i) => i.id);
-      fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/check_stop_product_availability`,
-        {
-          method: "POST",
-          headers: {
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ p_stop_id: stop.id, p_product_ids: pickupProductIds }),
-        }
-      )
-        .then((r) => r.json())
-        .then((data: { product_id: string; is_available: boolean }[]) => {
+      checkStopProductAvailability(stop.id, pickupProductIds)
+        .then((data) => {
           const unavailable = (data ?? [])
             .filter((row) => row.is_available === false)
             .map((row) => row.product_id);

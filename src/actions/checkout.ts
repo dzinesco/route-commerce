@@ -1,6 +1,6 @@
 "use server";
 
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type CartItem = {
   id: string;
@@ -64,9 +64,6 @@ export async function createOrder(
   brandId?: string,
   shippingAddress?: ShippingAddress
 ): Promise<CheckoutResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   // ── Calculate tax if brand collects tax ─────────────────────────────────
   let taxAmount = 0;
   let taxRate = 0;
@@ -90,33 +87,22 @@ export async function createOrder(
     }
   }
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/create_order_with_items`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify({
-        p_idempotency_key: idempotencyKey,
-        p_customer_name: customerName,
-        p_customer_email: customerEmail,
-        p_customer_phone: customerPhone,
-        p_stop_id: stopId,
-        p_items: items,
-        p_tax_amount: taxAmount,
-        p_tax_rate: taxRate,
-        p_tax_location: taxLocation || null,
-      }),
-    }
+  const { rows } = await pool.query<{ create_order_with_items: CreatedOrder | null }>(
+    `SELECT create_order_with_items($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9) AS "create_order_with_items"`,
+    [
+      idempotencyKey,
+      customerName,
+      customerEmail,
+      customerPhone,
+      stopId,
+      JSON.stringify(items),
+      taxAmount,
+      taxRate,
+      taxLocation || null,
+    ],
   );
+  const data = rows[0]?.create_order_with_items;
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ message: "Unknown error" }));
-    return { success: false, error: err.message ?? "Failed to create order" };
-  }
-
-  const data = await response.json();
-
-  // RPC returns a JSONB object with order + items
   if (!data || !data.id) {
     return { success: false, error: "Order created but data not returned" };
   }
@@ -124,14 +110,20 @@ export async function createOrder(
   // Send order receipt email
   try {
     const { sendOrderReceiptEmail } = await import("@/lib/email-service");
+    const rawItems = data.items ?? [];
+    const taxAmount = (data as { tax_amount?: number }).tax_amount ?? 0;
     await sendOrderReceiptEmail({
       customerName,
       customerEmail,
       orderId: data.id,
-      items: data.items ?? [],
+      items: rawItems.map((i) => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        price: i.price,
+      })),
       subtotal: data.subtotal ?? 0,
-      taxAmount: data.tax_amount ?? 0,
-      total: (data.subtotal ?? 0) + (data.tax_amount ?? 0),
+      taxAmount,
+      total: (data.subtotal ?? 0) + taxAmount,
       fulfillment: items.some((i) => i.fulfillment === "ship") ? "ship" : "pickup",
       stopCity: data.stop_city ?? undefined,
       stopState: data.stop_state ?? undefined,
@@ -140,31 +132,22 @@ export async function createOrder(
       stopLocation: data.stop_location ?? undefined,
       brandName: "Tuxedo Corn",
     });
-  } catch (e) {
+  } catch {
     // Email failure should not fail the order
   }
 
-  return { success: true, order: data as CreatedOrder };
+  return { success: true, order: data };
 }
 
 // ── Cart Persistence ──────────────────────────────────────────────────────────
 
 export async function getServerCart(userId: string): Promise<CartItem[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   try {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_user_cart`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_user_id: userId }),
-      }
+    const { rows } = await pool.query<{ get_user_cart: CartItem[] | null }>(
+      `SELECT get_user_cart($1) AS "get_user_cart"`,
+      [userId],
     );
-
-    if (!response.ok) return [];
-    const data = await response.json();
+    const data = rows[0]?.get_user_cart;
     return Array.isArray(data) ? data : [];
   } catch {
     return [];
@@ -177,24 +160,15 @@ export async function mergeLocalCart(
 ): Promise<{ merged: CartItem[] }> {
   if (!localCart || localCart.length === 0) return { merged: [] };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   // Fetch server cart
   let serverCart: CartItem[] = [];
   try {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_user_cart`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_user_id: userId }),
-      }
+    const { rows } = await pool.query<{ get_user_cart: CartItem[] | null }>(
+      `SELECT get_user_cart($1) AS "get_user_cart"`,
+      [userId],
     );
-    if (response.ok) {
-      const data = await response.json();
-      serverCart = Array.isArray(data) ? data : [];
-    }
+    const data = rows[0]?.get_user_cart;
+    serverCart = Array.isArray(data) ? data : [];
   } catch {
     // proceed with local cart only
   }
@@ -227,13 +201,9 @@ export async function mergeLocalCart(
 
   // Persist merged cart to server
   try {
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/upsert_user_cart`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_user_id: userId, p_items: merged }),
-      }
+    await pool.query(
+      `SELECT upsert_user_cart($1, $2::jsonb)`,
+      [userId, JSON.stringify(merged)],
     );
   } catch {
     // best-effort — localStorage is still source of truth for now
@@ -243,19 +213,53 @@ export async function mergeLocalCart(
 }
 
 export async function clearServerCart(userId: string): Promise<void> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   try {
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/clear_user_cart`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_user_id: userId }),
-      }
+    await pool.query(
+      `SELECT clear_user_cart($1)`,
+      [userId],
     );
   } catch {
     // ignore
   }
+}
+
+// ── Stop picker (used by cart + checkout client components) ───────────────
+
+export type PublicStop = {
+  id: string;
+  city: string;
+  state: string;
+  date: string;
+  time: string;
+  location: string;
+  brand_id: string;
+};
+
+export async function getPublicStopsForBrand(brandId: string): Promise<PublicStop[]> {
+  const { rows } = await pool.query<PublicStop>(
+    `SELECT id, city, state, date, time, location, brand_id
+     FROM stops
+     WHERE active = true AND brand_id = $1
+     ORDER BY date`,
+    [brandId],
+  );
+  return rows;
+}
+
+export type ProductAvailability = {
+  product_id: string;
+  is_available: boolean;
+};
+
+export async function checkStopProductAvailability(
+  stopId: string,
+  productIds: string[]
+): Promise<ProductAvailability[]> {
+  if (!productIds || productIds.length === 0) return [];
+  const { rows } = await pool.query<{ check_stop_product_availability: ProductAvailability[] | null }>(
+    `SELECT check_stop_product_availability($1, $2::uuid[]) AS "check_stop_product_availability"`,
+    [stopId, productIds],
+  );
+  const data = rows[0]?.check_stop_product_availability;
+  return Array.isArray(data) ? data : [];
 }

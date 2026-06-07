@@ -1,10 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { pool } from "@/lib/db";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,25 +62,22 @@ export type CreatePainLogData = {
   description?: string | null;
 };
 
-// ── Internal fetch helper ────────────────────────────────────────────────────
+// ── Internal RPC helper ──────────────────────────────────────────────────────
 
-async function platformRPC<T>(rpcName: string, body: Record<string, unknown> = {}): Promise<T> {
+async function platformRPC<T>(rpcName: string): Promise<T> {
   const adminUser = await getAdminUser();
   if (!adminUser) throw new Error("Not authenticated");
   if (adminUser.role !== "platform_admin") throw new Error("Access denied: platform admin only");
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
-    method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const { rows } = await pool.query<Record<string, T>>(
+    `SELECT ${rpcName}() AS "${rpcName}"`,
+  );
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`RPC ${rpcName} failed: ${err}`);
+  const data = rows[0]?.[rpcName];
+  if (data == null) {
+    return null as T;
   }
-
-  return response.json() as Promise<T>;
+  return data as T;
 }
 
 // ── Platform actions ─────────────────────────────────────────────────────────
@@ -104,19 +98,11 @@ export async function getPainLog(): Promise<PainLogItem[]> {
   const adminUser = await getAdminUser();
   if (!adminUser) throw new Error("Not authenticated");
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/founder_pain_log_platform?select=*`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
+  const { rows } = await pool.query<PainLogItem>(
+    `SELECT * FROM founder_pain_log_platform ORDER BY created_at DESC`,
   );
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Failed to fetch pain log: ${err}`);
-  }
-
-  return response.json() as Promise<PainLogItem[]>;
+  return rows;
 }
 
 export async function createPainLogItem(data: CreatePainLogData): Promise<{ success: boolean; error?: string }> {
@@ -125,22 +111,17 @@ export async function createPainLogItem(data: CreatePainLogData): Promise<{ succ
     if (!adminUser) return { success: false, error: "Not authenticated" };
     if (adminUser.role !== "platform_admin") return { success: false, error: "Access denied" };
 
-    const response = await fetch(`${supabaseUrl}/rest/v1/founder_pain_log`, {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify({
-        brand_id: data.brand_id || null,
-        severity: data.severity,
-        category: data.category,
-        title: data.title,
-        description: data.description || null,
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      return { success: false, error: err };
-    }
+    await pool.query(
+      `INSERT INTO founder_pain_log (brand_id, severity, category, title, description)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        data.brand_id || null,
+        data.severity,
+        data.category,
+        data.title,
+        data.description || null,
+      ],
+    );
 
     return { success: true };
   } catch (e) {
@@ -154,23 +135,12 @@ export async function resolvePainLogItem(id: string): Promise<{ success: boolean
     if (!adminUser) return { success: false, error: "Not authenticated" };
     if (adminUser.role !== "platform_admin") return { success: false, error: "Access denied" };
 
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/founder_pain_log?id=eq.${id}`,
-      {
-        method: "PATCH",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "resolved",
-          resolved_at: new Date().toISOString(),
-          resolved_by: adminUser.id,
-        }),
-      }
+    await pool.query(
+      `UPDATE founder_pain_log
+       SET status = 'resolved', resolved_at = now(), resolved_by = $2
+       WHERE id = $1`,
+      [id, adminUser.id],
     );
-
-    if (!response.ok) {
-      const err = await response.text();
-      return { success: false, error: err };
-    }
 
     return { success: true };
   } catch (e) {

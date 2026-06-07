@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiLimiter, checkRateLimit, rateLimitExceeded, securityHeaders } from "@/lib/rate-limit";
 import { captureError } from "@/lib/sentry";
+import { pool } from "@/lib/db";
 
 // Helper functions
 function apiResponse(data: unknown, status: number = 200) {
@@ -50,33 +51,20 @@ export async function GET(req: NextRequest) {
       return validationError(validation.error);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
     // Get report via RPC
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/generate_report`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          p_brand_id: validation.data.brand_id,
-          p_start_date: validation.data.start_date,
-          p_end_date: validation.data.end_date,
-          p_report_type: validation.data.report_type,
-        }),
-      }
+    const { rows } = await pool.query<{ generate_report: unknown }>(
+      `SELECT generate_report($1, $2::timestamptz, $3::timestamptz, $4) AS generate_report`,
+      [
+        validation.data.brand_id,
+        validation.data.start_date,
+        validation.data.end_date,
+        validation.data.report_type,
+      ],
     );
-
-    if (!res.ok) {
+    const report = rows[0]?.generate_report;
+    if (report == null) {
       return apiError("Failed to generate report", 500);
     }
-
-    const report = await res.json();
 
     return apiResponse(report);
   } catch (error) {

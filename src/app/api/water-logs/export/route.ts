@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const adminUser = await getAdminUser();
@@ -18,31 +18,26 @@ export async function GET(request: NextRequest) {
   // Use brand_id from session (always Tuxedo for water log) or fallback to env
   const brandId = adminUser.brand_id ?? process.env.TUXEDO_BRAND_ID ?? "64294306-5f42-463d-a5e8-2ad6c81a96de";
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  type WaterEntry = {
+    id: string;
+    user_id: string | null;
+    headgate_id: string | null;
+    measurement: number | null;
+    unit: string | null;
+    notes: string | null;
+    created_at: string;
+  };
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_water_entries`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId, p_limit: 10000 }),
-    }
+  const { rows: data } = await pool.query<{ get_water_entries: WaterEntry[] | null }>(
+    `SELECT get_water_entries($1, $2) AS "get_water_entries"`,
+    [brandId, 10000],
   );
-
-  if (!response.ok) {
-    return NextResponse.json({ error: "Failed to fetch water log" }, { status: 500 });
-  }
-
-  const data = await response.json();
+  const entries = data[0]?.get_water_entries ?? [];
 
   if (format === "csv") {
     const headers = ["id", "user_id", "headgate_id", "measurement", "unit", "notes", "created_at"];
     const csvRows = [headers.join(",")];
-    for (const row of data) {
+    for (const row of entries) {
       csvRows.push([
         row.id,
         row.user_id ?? "",
@@ -61,5 +56,5 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(entries);
 }

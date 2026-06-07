@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import type { StopInfo } from "@/context/CartContext";
 import { createRetailStripeCheckoutSession } from "@/actions/billing/retail-checkout";
+import { getPublicStopsForBrand } from "@/actions/checkout";
 import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import StripeExpressCheckout, {
@@ -43,15 +44,7 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     if (!cartBrandId) return;
-    fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/stops?active=eq.true&brand_id=eq.${cartBrandId}&select=id,city,state,date,time,location,brand_id&order=date`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-      }
-    )
-      .then((r) => r.json())
+    getPublicStopsForBrand(cartBrandId)
       .then((data) => setStops(data ?? []))
       .catch(() => setStops([]));
   }, [cartBrandId]);

@@ -1,18 +1,15 @@
 /**
- * Service-layer admin user creation via Supabase REST API.
- * Uses apikey-only authentication — no Authorization header (which fails on
- * Vercel Edge due to raw JWT chars +, /, = in the token).
+ * Service-layer admin user creation. Hits the `admin_users` table directly
+ * via the shared pg pool. Returns the inserted row (or existing row if the
+ * user was already provisioned).
  */
 export async function createAdminUser(
   userId: string,
   role: string,
   brandId: string | null
 ): Promise<Record<string, unknown> | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) return null;
-
-  const body = JSON.stringify({
+  const { pool } = await import("@/lib/db");
+  const body = {
     user_id: userId,
     role,
     brand_id: brandId,
@@ -28,33 +25,52 @@ export async function createAdminUser(
     can_manage_reports: role === "platform_admin",
     can_manage_settings: role === "platform_admin",
     must_change_password: false,
-  });
+  };
 
-  // Use apikey-only — no Authorization header to avoid Vercel Edge JWT rejection
-  const res = await fetch(`${supabaseUrl}/rest/v1/admin_users`, {
-    method: "POST",
-    headers: {
-      apikey: serviceKey,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body,
-  });
-
-  if (res.status === 409) {
-    // User already exists — fetch and return
-    const existing = await fetch(
-      `${supabaseUrl}/rest/v1/admin_users?user_id=eq.${userId}&limit=1`,
-      { headers: { apikey: serviceKey, "Content-Type": "application/json" } }
+  try {
+    const { rows } = await pool.query<Record<string, unknown>>(
+      `INSERT INTO admin_users
+         (user_id, role, brand_id, active,
+          can_manage_products, can_manage_stops, can_manage_orders,
+          can_manage_pickup, can_manage_messages, can_manage_refunds,
+          can_manage_users, can_manage_water_log, can_manage_reports,
+          can_manage_settings, must_change_password)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       ON CONFLICT (user_id) DO UPDATE
+         SET role = EXCLUDED.role,
+             brand_id = EXCLUDED.brand_id,
+             active = EXCLUDED.active,
+             can_manage_products = EXCLUDED.can_manage_products,
+             can_manage_stops = EXCLUDED.can_manage_stops,
+             can_manage_orders = EXCLUDED.can_manage_orders,
+             can_manage_pickup = EXCLUDED.can_manage_pickup,
+             can_manage_messages = EXCLUDED.can_manage_messages,
+             can_manage_refunds = EXCLUDED.can_manage_refunds,
+             can_manage_users = EXCLUDED.can_manage_users,
+             can_manage_water_log = EXCLUDED.can_manage_water_log,
+             can_manage_reports = EXCLUDED.can_manage_reports,
+             can_manage_settings = EXCLUDED.can_manage_settings
+       RETURNING *`,
+      [
+        body.user_id,
+        body.role,
+        body.brand_id,
+        body.active,
+        body.can_manage_products,
+        body.can_manage_stops,
+        body.can_manage_orders,
+        body.can_manage_pickup,
+        body.can_manage_messages,
+        body.can_manage_refunds,
+        body.can_manage_users,
+        body.can_manage_water_log,
+        body.can_manage_reports,
+        body.can_manage_settings,
+        body.must_change_password,
+      ],
     );
-    const data = existing.ok ? await existing.json().catch(() => null) : null;
-    return (Array.isArray(data) && data.length > 0) ? data[0] as Record<string, unknown> : null;
-  }
-
-  if (!res.ok) {
+    return rows[0] ?? null;
+  } catch {
     return null;
   }
-
-  const data = await res.json();
-  return (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
 }
