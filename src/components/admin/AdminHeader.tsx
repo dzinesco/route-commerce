@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { signOutAction } from "@/actions/auth-actions";
 
 type AdminHeaderProps = {
   userRole?: string | null;
@@ -89,10 +89,7 @@ export default function AdminHeader({ userRole, canManageUsers, routeTraceEnable
   const homeLabel = isStoreEmployee ? "Pickup" : "Admin";
 
   async function handleLogout() {
-    document.cookie = "dev_session=;path=/;max-age=0";
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutAction();
   }
 
   const roleLabel = userRole === "platform_admin" ? "Platform Admin"

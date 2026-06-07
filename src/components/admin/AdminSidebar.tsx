@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback, KeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import BrandSelector from "./BrandSelector";
+import { signOutAction } from "@/actions/auth-actions";
 
 // Elegant warm sidebar design
 // Colors: parchment 100 bg, soft linen text, powder petal accent
@@ -220,10 +219,15 @@ type SidebarProps = {
   userRole?: string | null;
   brandIds?: string[];
   activeBrandId?: string | null;
-  brands?: Array<{ id: string; name: string; slug: string; logo_url: string | null }>;
+  brands?: { id: string; name: string; slug: string; logo_url: string | null }[];
 };
 
-export default function AdminSidebar({ userRole, brandIds, activeBrandId, brands }: SidebarProps) {
+export default function AdminSidebar({
+  userRole,
+  brandIds,
+  activeBrandId,
+  brands,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -234,14 +238,8 @@ export default function AdminSidebar({ userRole, brandIds, activeBrandId, brands
 
   const roleLabel = userRole === "platform_admin" ? "Platform Admin"
     : userRole === "brand_admin" ? "Brand Admin"
-    : userRole === "multi_brand_admin" ? "Multi-Brand Manager"
     : userRole === "store_employee" ? "Store Employee"
     : null;
-
-  const isMultiBrandAdmin = userRole === "multi_brand_admin";
-  const showAllBrandsOption = userRole === "platform_admin";
-  const showBrandSelector =
-    brands && (showAllBrandsOption || (brandIds && brandIds.length >= 2));
 
   const isActive = useCallback((href: string) => {
     if (href === "/admin") return pathname === "/admin";
@@ -306,10 +304,7 @@ export default function AdminSidebar({ userRole, brandIds, activeBrandId, brands
   }, [router, mobileOpen, closeMobileMenu]);
 
   async function handleLogout() {
-    document.cookie = "dev_session=;path=/;max-age=0";
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutAction();
   }
 
   return (
@@ -403,24 +398,6 @@ export default function AdminSidebar({ userRole, brandIds, activeBrandId, brands
             Back to Site
           </Link>
         </div>
-
-        {/* Brand selector (multi-brand admins + platform_admin) */}
-        {showBrandSelector && (
-          <div className="px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "rgba(208, 203, 180, 0.2)" }}>
-            <p
-              className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 px-1"
-              style={{ color: "rgba(195, 195, 193, 0.6)" }}
-            >
-              Active Brand
-            </p>
-            <BrandSelector
-              brands={brands!}
-              activeBrandId={activeBrandId ?? null}
-              showAllBrandsOption={showAllBrandsOption}
-              isMultiBrandAdmin={isMultiBrandAdmin}
-            />
-          </div>
-        )}
 
         {/* Nav links with keyboard navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 scrollbar-thin">

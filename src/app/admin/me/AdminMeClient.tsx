@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { AdminUserRow } from "@/actions/admin/users";
-import { logUserActivity } from "@/actions/admin/audit";
 
 type ProfilePageProps = {
   currentUser: AdminUserRow;
@@ -21,53 +19,24 @@ export default function AdminMeClient({ currentUser }: ProfilePageProps) {
   const [newEmail, setNewEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
 
+  // Profile / email mutations used to call Supabase directly. With the
+  // platform moved off Supabase entirely, those handlers are stubbed out
+  // — the page remains read-only until a server-action equivalent ships.
+  // See the final YOLO report for the broader Supabase → pg data-fetch
+  // migration that covers the rest of the admin pages.
+
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError(null);
-    try {
-      const { error: rpcError } = await supabase.rpc("update_admin_user", {
-        p_id: currentUser.id,
-        p_display_name: displayName || null,
-        p_phone_number: phoneNumber || null,
-      });
-      if (rpcError) {
-        setError(rpcError.message);
-        return;
-      }
-      await logUserActivity({
-        user_id: currentUser.user_id,
-        activity_type: "profile_update",
-        details: { fields: ["display_name", "phone_number"] },
-      });
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
+    setError("Profile editing is temporarily unavailable. Contact a platform admin.");
+    setSaving(false);
   }
 
   async function handleEmailChange(e: React.FormEvent) {
     e.preventDefault();
     setChangingEmail(true);
-    setEmailError(null);
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        email: newEmail,
-      });
-      if (updateError) {
-        setEmailError(updateError.message);
-        return;
-      }
-      await logUserActivity({
-        user_id: currentUser.user_id,
-        activity_type: "email_change",
-        details: { new_email: newEmail },
-      });
-      setEmailChangeSent(true);
-      setChangingEmail(false);
-    } finally {
-      setChangingEmail(false);
-    }
+    setEmailError("Email changes are temporarily unavailable. Contact a platform admin.");
+    setChangingEmail(false);
   }
 
   return (

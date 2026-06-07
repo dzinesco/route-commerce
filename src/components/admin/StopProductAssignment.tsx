@@ -22,7 +22,7 @@ type StopProductAssignmentProps = {
   stopId: string;
   allProducts: Product[];
   assignedProducts: AssignedProduct[];
-  callerUid: string;
+  callerUid: string | null;
 };
 
 type Filter = "all" | "available" | "assigned";

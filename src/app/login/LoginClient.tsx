@@ -1,546 +1,208 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { signInWithGoogle, signInWithDev } from "@/actions/auth-signin";
+import { useState, useTransition } from "react";
+import { signInWithGoogle, signInWithCredentials } from "@/actions/auth-actions";
 
-function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [forgotPassword, setForgotPassword] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotSent, setForgotSent] = useState(false);
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotError, setForgotError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+type LoginClientProps = {
+  hasGoogle: boolean;
+  hasCredentials: boolean;
+  /** Server-rendered error message, if any (from ?error=...) */
+  error: string | null;
+  /** Pre-fill the email in dev (for the seeded admin). */
+  seededEmail?: string;
+  /** Where to send the user after a successful sign-in. */
+  redirectTo?: string;
+};
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-
-  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setGlobalError(null);
-    if (!email.trim()) { setGlobalError("Please enter your email address."); return; }
-    if (!password.trim()) { setGlobalError("Please enter your password."); return; }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      const data = await res.json().catch(() => ({ error: "Login failed" }));
-      if (res.ok && data?.ok) {
-        window.location.replace("/admin");
-      } else {
-        setGlobalError(data?.error || `Login failed (${res.status})`);
-      }
-    } catch {
-      setGlobalError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [email, password]);
-
-  const handleForgotPassword = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!forgotEmail.trim()) return;
-    setForgotLoading(true);
-    setForgotError(null);
-    const fd = new FormData();
-    fd.set("email", forgotEmail.trim());
-    const result = await fetch("/api/forgot-password", {
-      method: "POST",
-      body: fd,
-    }).then(r => r.json()).catch(() => ({ error: "Network error" }));
-    setForgotLoading(false);
-    if (result.error) {
-      setForgotError(result.error);
-    } else {
-      setForgotSent(true);
-    }
-  }, [forgotEmail]);
+function GoogleSignIn({ hasGoogle }: { hasGoogle: boolean }) {
+  if (!hasGoogle) {
+    return (
+      <div className="rounded-xl border border-stone-200/80 bg-stone-50 p-4 text-sm text-stone-700">
+        <p className="font-medium">Google sign-in is not configured.</p>
+        <p className="mt-1 text-stone-600">
+          Add <code className="font-mono text-xs">AUTH_GOOGLE_ID</code> and{" "}
+          <code className="font-mono text-xs">AUTH_GOOGLE_SECRET</code> to your
+          environment to enable it.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5", height: "100vh" }}>
-      {/* Google Fonts */}
+    <form action={signInWithGoogle}>
+      <button
+        type="submit"
+        className="w-full flex items-center justify-center gap-3 rounded-xl bg-white border border-stone-200/80 px-6 py-3.5 text-sm font-semibold text-stone-800 hover:bg-stone-50 active:scale-[0.98] transition-all shadow-sm"
+        style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+      >
+        <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.99 10.99 0 0012 23z" />
+          <path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 015.5 12c0-.73.13-1.44.34-2.1V7.07H2.18A10.99 10.99 0 001 12c0 1.77.43 3.45 1.18 4.93l3.66-2.83z" />
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z" />
+        </svg>
+        Continue with Google
+      </button>
+    </form>
+  );
+}
+
+function CredentialsForm({
+  seededEmail,
+  error,
+}: {
+  seededEmail?: string;
+  error: string | null;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  return (
+    <form
+      action={(formData) => {
+        setLocalError(null);
+        startTransition(async () => {
+          try {
+            await signInWithCredentials(formData);
+          } catch (err) {
+            // Auth.js throws NEXT_REDIRECT on success — that's the normal
+            // flow. We only care about non-redirect errors here.
+            const msg = err instanceof Error ? err.message : String(err);
+            if (!msg.includes("NEXT_REDIRECT")) {
+              setLocalError("Sign-in failed. Please try again.");
+            }
+          }
+        });
+      }}
+      className="space-y-3"
+    >
+      <label className="block">
+        <span className="block text-xs font-medium text-stone-700 mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+          Email
+        </span>
+        <input
+          name="email"
+          type="email"
+          required
+          autoComplete="username"
+          defaultValue={seededEmail ?? ""}
+          className="w-full rounded-xl border border-stone-200/80 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#6b8f71]/40 focus:border-[#6b8f71]"
+          placeholder="you@example.com"
+        />
+      </label>
+      <label className="block">
+        <span className="block text-xs font-medium text-stone-700 mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+          Password
+        </span>
+        <input
+          name="password"
+          type="password"
+          required
+          autoComplete="current-password"
+          className="w-full rounded-xl border border-stone-200/80 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#6b8f71]/40 focus:border-[#6b8f71]"
+          placeholder="••••••••"
+        />
+      </label>
+      {(error || localError) && (
+        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          {error ?? localError}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={isPending}
+        className="w-full rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]"
+        style={{
+          fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+          background: isPending
+            ? "linear-gradient(135deg, #6b8f71 0%, #7ba085 100%)"
+            : "linear-gradient(135deg, #1a4d2e 0%, #2d6a45 100%)",
+          boxShadow: "0 8px 24px rgba(26, 77, 46, 0.20)",
+        }}
+      >
+        {isPending ? "Signing in…" : "Sign in with email"}
+      </button>
+    </form>
+  );
+}
+
+function Divider() {
+  return (
+    <div className="flex items-center gap-3 my-5" aria-hidden="true">
+      <div className="flex-1 h-px bg-stone-200/80" />
+      <span className="text-xs uppercase tracking-wider text-stone-400" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+        or
+      </span>
+      <div className="flex-1 h-px bg-stone-200/80" />
+    </div>
+  );
+}
+
+export default function LoginClient({
+  hasGoogle,
+  hasCredentials,
+  error,
+  seededEmail,
+}: LoginClientProps) {
+  // Render the Google button first (or a setup message), then the divider,
+  // then the credentials form if dev login is enabled. The order is the
+  // most-common-first progression: prod users see Google; dev users
+  // see Google at top, email/password below as the fast path.
+  return (
+    <main
+      className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{ backgroundColor: "#faf8f5", height: "100vh" }}
+    >
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
         html, body { overflow: hidden; }
       `}</style>
 
-      {/* Organic background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-20" style={{ background: "radial-gradient(circle at 30% 30%, #c97a3e20 0%, transparent 70%)", filter: "blur(40px)" }} />
         <div className="absolute -bottom-48 -left-48 w-[600px] h-[600px] rounded-full opacity-15" style={{ background: "radial-gradient(circle at 70% 70%, #6b8f7130 0%, transparent 70%)", filter: "blur(60px)" }} />
         <div className="absolute top-1/3 left-1/4 w-72 h-72 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #1a4d2e15 0%, transparent 70%)", filter: "blur(30px)" }} />
       </div>
 
-      {/* Header */}
-      <header className="w-full py-6 px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group" style={{ textDecoration: "none" }}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ backgroundColor: "#1a4d2e" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-xl font-semibold tracking-tight" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: "#1a1a1a" }}>
-              Route Commerce
-            </span>
-          </Link>
-          <Link href="/" className="text-sm font-medium transition-opacity hover:opacity-60" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}>
-            Back to home
-          </Link>
-        </div>
-      </header>
-
-      {/* Login Card */}
       <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
-        <div className={`w-full max-w-sm transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          {/* Card */}
+        <div className="w-full max-w-sm">
           <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl ring-1 ring-black/5 overflow-hidden">
-            {/* Subtle top accent */}
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#6b8f71]/30 to-transparent" />
 
             <div className="p-8 sm:p-10">
-              {/* Logo & Title */}
               <div className="text-center mb-8">
-                <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-5" style={{ background: "linear-gradient(135deg, #1a4d2e 0%, #2d6a45 100%)", boxShadow: "0 12px 32px rgba(26, 77, 46, 0.25)" }}>
+                <div
+                  className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-5"
+                  style={{
+                    background: "linear-gradient(135deg, #1a4d2e 0%, #2d6a45 100%)",
+                    boxShadow: "0 12px 32px rgba(26, 77, 46, 0.25)",
+                  }}
+                >
                   <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                   </svg>
                 </div>
-                <h1 className="text-3xl font-semibold text-stone-900" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: "-0.02em" }}>
+                <h1
+                  className="text-3xl font-semibold text-stone-900"
+                  style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: "-0.02em" }}
+                >
                   Welcome back
                 </h1>
-                <p className="mt-2 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
+                <p
+                  className="mt-2 text-sm"
+                  style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}
+                >
                   Sign in to your account
                 </p>
               </div>
 
-              {/* Auth.js v5 — primary sign-in: Google OAuth */}
-              <form action={signInWithGoogle} className="space-y-3">
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center gap-3 rounded-xl border border-stone-200/80 bg-white px-6 py-3.5 text-sm font-semibold text-stone-900 shadow-sm transition-all hover:bg-stone-50 active:scale-[0.98]"
-                  style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-                  aria-label="Sign in with Google"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.99 10.99 0 0 0 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A10.99 10.99 0 0 0 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
-                    />
-                  </svg>
-                  <span>Sign in with Google</span>
-                </button>
-              </form>
-
-              {/* Dev login (only visible in development) */}
-              {process.env.NODE_ENV !== "production" && (
-                <form action={signInWithDev} className="space-y-3">
-                  <div className="rounded-xl bg-amber-50/70 border border-amber-200/60 px-3 py-2 text-xs text-amber-900">
-                    <strong>Dev login</strong> — only available in development.
-                    Set <code>ALLOW_DEV_LOGIN=false</code> in <code>.env.local</code> to hide.
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      name="username"
-                      type="text"
-                      defaultValue="admin"
-                      className="rounded-xl border border-stone-200/80 bg-white/90 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 placeholder:text-stone-400"
-                      placeholder="Username"
-                      aria-label="Dev username"
-                    />
-                    <input
-                      name="password"
-                      type="password"
-                      defaultValue="dev"
-                      className="rounded-xl border border-stone-200/80 bg-white/90 px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 placeholder:text-stone-400"
-                      placeholder="Password"
-                      aria-label="Dev password"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-                  >
-                    Dev sign in (no Google required)
-                  </button>
-                </form>
-              )}
-
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-stone-200/70" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                  <span className="bg-white/0 px-2 text-stone-400" style={{ background: "linear-gradient(to right, transparent, white 30%, white 70%, transparent)" }}>
-                    or sign in with email
-                  </span>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-5" aria-label="Sign in form">
-                {globalError && (
-                  <div role="alert" className="rounded-2xl bg-red-50/80 p-4 text-sm text-red-600 border border-red-100/50">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {globalError}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <label htmlFor="email" className="block text-sm font-medium text-stone-700" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="username"
-                    disabled={loading}
-                    className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-                    placeholder="you@company.com"
-                    aria-required="true"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="password" className="block text-sm font-medium text-stone-700" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Password</label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                      disabled={loading}
-                      className="w-full rounded-xl border border-stone-200/80 px-4 py-3.5 pr-12 text-stone-900 shadow-sm outline-none transition-all focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 disabled:bg-stone-100 disabled:cursor-not-allowed placeholder:text-stone-400"
-                      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-                      placeholder="••••••••"
-                      aria-required="true"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 transition-colors"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
-                >
-                  {loading ? (
-                    <>
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Signing in...
-                    </>
-                  ) : "Sign in"}
-                </button>
-
-                {!forgotPassword && !forgotSent && (
-                  <button
-                    type="button"
-                    onClick={() => { setForgotPassword(true); setGlobalError(null); }}
-                    className="w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </form>
-
-              {/* Password Reset Form */}
-              {forgotPassword && !forgotSent && (
-                <form onSubmit={handleForgotPassword} className="mt-6 space-y-4 border-t border-stone-200/50 pt-6" aria-label="Password reset form">
-                  <p className="text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b6b6b" }}>Enter your email and we&apos;ll send you a reset link.</p>
-                  {forgotError && (
-                    <div role="alert" className="rounded-xl bg-red-50/80 p-3 text-sm text-red-600 border border-red-100">
-                      {forgotError}
-                    </div>
-                  )}
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    required
-                    className="w-full rounded-xl border border-stone-200/80 bg-white/90 px-4 py-3.5 text-stone-900 outline-none focus:border-[#6b8f71] focus:ring-4 focus:ring-[#6b8f71]/10 placeholder:text-stone-400 transition-all"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
-                    placeholder="you@company.com"
-                    aria-required="true"
-                  />
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
-                  >
-                    {forgotLoading ? "Sending..." : "Send Reset Link"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setForgotPassword(false); setForgotEmail(""); setForgotError(null); }}
-                    className="w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
-                  >
-                    ← Back to sign in
-                  </button>
-                </form>
-              )}
-
-              {/* Reset Email Sent */}
-              {forgotSent && (
-                <div className="mt-6 border-t border-stone-200/50 pt-6" role="status" aria-live="polite">
-                  <div className="rounded-xl p-4 text-sm border" style={{ backgroundColor: "#f0fdf4", color: "#166534", borderColor: "#bbf7d0" }}>
-                    <strong>Check your inbox.</strong> If an account exists for <span className="font-medium">{forgotEmail}</span>, a reset link has been sent.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { setForgotPassword(false); setForgotSent(false); setForgotEmail(""); }}
-                    className="mt-4 w-full text-center text-sm transition-colors hover:text-[#1a4d2e]"
-                    style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}
-                  >
-                    ← Back to sign in
-                  </button>
-                </div>
-              )}
+              <GoogleSignIn hasGoogle={hasGoogle} />
+              {hasCredentials && hasGoogle && <Divider />}
+              {hasCredentials && <CredentialsForm seededEmail={seededEmail} error={error} />}
             </div>
-
-            {/* Security Trust Badges */}
-            <div className="border-t border-stone-100/50 px-8 py-5" style={{ backgroundColor: "rgba(250, 248, 245, 0.5)" }}>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-center gap-4 text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#9a9590" }}>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-[#6b8f71]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    <span>256-bit SSL</span>
-                  </div>
-                  <span className="text-stone-300">•</span>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-[#6b8f71]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <span>SOC 2</span>
-                  </div>
-                  <span className="text-stone-300">•</span>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#6b8f71"/>
-                    </svg>
-                    <span>Powered by Supabase</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Back link */}
-          <div className="text-center mt-6">
-            <Link href="/brands" className="text-sm transition-opacity hover:opacity-60 inline-flex items-center gap-1" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-              View Farms
-            </Link>
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="py-6 px-6 border-t border-stone-200/30 relative z-10">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1a4d2e" }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#b5b0a8" }}>
-              © {new Date().getFullYear()} Route Commerce
-            </span>
-          </div>
-          <nav className="flex items-center gap-6">
-            <Link href="/privacy-policy" className="text-xs font-medium uppercase tracking-wider transition-colors hover:text-[#1a4d2e]" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71", letterSpacing: "0.08em" }}>
-              Privacy
-            </Link>
-            <Link href="/terms-and-conditions" className="text-xs font-medium uppercase tracking-wider transition-colors hover:text-[#1a4d2e]" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71", letterSpacing: "0.08em" }}>
-              Terms
-            </Link>
-          </nav>
-        </div>
-      </footer>
     </main>
-  );
-}
-
-// Demo mode wrapper
-function DemoMode() {
-  return (
-    <main className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: "#faf8f5", height: "100vh" }}>
-      {/* Organic background elements */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-20" style={{ background: "radial-gradient(circle at 30% 30%, #c97a3e20 0%, transparent 70%)", filter: "blur(40px)" }} />
-        <div className="absolute -bottom-48 -left-48 w-[600px] h-[600px] rounded-full opacity-15" style={{ background: "radial-gradient(circle at 70% 70%, #6b8f7130 0%, transparent 70%)", filter: "blur(60px)" }} />
-      </div>
-
-      {/* Header */}
-      <header className="w-full py-6 px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group" style={{ textDecoration: "none" }}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ backgroundColor: "#1a4d2e" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-xl font-semibold tracking-tight" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: "#1a1a1a" }}>
-              Route Commerce
-            </span>
-          </Link>
-          <Link href="/" className="text-sm font-medium transition-opacity hover:opacity-60" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#6b8f71" }}>
-            Back to home
-          </Link>
-        </div>
-      </header>
-
-      {/* Demo Card */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
-        <div className="w-full max-w-sm">
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl ring-1 ring-black/5 overflow-hidden p-10">
-            <div className="text-center mb-8">
-              <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-5" style={{ background: "linear-gradient(135deg, #1a4d2e 0%, #2d6a45 100%)", boxShadow: "0 12px 32px rgba(26, 77, 46, 0.25)" }}>
-                <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                </svg>
-              </div>
-              <h1 className="text-3xl font-semibold text-stone-900" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: "-0.02em" }}>
-                Demo Mode
-              </h1>
-              <p className="mt-2 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
-                Select a role to explore the platform
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => { document.cookie = "dev_session=platform_admin; path=/; max-age=86400"; window.location.replace("/admin"); }}
-                className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#1a4d2e" }}
-              >
-                Platform Admin
-              </button>
-              <button
-                onClick={() => { document.cookie = "dev_session=brand_admin; path=/; max-age=86400"; window.location.replace("/admin"); }}
-                className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#c97a3e" }}
-              >
-                Brand Admin
-              </button>
-              <button
-                onClick={() => { document.cookie = "dev_session=store_employee; path=/; max-age=86400"; window.location.replace("/admin"); }}
-                className="w-full rounded-xl px-6 py-4 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", backgroundColor: "#6b8f71" }}
-              >
-                Store Employee
-              </button>
-            </div>
-          </div>
-
-          {/* Back link */}
-          <div className="text-center mt-6">
-            <Link href="/brands" className="text-sm transition-opacity hover:opacity-60 inline-flex items-center gap-1" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#7a7570" }}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-              View Farms
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="py-6 px-6 border-t border-stone-200/30 relative z-10">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1a4d2e" }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L4.5 13.5H11.5L10.5 22L19 10.5H12L13 2Z" fill="#faf8f5" stroke="#faf8f5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-xs" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: "#b5b0a8" }}>
-              © {new Date().getFullYear()} Route Commerce
-            </span>
-          </div>
-        </div>
-      </footer>
-    </main>
-  );
-}
-
-// Inner component that uses useSearchParams - must be wrapped in Suspense
-function LoginPageInner() {
-  const searchParams = useSearchParams();
-  const isDemo = searchParams.get("demo") === "1";
-  if (isDemo) return <DemoMode />;
-  return <LoginForm />;
-}
-
-export default function LoginClient() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-500 animate-pulse" />
-          <p className="text-stone-500">Loading...</p>
-        </div>
-      </div>
-    }>
-      <LoginPageInner />
-    </Suspense>
   );
 }

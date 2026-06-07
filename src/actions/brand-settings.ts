@@ -271,25 +271,36 @@ export async function getBrandSettings(brandId: string): Promise<GetBrandSetting
 
 // Public version for storefront pages — uses slug, no auth required
 export async function getBrandSettingsPublic(brandSlug: string): Promise<GetBrandSettingsResult & { wholesaleEnabled?: boolean | null }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_brand_settings_by_slug`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_slug: brandSlug }),
-    }
-  );
+  if (!supabaseUrl || !supabaseKey) {
+    return { success: false, error: "Supabase not configured", wholesaleEnabled: undefined };
+  }
 
-  if (!response.ok) return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
-  const data = await response.json();
-  return {
-    success: true,
-    settings: data,
-    wholesaleEnabled: data?.wholesale_enabled,
-  };
+  // Wrapped in try/catch so a build-time Supabase outage (ECONNREFUSED)
+  // doesn't crash the prerender — the page just falls back to its
+  // default brand name and revalidates from a real request later.
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_brand_settings_by_slug`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
+        body: JSON.stringify({ p_brand_slug: brandSlug }),
+      }
+    );
+
+    if (!response.ok) return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
+    const data = await response.json();
+    return {
+      success: true,
+      settings: data,
+      wholesaleEnabled: data?.wholesale_enabled,
+    };
+  } catch {
+    return { success: false, error: "Failed to fetch brand settings", wholesaleEnabled: undefined };
+  }
 }
 
 export async function saveBrandSettings(params: {

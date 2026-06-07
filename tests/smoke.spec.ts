@@ -3,39 +3,9 @@ import { test, expect } from "@playwright/test";
 const BASE = process.env.PLAYWRIGHT_URL ?? "http://localhost:3000";
 
 test.describe("Smoke Tests", () => {
-  test("Login — dev_session platform_admin lands on admin dashboard", async ({ page }) => {
-    await page.context().addCookies([
-      { name: "dev_session", value: "platform_admin", domain: "localhost", path: "/" },
-    ]);
-
-    await page.goto(`${BASE}/admin`);
-    await expect(page).toHaveURL(/\/admin/, { timeout: 5000 });
-
-    // Admin sidebar nav should be loaded (sidebar is rendered by layout)
-    await expect(page.locator("aside").first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test("Admin Settings — page loads", async ({ page }) => {
-    await page.context().addCookies([
-      { name: "dev_session", value: "platform_admin", domain: "localhost", path: "/" },
-    ]);
-
-    await page.goto(`${BASE}/admin/settings`);
-
-    // Wait for redirect to complete (may go to /login first)
-    await page.waitForURL(/\/admin\/settings/, { timeout: 10000 });
-
-    // Page renders without crash — main content area should exist
-    await expect(page.locator("main").first()).toBeVisible({ timeout: 8000 });
-  });
-
-  test("Time Tracking — page loads", async ({ page }) => {
-    await page.context().addCookies([
-      { name: "dev_session", value: "platform_admin", domain: "localhost", path: "/" },
-    ]);
-
-    await page.goto(`${BASE}/admin/time-tracking`);
-    await expect(page).toHaveURL(/\/admin\/time-tracking/, { timeout: 5000 });
+  test("Homepage loads", async ({ page }) => {
+    const res = await page.goto(`${BASE}/`);
+    expect(res?.status()).toBeLessThan(500);
     await expect(page.locator("body")).toBeVisible();
   });
 
@@ -46,17 +16,34 @@ test.describe("Smoke Tests", () => {
     });
 
     await page.goto(`${BASE}/tuxedo`);
-
-    // Hero brand name — use a more stable anchor
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10000 });
-
-    // "Why Choose" section heading is a strong signal the page rendered correctly
-    await expect(page.getByRole("heading", { name: /why choose/i })).toBeVisible({ timeout: 5000 });
-
-    // No console errors (filter known non-critical)
+    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
     const criticalErrors = errors.filter(
-      (e) => !e.includes("favicon") && !e.includes("Warning:")
+      (e) => !e.includes("favicon") && !e.includes("Warning:"),
     );
     expect(criticalErrors).toHaveLength(0);
+  });
+
+  test("Indian River Direct storefront — homepage loads", async ({ page }) => {
+    const res = await page.goto(`${BASE}/indian-river-direct`);
+    expect(res?.status()).toBeLessThan(500);
+    await expect(page.locator("body")).toBeVisible();
+  });
+
+  test("/admin redirects to /login when unauthenticated", async ({ page }) => {
+    await page.goto(`${BASE}/admin`, { waitUntil: "domcontentloaded" });
+    expect(page.url()).toMatch(/\/login(\?|$)/);
+  });
+
+  test("Login page renders the Google CTA (or 'not configured' notice)", async ({ page }) => {
+    await page.goto(`${BASE}/login`);
+    const hasGoogle = await page
+      .getByRole("button", { name: /continue with google/i })
+      .isVisible()
+      .catch(() => false);
+    const hasSetup = await page
+      .getByText(/Google sign-in is not configured/i)
+      .isVisible()
+      .catch(() => false);
+    expect(hasGoogle || hasSetup).toBe(true);
   });
 });

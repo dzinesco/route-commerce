@@ -1,185 +1,225 @@
-import { cookies } from "next/headers";
-import type { AdminUser } from "./admin-permissions-types";
-export type { AdminUser } from "./admin-permissions-types";
+import "server-only";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { withPlatformAdmin } from "@/db/client";
+import { users, tenants, tenantUsers } from "@/db/schema";
+import type { AdminRole, AdminUser, TenantContext } from "@/lib/admin-permissions-types";
 
 /**
- * Returns the current admin user, or `null` if not authenticated.
+ * Source of truth for the current admin user.
  *
- * Resolution order:
- *   1. Mock data mode (NEXT_PUBLIC_USE_MOCK_DATA=true) → platform_admin dev.
- *   2. `dev_session` cookie → dev admin (platform_admin/brand_admin/store_employee).
- *   3. Real auth (rc_auth_uid or rc_uid cookie) → load admin_users + brand_ids.
+ * Looks up the Auth.js v5 session, then resolves the user + tenant
+ * from the `users` and `tenant_users` tables.
  *
- * `brand_id` is the active brand; `brand_ids` is the full membership list.
- * For dev sessions without a real DB, `brand_ids` is populated by:
- *   - platform_admin: `[]` (listBrandsForAdmin resolves against the brands table)
- *   - store_employee: `[<first real brand>]` if a brand exists, else `[]`
- *   - brand_admin: `[]` (legacy dev; we don't have a way to scope brand in dev)
+ * Returns `null` if:
+ *   - No Auth.js session (caller not signed in)
+ *   - The session email doesn't match any `users.email`
+ *   - The user has no `tenant_users` row (not provisioned yet)
+ *
+ * Provisioning: an admin must run
+ *   INSERT INTO users (email, ...) VALUES (...)
+ *   INSERT INTO tenant_users (tenant_id, user_id, role) VALUES (...)
+ * to grant a Google-sign-in user admin access. Until provisioned, the
+ * layout shows "Access Denied" — correct behavior.
+ *
+ * The previous `dev_session` cookie bypass has been removed. The only
+ * way into the admin is through real Auth.js (Google in production;
+ * for local dev, configure `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`).
  */
 export async function getAdminUser(): Promise<AdminUser | null> {
-  const cookieStore = await cookies();
-
-  // ── Mock data mode for UI review ─────────────────────────────────
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") {
-    return buildDevAdmin("platform_admin");
-  }
-
-  // ── Dev session bypass (enabled for testing on all envs) ──────────────
-  const dev = cookieStore.get("dev_session")?.value;
-  if (dev === "platform_admin" || dev === "brand_admin" || dev === "store_employee") {
-    return buildDevAdmin(dev);
-  }
-
-  // ── Main auth: rc_auth_uid (new) or rc_uid (legacy) cookie set by /api/login ─
-  const uid = cookieStore.get("rc_auth_uid")?.value ?? cookieStore.get("rc_uid")?.value;
-  if (!uid) return null;
-
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return null;
-  }
-
-  // Lookup admin_users by Supabase auth user id
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  let adminUsers: unknown[] = [];
+  let sessionEmail: string | null = null;
   try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/admin_users?user_id=eq.${uid}&limit=1`,
-      { headers: { apikey: serviceKey, "Content-Type": "application/json" } }
-    );
-    if (res.ok) {
-      const data = await res.json().catch(() => []);
-      adminUsers = Array.isArray(data) ? data : [];
-    }
-  } catch (e) {
-    // fetch failed silently
-  }
-
-  // First login — auto-create platform_admin via SECURITY DEFINER RPC
-  if (adminUsers.length === 0) {
-    // Check if uid is a valid UUID before trying to insert
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!UUID_REGEX.test(uid)) return null;
-
-    try {
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/rpc/upsert_admin_user`,
-        {
-          method: "POST",
-          headers: { apikey: serviceKey, "Content-Type": "application/json", Prefer: "return=representation" },
-          body: JSON.stringify({ p_user_id: uid }),
-        }
-      );
-      if (res.ok) {
-        const inserted = await res.json().catch(() => null);
-        if (inserted && inserted.length > 0) {
-          return buildAdminUser(inserted[0] as Record<string, unknown>, []);
-        }
-      }
-    } catch (e) {
-      // RPC failed silently
-    }
+    const session = await auth();
+    sessionEmail = session?.user?.email ?? null;
+  } catch (err) {
+    console.error("[admin-permissions] auth() failed:", err);
     return null;
   }
 
-  const admin = adminUsers[0] as Record<string, unknown>;
-  if (!admin.active) return null;
+  if (!sessionEmail) return null;
 
-  // Load brand_ids from the admin_user_brands junction
-  const brandIds = await fetchAdminUserBrandIds(supabaseUrl, serviceKey, admin.id as string);
+  return await withPlatformAdmin(async (db) => {
+    const userRows = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, sessionEmail))
+      .limit(1);
+    const user = userRows[0];
+    if (!user) return null;
 
-  return buildAdminUser(admin, brandIds);
+    const membershipRows = await db
+      .select({
+        tenantId: tenants.id,
+        tenantName: tenants.name,
+        tenantSlug: tenants.slug,
+        tenantStatus: tenants.status,
+        role: tenantUsers.role,
+      })
+      .from(tenantUsers)
+      .innerJoin(tenants, eq(tenants.id, tenantUsers.tenantId))
+      .where(eq(tenantUsers.userId, user.id))
+      .limit(1);
+
+    if (membershipRows.length === 0) {
+      // Signed in but not provisioned for any tenant.
+      return null;
+    }
+
+    const m = membershipRows[0];
+    const role = m.role as AdminRole;
+    return buildAdminUser({
+      id: user.id,
+      email: user.email,
+      displayName: user.name,
+      authProvider: user.authProvider,
+      tenantId: m.tenantId,
+      tenantSlug: m.tenantSlug,
+      tenantName: m.tenantName,
+      role,
+      active: true,
+    });
+  });
 }
 
 /**
- * Load `brand_ids` from the admin_user_brands junction for the given admin row.
- * Returns an empty array on any failure (e.g. before migration 207 is applied).
+ * Resolves the current admin user AND their tenant. Returns `null` if
+ * the user is not signed in or has no tenant. For platform_admin (no
+ * tenant), `tenant` is `null` and callers should use `withPlatformAdmin`
+ * to query across all tenants.
  */
-async function fetchAdminUserBrandIds(
-  supabaseUrl: string,
-  serviceKey: string,
-  adminRowId: string
-): Promise<string[]> {
-  try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/admin_user_brands?admin_user_id=eq.${adminRowId}&select=brand_id`,
-      { headers: { apikey: serviceKey, "Content-Type": "application/json" } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json().catch(() => []);
-    if (!Array.isArray(data)) return [];
-    return data
-      .map((row: Record<string, unknown>) => row.brand_id as string)
-      .filter((id): id is string => typeof id === "string");
-  } catch {
-    return [];
+export async function getCurrentTenant(): Promise<TenantContext | null> {
+  const user = await getAdminUser();
+  if (!user) return null;
+  if (!user.tenant_id) {
+    // platform_admin — no specific tenant
+    return null;
   }
+  return {
+    user,
+    tenant: {
+      id: user.tenant_id,
+      name: user.display_name ?? user.tenant_slug ?? "Unknown",
+      slug: user.tenant_slug ?? "unknown",
+      status: "active",
+    },
+  };
 }
 
-function buildDevAdmin(role: string): AdminUser {
-  // For dev sessions we don't have an admin_user_brands junction row to load.
-  // - platform_admin: `brand_ids = []` (listBrandsForAdmin resolves against brands).
-  // - store_employee: `brand_ids = []` (dev AdminAccessDenied is acceptable;
-  //   this is the documented limitation — re-read spec section on getAdminUser
-  //   step 1. We skip the spec's "fetch first real brand" complexity here in
-  //   favour of keeping dev session cheap and DB-independent).
-  // - brand_admin: `brand_ids = []` (same rationale).
-  // `role` is narrowed to the strict union — we know the dev callers pass
-  // only valid values.
-  const base = {
+// ────────────────────────────────────────────────────────────────────────
+// Re-exports for backward compat
+// ────────────────────────────────────────────────────────────────────────
+
+export type { AdminUser, AdminRole, TenantContext } from "@/lib/admin-permissions-types";
+
+/**
+ * @deprecated Kept for unit tests that exercise the dev shim path.
+ * Production code should never call this — `getAdminUser()` only reads
+ * the Auth.js session now.
+ */
+export function buildDevAdmin(role: AdminRole): AdminUser {
+  const isPlatform = role === "platform_admin";
+  const tenantId = isPlatform ? null : "dev-tenant";
+  return {
     id: "dev",
     user_id: "dev",
-    brand_id: null,
-    brand_ids: [] as string[],
-    role: role as AdminUser["role"],
+    email: null,
+    display_name: "Demo Admin",
+    tenant_id: tenantId,
+    brand_id: tenantId, // legacy alias
+    brand_ids: tenantId ? [tenantId] : [], // legacy array alias
+    tenant_slug: isPlatform ? null : "tuxedo",
+    role,
     active: true,
+    auth_provider: "dev",
+    ...permissionsForRole(role),
     must_change_password: false,
   };
-  if (role === "store_employee") {
-    return { ...base, can_manage_products: false, can_manage_stops: false, can_manage_orders: true,
-      can_manage_pickup: true, can_manage_messages: false, can_manage_refunds: false,
-      can_manage_users: false, can_manage_water_log: false, can_manage_reports: false, can_manage_settings: false };
-  }
-  return { ...base, can_manage_products: true, can_manage_stops: true, can_manage_orders: true,
-    can_manage_pickup: true, can_manage_messages: true, can_manage_refunds: true,
-    can_manage_users: true, can_manage_water_log: true, can_manage_reports: true, can_manage_settings: true };
 }
 
-function buildAdminUser(r: Record<string, unknown>, brandIds: string[]): AdminUser {
-  // The DB column is TEXT (per CLAUDE.md) so the runtime value is a string.
-  // We narrow it to the known union here. If the DB has an unknown role
-  // (e.g. a future role), the migration's CHECK constraint will reject it
-  // before it ever reaches this function.
-  const role = r.role as AdminUser["role"];
-  // `brand_id` is the *legacy* single-brand column — preserved here as-is.
-  // The canonical "active brand" is resolved by `getActiveBrandId` on each
-  // page/action, which considers URL params, the active_brand_id cookie,
-  // and this legacy fallback. Setting `brand_id` here to a sensible default
-  // (legacy → first of brand_ids) keeps the AdminUser shape useful even
-  // for callers that haven't migrated to `getActiveBrandId` yet.
-  const legacyBrandId = (r.brand_id as string | null) ?? null;
-  const base = {
-    id: r.id as string,
-    user_id: r.user_id as string,
-    brand_id: legacyBrandId ?? brandIds[0] ?? null,
-    brand_ids: brandIds,
-    role,
-    active: r.active as boolean,
-    must_change_password: Boolean(r.must_change_password),
+function buildAdminUser(input: {
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  authProvider: "dev" | "google" | "email" | null;
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  role: AdminRole;
+  active: boolean;
+}): AdminUser {
+  return {
+    id: input.id,
+    user_id: input.id,
+    email: input.email,
+    display_name: input.displayName,
+    tenant_id: input.tenantId,
+    brand_id: input.tenantId, // legacy alias
+    brand_ids: [input.tenantId], // legacy array alias
+    tenant_slug: input.tenantSlug,
+    role: input.role,
+    active: input.active,
+    auth_provider: input.authProvider,
+    ...permissionsForRole(input.role),
   };
+}
+
+/**
+ * Single source of truth for "what can a role do". Used by both the
+ * dev shim and the real user lookup so the demo and the real thing
+ * behave identically.
+ */
+export function permissionsForRole(role: AdminRole) {
   if (role === "platform_admin") {
-    return { ...base, can_manage_products: true, can_manage_stops: true, can_manage_orders: true,
-      can_manage_pickup: true, can_manage_messages: true, can_manage_refunds: true,
-      can_manage_users: true, can_manage_water_log: true, can_manage_reports: true, can_manage_settings: true };
+    return {
+      can_manage_products: true,
+      can_manage_stops: true,
+      can_manage_orders: true,
+      can_manage_pickup: true,
+      can_manage_messages: true,
+      can_manage_refunds: true,
+      can_manage_users: true,
+      can_manage_water_log: true,
+      can_manage_reports: true,
+      can_manage_settings: true,
+      can_manage_billing: true,
+      can_manage_branding: true,
+      can_manage_marketing: true,
+      can_manage_team: true,
+    };
   }
-  if (role === "store_employee") {
-    return { ...base, can_manage_products: false, can_manage_stops: false, can_manage_orders: true,
-      can_manage_pickup: true, can_manage_messages: false, can_manage_refunds: false,
-      can_manage_users: false, can_manage_water_log: false, can_manage_reports: false, can_manage_settings: false };
+  if (role === "brand_admin") {
+    return {
+      can_manage_products: true,
+      can_manage_stops: true,
+      can_manage_orders: true,
+      can_manage_pickup: true,
+      can_manage_messages: true,
+      can_manage_refunds: true,
+      can_manage_users: false,
+      can_manage_water_log: true,
+      can_manage_reports: true,
+      can_manage_settings: true,
+      can_manage_billing: true,
+      can_manage_branding: true,
+      can_manage_marketing: true,
+      can_manage_team: true,
+    };
   }
-  return { ...base, can_manage_products: Boolean(r.can_manage_products), can_manage_stops: Boolean(r.can_manage_stops),
-    can_manage_orders: Boolean(r.can_manage_orders), can_manage_pickup: Boolean(r.can_manage_pickup),
-    can_manage_messages: Boolean(r.can_manage_messages), can_manage_refunds: Boolean(r.can_manage_refunds),
-    can_manage_users: Boolean(r.can_manage_users), can_manage_water_log: Boolean(r.can_manage_water_log),
-    can_manage_reports: Boolean(r.can_manage_reports), can_manage_settings: Boolean(r.can_manage_settings) };
+  // store_employee
+  return {
+    can_manage_products: false,
+    can_manage_stops: false,
+    can_manage_orders: true,
+    can_manage_pickup: true,
+    can_manage_messages: false,
+    can_manage_refunds: false,
+    can_manage_users: false,
+    can_manage_water_log: false,
+    can_manage_reports: false,
+    can_manage_settings: false,
+    can_manage_billing: false,
+    can_manage_branding: false,
+    can_manage_marketing: false,
+    can_manage_team: false,
+  };
 }

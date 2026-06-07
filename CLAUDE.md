@@ -36,28 +36,36 @@ E2E tests live in `tests/` and run via Playwright. Specs include `tests/smoke.sp
 
 ### Authentication & Authorization
 
-**Dev mode** bypasses Supabase auth entirely via `dev_session` cookie set by `/login`:
+**Auth.js v5 (NextAuth)** is the active auth system. Config lives in `src/lib/auth.ts`, with the route handler at `src/app/api/auth/[...nextauth]/route.ts`. The login page (`src/app/login/LoginClient.tsx`) renders a "Continue with Google" button alongside the email/password form, both backed by Auth.js providers. Server-side code reads the session via `await auth()` from `@/lib/auth`; client code that needs to sign out can call the `signOutAction` server action from `@/actions/auth-actions`.
+
+**Providers (see `src/lib/auth.ts`):**
+- **Google OAuth** — primary sign-in. Active when `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` are set. Users auto-provision as `platform_admin` if their Google `sub` is UUID-shaped (rare) — for Google sign-ins, `admin_users` rows must be provisioned manually by an existing admin until the `email`-based provisioning flow lands.
+- **Email/password (Supabase-backed)** — wraps the existing `auth/v1/token?grant_type=password` flow. This is transitional; once Supabase auth is fully removed, this provider goes away.
+
+**Demo / dev mode** still works through a `dev_session` cookie:
 - `dev_session=platform_admin` — full access, all brands
 - `dev_session=brand_admin` — full access to assigned brand only
 - `dev_session=store_employee` — limited access (orders, pickup, wholesale only)
+- The login page renders "Demo Mode" buttons that set this cookie client-side; the middleware also auto-issues `dev_session=platform_admin` for the `/admin` demo flow when Supabase isn't configured.
 
-`src/lib/admin-permissions.ts` is the single source of truth for the current admin user. It uses a `dev_session` cookie in development and the legacy `rc_auth_uid` cookie in production (set by the pre-Auth.js `/api/login`) — never import this file directly into Client Components. Use the `getCurrentAdminUser` server action from `@/actions/admin-user` instead.
+**Single source of truth for the current admin user:** `getAdminUser()` in `src/lib/admin-permissions.ts`. It reads `dev_session` first, then the Auth.js session via `auth()` from `@/lib/auth`. The Supabase `admin_users` lookup still uses `rest/v1/admin_users?user_id=eq.<uid>` — when the `pg` pool at `src/lib/db.ts` lands, that lookup should switch to a direct `SELECT`. **Never import `admin-permissions.ts` into Client Components** — use the `getCurrentAdminUser` server action from `@/actions/admin-user` instead.
 
-The middleware (`src/middleware.ts`) guards `/admin/:path*` and `/login`. It auto-issues a `dev_session=platform_admin` cookie for the demo flow when no auth is present. A `clerk-auth.ts` helper exists in `src/lib/` but is currently a stub — do not depend on it.
+The middleware (`src/middleware.ts`) uses Auth.js v5's `auth()` wrapper. It guards `/admin/*` and `/login`, preserves the `dev_session` bypass, and adds baseline security headers.
 
 The `AdminUser` type lives in `src/lib/admin-permissions-types.ts` and is shared across server/client boundary.
 
-#### Auth.js (NextAuth v5) migration — in progress
+#### Migration status
 
-The platform is migrating from the bespoke `dev_session` + `rc_auth_uid` cookie flow to **Auth.js (NextAuth v5)**, with Supabase as the database adapter and email/OAuth providers. While the migration is in flight:
-
-- Do **not** add new code that depends on the `dev_session` or `rc_auth_uid` cookies — write against the Auth.js API (`auth()`, `signIn`, `signOut`, `getSession`) instead.
-- New env vars: `AUTH_SECRET`, `AUTH_URL`, and provider-specific keys (`AUTH_GITHUB_ID`/`SECRET`, `AUTH_GOOGLE_ID`/`SECRET`, etc.). See `.env.example` for the full list.
-- A new route handler at `src/app/api/auth/[...nextauth]/route.ts` will replace the ad-hoc `/api/login`, `/api/auth/uid`, and `/api/logout` endpoints.
-- The middleware (`src/middleware.ts`) will eventually use `auth()` from NextAuth to populate the session; the existing `dev_session` auto-login branch is a temporary fallback for demos.
-- `src/lib/admin-permissions.ts` will keep its public surface (`getAdminUser`, `getCurrentAdminUser`) but read the session from NextAuth internally — the `AdminUser` type does not need to change.
-- `clerk-auth.ts` is being removed in favor of Auth.js; do not extend it.
-- Until the migration ships, the `dev_session` and `rc_auth_uid` paths remain the source of truth — see the section above for current behavior.
+- ✅ Auth.js v5 installed (`next-auth@beta`, currently `5.0.0-beta.31`)
+- ✅ `src/lib/auth.ts` + `src/app/api/auth/[...nextauth]/route.ts` in place
+- ✅ Google + Credentials (Supabase-backed) providers configured
+- ✅ `getAdminUser()` reads from `auth()` session
+- ✅ Middleware uses `auth()` wrapper
+- ✅ Old `/api/login`, `/api/logout`, `/api/auth/uid`, `/api/set-auth-cookie` removed
+- ⏳ Add `email` column to `admin_users` and provision Google users by email (TODO)
+- ⏳ Switch the `admin_users` lookup in `getAdminUser()` to direct `pg` (TODO — needs `src/lib/db.ts`)
+- ⏳ Remove the email/password (Supabase) provider when Supabase auth is fully cut over (TODO)
+- ⏳ The `rc_auth_uid` cookie is no longer the source of truth, but `actions/admin/users.ts` still reads it for backward compat with pre-existing sessions — the `DEV_FORCE_UID` constant and its branches are now dead code (the `/api/force-admin` route that set it was deleted) and should be removed in a follow-up
 
 ### Server Actions Pattern
 
