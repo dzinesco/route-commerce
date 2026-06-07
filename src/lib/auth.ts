@@ -1,84 +1,89 @@
 import "server-only";
 
 /**
- * Auth.js (NextAuth v5) configuration.
+ * Auth.js (NextAuth v5) — server-side configuration.
+ *
+ * This file is Node-only. It is imported by:
+ *   - `src/app/api/auth/[...nextauth]/route.ts` (the OAuth + credentials handlers)
+ *   - Server actions that call `signIn` / `signOut`
+ *   - `src/lib/admin-permissions.ts` (reads `auth()` for the current user)
+ *
+ * The middleware imports a separate, edge-safe instance built from
+ * `src/auth.config.ts`. Both instances share the same JWT cookie, so the
+ * middleware can read sessions minted here.
  *
  * Providers:
- *   - Google OAuth — only active when AUTH_GOOGLE_ID + AUTH_GOOGLE_SECRET
- *     are set.
+ *   - Google OAuth — active when AUTH_GOOGLE_ID + AUTH_GOOGLE_SECRET are set.
+ *   - Email + password (Credentials) — active in dev only; backed by the
+ *     `users.password_hash` column. In production, set ALLOW_DEV_LOGIN=false
+ *     (the default) and the provider is omitted entirely.
  *
- * Supabase is no longer used for auth (or anything else) on this platform.
- * The historical Supabase-backed Credentials provider was removed in the
- * cleanup pass. New admin users are provisioned manually by an existing
- * platform admin via /admin/users (the action creates an `admin_users`
- * row linked to the Google `sub` after the user signs in for the first
- * time).
- *
- * Session strategy: JWT. No database adapter — admin user lookup is
- * delegated to `getAdminUser()` in `src/lib/admin-permissions.ts`.
- *
- * Required env vars (production):
- *   - AUTH_SECRET          — JWT signing secret
- *   - AUTH_URL             — base URL (auto-detected on Vercel)
- *   - AUTH_GOOGLE_ID       — Google OAuth client id
- *   - AUTH_GOOGLE_SECRET   — Google OAuth client secret
- *
- * Backward compatibility: the `dev_session` cookie was the source of
- * truth for the demo flow but has been removed — `getAdminUser()` and
- * the middleware now use only the Auth.js session. The legacy
- * `rc_auth_uid` cookie was retired earlier — see the
- * final report for the cleanup notes.
+ * For local dev, run `npm run db:seed` to create the seeded admin user
+ * (`admin@route-commerce.local` / `admin`). The `authorize` function
+ * looks up the user by email, verifies the password against the stored
+ * hash, and returns the real user record. No `dev_session` cookie
+ * bypass; this is real Auth.js sign-in.
  */
 
-import NextAuth, { type DefaultSession } from "next-auth";
-import Google from "next-auth/providers/google";
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { eq } from "drizzle-orm";
+import { authConfig, isDevLoginEnabled } from "@/auth.config";
+import { withDb } from "@/db/client";
+import { users } from "@/db/schema";
+import { verifyPassword } from "@/lib/passwords";
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-    } & DefaultSession["user"];
-  }
+function buildCredentialsProvider() {
+  return Credentials({
+    id: "credentials",
+    name: "Email + password",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    /**
+     * Returns the user on success, or `null` on any failure. Auth.js
+     * never throws from `authorize` — a throw is treated as a 500.
+     */
+    async authorize(creds) {
+      if (!isDevLoginEnabled()) return null;
+      const email = String(creds?.email ?? "").trim().toLowerCase();
+      const password = String(creds?.password ?? "");
+      if (!email || !password) return null;
+
+      try {
+        // The `users` table is global (not tenant-scoped), so we use
+        // `withDb` rather than `withTenant` — no GUC to set.
+        const u = await withDb(async (db) => {
+          const rows = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
+          return rows[0] ?? null;
+        });
+        if (!u || !u.passwordHash) return null;
+        if (!verifyPassword(password, u.passwordHash)) return null;
+        return {
+          id: u.id,
+          name: u.name ?? undefined,
+          email: u.email,
+        };
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[auth] credentials authorize failed:", err);
+        return null;
+      }
+    },
+  });
 }
 
-const hasGoogleCreds = !!(
-  process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
-);
-
-const googleProvider = hasGoogleCreds
-  ? [
-      Google({
-        clientId: process.env.AUTH_GOOGLE_ID,
-        clientSecret: process.env.AUTH_GOOGLE_SECRET,
-      }),
-    ]
-  : [];
+const providers = [
+  ...authConfig.providers,
+  ...(isDevLoginEnabled() ? [buildCredentialsProvider()] : []),
+];
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  providers: googleProvider,
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        // `user.id` is the provider's stable subject — for Google sign-ins
-        // this is the opaque `sub` claim.
-        if (user.id) token.id = user.id;
-        if (user.email) token.email = user.email;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id =
-          (typeof token.id === "string" && token.id) ||
-          (typeof token.sub === "string" && token.sub) ||
-          "";
-      }
-      return session;
-    },
-  },
+  ...authConfig,
+  providers,
 });

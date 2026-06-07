@@ -1,22 +1,25 @@
 // NextAuth v5 middleware
 //
-// Runs on every non-static request. Responsibilities:
-//   1. Allow Auth.js v5 to read/write its own session cookie
-//   2. Protect /admin/* and /wholesale/* — redirect to /login if not authenticated
+// Runs on every non-static request in the Edge runtime. It uses a
+// lightweight NextAuth instance built from the edge-safe `authConfig` —
+// NOT the full `src/lib/auth.ts` (which uses `pg` and is Node-only).
+//
+// Responsibilities:
+//   1. Allow Auth.js to read/write its own session cookie
+//   2. Protect /admin/*, /wholesale/*, /protected-example — redirect to
+//      /login if not authenticated
 //   3. Redirect away from /login when the user already has a session
 //   4. Add a handful of baseline security headers
 //
 // The legacy `dev_session` cookie bypass has been removed. The only way
-// into the admin is through real Auth.js (Google in production; for
-// local dev, configure `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`).
-//
-// Backward compatibility: the legacy `rc_auth_uid` / `rc_uid` cookies
-// are intentionally no longer read here — `getAdminUser()` in
-// src/lib/admin-permissions.ts is the single source of truth and reads
-// the Auth.js session instead.
+// into the admin is through real Auth.js — Google in production, or the
+// seeded Credentials provider in dev (see `src/lib/auth.ts`).
 
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/auth.config";
 import { NextResponse } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
