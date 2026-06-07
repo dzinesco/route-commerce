@@ -39,6 +39,10 @@ next-env.d.ts
 # Supabase
 supabase/.temp/
 
+# Playwright test results (generated, not source)
+test-results/
+playwright-report/
+
 # IDE / local config
 .mcp.json
 .env*

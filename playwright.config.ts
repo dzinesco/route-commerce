@@ -10,6 +10,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  // Playwright should only run E2E specs — vitest owns everything under
+  // tests/unit/. The glob below matches *.spec.ts at the top of tests/ and
+  // tests/e2e/ and tests/login/ but skips the .test.ts files (vitest).
+  testMatch: /(tests\/(smoke|e2e|login)\/.*|\/[^/]+\.spec\.ts$)/,
   reporter: "list",
   use: {
     baseURL: LOCAL_BASE,
