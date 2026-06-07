@@ -35,6 +35,13 @@ export const users = pgTable(
     email: text("email").unique(),
     name: text("name"),
     image: text("image"),
+    /**
+     * Bcrypt / scrypt / argon2 hash, or null for OAuth-only users.
+     * Format is self-describing (algorithm$N$salt$hash) so we can
+     * migrate to a stronger KDF later without losing existing hashes.
+     * See `src/lib/passwords.ts` for the encoder/decoder.
+     */
+    passwordHash: text("password_hash"),
     authProvider: text("auth_provider", { enum: authProviderEnum })
       .notNull()
       .default("dev"),
