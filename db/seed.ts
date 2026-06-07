@@ -16,7 +16,21 @@
  */
 import "dotenv/config";
 import { Pool } from "pg";
-import { hashPassword } from "../src/lib/passwords";
+import { randomBytes, scryptSync } from "node:crypto";
+
+// `src/lib/passwords.ts` has `import "server-only"` which throws when this
+// script runs outside a Next.js server context. Inline the same scrypt
+// format here (must match `verifyPassword` in passwords.ts) so the seed
+// can run from a plain Node process.
+const SALT_LEN = 16;
+const KEY_LEN = 64;
+const DEFAULT_N = 16384;
+const ALGO = "scrypt";
+function hashPassword(plain: string): string {
+  const salt = randomBytes(SALT_LEN).toString("hex");
+  const hash = scryptSync(plain, salt, KEY_LEN, { N: DEFAULT_N }).toString("hex");
+  return `${ALGO}$${DEFAULT_N}$${salt}$${hash}`;
+}
 
 // Seed needs elevated privileges (inserts into plans, add_ons, tenants —
 // tables that are intentionally not RLS-scoped but the runtime app user
