@@ -2,7 +2,9 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getMockTableData } from "@/lib/mock-data";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { products } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 
 const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
@@ -36,33 +38,30 @@ export async function updateProduct(
     return { success: true };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${productId}`, {
-    method: "PATCH",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", "Prefer": "return=representation" },
-    body: JSON.stringify({
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      type: data.type,
-      active: data.active,
-      image_url: data.image_url ?? null,
-      is_taxable: data.is_taxable,
-      pickup_type: data.pickup_type ?? "scheduled_stop",
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed to update product: ${err}` };
+  // The new schema has `price_cents` (integer cents) and no `type`,
+  // `is_taxable`, `pickup_type`, or `image_url` column. `type` /
+  // `is_taxable` / `pickup_type` are dropped for the SaaS rebuild;
+  // `image_url` lives in `product_images`.
+  const priceCents = Math.round(Number(data.price) * 100);
+  if (!Number.isFinite(priceCents) || priceCents < 0) {
+    return { success: false, error: "Invalid price" };
   }
 
-  const updated = await res.json();
-  if (updated.errors) {
-    return { success: false, error: updated.errors[0]?.message ?? "Unknown error" };
+  try {
+    await withTenant(brandId, (db) =>
+      db
+        .update(products)
+        .set({
+          name: data.name,
+          description: data.description ?? null,
+          priceCents,
+          active: data.active,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(products.id, productId), eq(products.tenantId, brandId)))
+    );
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: `Failed to update product: ${err instanceof Error ? err.message : String(err)}` };
   }
-
-  return { success: true };
 }

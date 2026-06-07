@@ -2,23 +2,14 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId, assertBrandAccess } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_PAT = process.env.SUPABASE_PAT!;
-
-async function adminFetch(endpoint: string, options?: RequestInit) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
-    ...options,
-    headers: {
-      ...svcHeaders(SUPABASE_PAT),
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
+// TODO(migration): the `harvest_lots` / `harvest_lot_events` / `lot_orders`
+// tables from the route-trace feature (defined across
+// supabase/migrations/143_enable_route_trace.sql and friends) were retired
+// from the SaaS rebuild — they don't exist in `db/schema/`. The functions
+// below all return empty results so the public trace page and FSMA reports
+// 404 gracefully. If route-trace comes back, re-introduce the tables in
+// `db/schema/` and replace these stubs with real Drizzle queries.
 
 export interface HarvestLot {
   id: string;
@@ -151,72 +142,72 @@ export interface FieldYieldSummary {
   yield_unit: string | null;
 }
 
-export async function getRouteTraceLots(brandId: string, status?: string) {
+// Discriminated unions so TypeScript narrows correctly for consumer patterns:
+// - `result.success ? result.X : defaultValue` (X is defined on success)
+// - `if (result.success && result.X) { ... } else { result.error }` (error readable in else)
+type LotsResult =
+  | { success: true; lots: HaulingLot[]; error: null }
+  | { success: false; lots: null; error: string };
+type HarvestLotsResult =
+  | { success: true; lots: HarvestLot[]; error: null }
+  | { success: false; lots: null; error: string };
+type StatsResult =
+  | { success: true; stats: RouteTraceStats; error: null }
+  | { success: false; stats: null; error: string };
+type LotDetailResult =
+  | { success: true; lot: LotDetail; error: null }
+  | { success: false; lot: null; error: string };
+type CreatedLotResult =
+  | { success: true; lot: HarvestLot; error: null }
+  | { success: false; lot: null; error: string };
+type UpdatedLotResult =
+  | { success: true; lot: HarvestLot | null; error: null }
+  | { success: false; lot: null; error: string };
+type InventoryResult =
+  | { success: true; inventory: InventoryByCrop[]; error: null }
+  | { success: false; inventory: null; error: string };
+type YieldResult =
+  | { success: true; summary: FieldYieldSummary[]; error: null }
+  | { success: false; summary: null; error: string };
+type EventsResult =
+  | { success: true; events: RecentLotEvent[]; error: null }
+  | { success: false; events: null; error: string };
+type OrdersResult =
+  | { success: true; orders: LotOrder[]; error: null }
+  | { success: false; orders: null; error: string };
+type ChainResult =
+  | { success: true; chain: TraceChain; error: null }
+  | { success: false; chain: null; error: string };
+
+async function assertCanAccessBrand(brandId: string): Promise<
+  { ok: true; adminUser: NonNullable<Awaited<ReturnType<typeof getAdminUser>>> } | { ok: false; error: string }
+> {
   const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
+  if (!adminUser) return { ok: false, error: "Unauthorized" };
   const activeBrandId = await getActiveBrandId(adminUser, brandId);
   if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
+    return { ok: false, error: "Brand access required" };
   }
   if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
+    try {
+      assertBrandAccess(adminUser, activeBrandId);
+    } catch {
+      return { ok: false, error: "Brand access denied" };
+    }
   }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const data = await adminFetch("get_harvest_lots", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId, p_status: status ?? null }),
-    });
-    return { success: true, lots: data };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+  return { ok: true, adminUser };
 }
 
-export async function getRouteTraceLotDetail(lotId: string) {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
+export async function getRouteTraceLots(brandId: string, _status?: string): Promise<LotsResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, lots: null, error: auth.error };
+  return { success: true, lots: [], error: null };
+}
 
-  try {
-    const data = await adminFetch("get_harvest_lot_detail", {
-      method: "POST",
-      body: JSON.stringify({ p_lot_id: lotId }),
-    });
-    if (!data || data.length === 0) return { success: false, error: "Lot not found" };
-    const row = data[0];
-    return {
-      success: true,
-      lot: {
-        lot_id: row.lot_id,
-        lot_number: row.lot_number,
-        crop_type: row.crop_type,
-        variety: row.variety ?? null,
-        harvest_date: row.harvest_date,
-        field_location: row.field_location,
-        worker_name: row.worker_name,
-        packer_name: row.packer_name ?? null,
-        quantity_lbs: row.quantity_lbs,
-        quantity_used_lbs: row.quantity_used_lbs ?? null,
-        status: row.status,
-        notes: row.notes,
-        source_stop_id: row.source_stop_id,
-        destination_stop_id: row.destination_stop_id,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        bin_id: row.bin_id ?? null,
-        container_id: row.container_id ?? null,
-        field_block: row.field_block ?? null,
-        pallets: row.pallets ?? null,
-        yield_estimate_lbs: row.yield_estimate_lbs ?? null,
-        yield_unit: row.yield_unit ?? null,
-        events: row.events ?? [],
-      },
-    };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function getRouteTraceLotDetail(_lotId: string): Promise<LotDetailResult> {
+  const adminUser = await getAdminUser();
+  if (!adminUser) return { success: false, lot: null, error: "Unauthorized" };
+  return { success: false, lot: null, error: "Route-trace feature not configured" };
 }
 
 export interface CreateLotData {
@@ -239,201 +230,70 @@ export interface CreateLotData {
 
 export async function createHarvestLot(
   brandId: string,
-  data: CreateLotData
-) {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const result = await adminFetch("create_harvest_lot", {
-      method: "POST",
-      body: JSON.stringify({
-        p_brand_id: effectiveBrandId,
-        p_crop_type: data.crop_type,
-        p_variety: data.variety ?? null,
-        p_harvest_date: data.harvest_date,
-        p_field_location: data.field_location ?? null,
-        p_worker_name: data.worker_name ?? null,
-        p_packer_name: data.packer_name ?? null,
-        p_quantity_lbs: data.quantity_lbs ?? null,
-        p_notes: data.notes ?? null,
-        p_destination_stop_id: data.destination_stop_id ?? null,
-        p_admin_id: adminUser.id ?? null,
-        p_bin_id: data.bin_id ?? null,
-        p_container_id: data.container_id ?? null,
-        p_field_block: data.field_block ?? null,
-        p_yield_estimate_lbs: data.yield_estimate_lbs ?? null,
-        p_yield_unit: data.yield_unit ?? null,
-        p_pallets: data.pallets ?? null,
-      }),
-    });
-    return { success: true, lot: result };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+  _data: CreateLotData
+): Promise<CreatedLotResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, lot: null, error: auth.error };
+  return { success: false, lot: null, error: "Route-trace feature not configured" };
 }
 
 export async function updateHarvestLotStatus(
-  lotId: string,
-  status: string,
-  location?: string,
-  notes?: string,
-  binId?: string
-) {
+  _lotId: string,
+  _status: string,
+  _location?: string,
+  _notes?: string,
+  _binId?: string
+): Promise<UpdatedLotResult> {
   const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-
-  try {
-    const result = await adminFetch("update_harvest_lot_status", {
-      method: "POST",
-      body: JSON.stringify({
-        p_lot_id: lotId,
-        p_status: status,
-        p_location: location ?? null,
-        p_notes: notes ?? null,
-        p_admin_id: adminUser.id ?? null,
-        ...(binId ? { p_bin_id: binId } : {}),
-      }),
-    });
-    return { success: true, lot: result };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+  if (!adminUser) return { success: false, lot: null, error: "Unauthorized" };
+  return { success: false, lot: null, error: "Route-trace feature not configured" };
 }
 
-export async function getRouteTraceStats(brandId: string) {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const data = await adminFetch("get_route_trace_stats", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId }),
-    });
-    if (!data || data.length === 0) {
-      return { success: true, stats: { active_count: 0, in_transit_count: 0, at_shed_count: 0, total_lots_today: 0, total_harvested_today: 0 } };
-    }
-    return { success: true, stats: data[0] };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function getRouteTraceStats(brandId: string): Promise<StatsResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, stats: null, error: auth.error };
+  return {
+    success: true,
+    stats: {
+      active_count: 0,
+      in_transit_count: 0,
+      at_shed_count: 0,
+      total_lots_today: 0,
+      total_harvested_today: 0,
+      total_lots: 0,
+    },
+    error: null,
+  };
 }
 
-export async function searchHarvestLots(brandId: string, query: string) {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const data = await adminFetch("search_harvest_lots", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId, p_query: query }),
-    });
-    return { success: true, lots: data };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function searchHarvestLots(brandId: string, _query: string): Promise<HarvestLotsResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, lots: null, error: auth.error };
+  return { success: true, lots: [], error: null };
 }
 
-export async function getTraceChain(lotId: string) {
-  try {
-    const data = await adminFetch("get_trace_chain", {
-      method: "POST",
-      body: JSON.stringify({ p_lot_id: lotId }),
-    });
-    return { success: true, chain: data };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function getTraceChain(_lotId: string): Promise<ChainResult> {
+  const adminUser = await getAdminUser();
+  if (!adminUser) return { success: false, chain: null, error: "Unauthorized" };
+  return { success: false, chain: null, error: "Route-trace feature not configured" };
 }
 
-export async function getHarvestLotsReadyToHaul(brandId: string) {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const data = await adminFetch("get_harvest_lots_ready_to_haul", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId }),
-    });
-    return { success: true, lots: data };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function getHarvestLotsReadyToHaul(brandId: string): Promise<LotsResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, lots: null, error: auth.error };
+  return { success: true, lots: [], error: null };
 }
 
-export async function getFieldYieldSummary(brandId: string) {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const data = await adminFetch("get_field_yield_summary", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId }),
-    });
-    return { success: true, summary: data };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function getFieldYieldSummary(brandId: string): Promise<YieldResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, summary: null, error: auth.error };
+  return { success: true, summary: [], error: null };
 }
 
-export async function getLotOrders(lotId: string): Promise<{ success: true; orders: LotOrder[] } | { success: false; error: string }> {
+export async function getLotOrders(_lotId: string): Promise<OrdersResult> {
   const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-
-  try {
-    const data = await adminFetch("get_lot_orders", {
-      method: "POST",
-      body: JSON.stringify({ p_lot_id: lotId }),
-    });
-    return { success: true, orders: data ?? [] };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+  if (!adminUser) return { success: false, orders: null, error: "Unauthorized" };
+  return { success: true, orders: [], error: null };
 }
 
 export interface InventoryByCrop {
@@ -445,79 +305,42 @@ export interface InventoryByCrop {
   yield_unit: string | null;
 }
 
-export async function getInventoryByCrop(brandId: string): Promise<{ success: true; inventory: InventoryByCrop[] } | { success: false; error: string }> {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
-
-  try {
-    const data = await adminFetch("get_inventory_by_crop", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId }),
-    });
-    return { success: true, inventory: data ?? [] };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+export async function getInventoryByCrop(brandId: string): Promise<InventoryResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, inventory: null, error: auth.error };
+  return { success: true, inventory: [], error: null };
 }
 
 export async function markLotUsedInOrder(
-  lotId: string,
-  orderId: string,
-  quantityToAdd?: number,
-  notes?: string
+  _lotId: string,
+  _orderId: string,
+  _quantityToAdd?: number,
+  _notes?: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Unauthorized" };
-
-  try {
-    await adminFetch("mark_lot_used_in_order", {
-      method: "POST",
-      body: JSON.stringify({
-        p_lot_id: lotId,
-        p_order_id: orderId,
-        p_quantity_to_add: quantityToAdd ?? null,
-        p_notes: notes ?? null,
-        p_admin_id: adminUser.id ?? null,
-      }),
-    });
-    return { success: true };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+  return { success: false, error: "Route-trace feature not configured" };
 }
 
 export async function getRecentLotEvents(
   brandId: string,
-  limit = 10
-): Promise<{ success: true; events: RecentLotEvent[] } | { success: false; error: string }> {
-  const adminUser = await getAdminUser();
-  if (!adminUser) return { success: false, error: "Unauthorized" };
-  const activeBrandId = await getActiveBrandId(adminUser, brandId);
-  if (!activeBrandId && adminUser.role !== "platform_admin") {
-    return { success: false, error: "Brand access required" };
-  }
-  if (activeBrandId) {
-    try { assertBrandAccess(adminUser, activeBrandId); } catch { return { success: false, error: "Brand access denied" }; }
-  }
-  const effectiveBrandId = activeBrandId ?? undefined;
-  if (!effectiveBrandId) return { success: false, error: "No brand" };
+  _limit = 10
+): Promise<EventsResult> {
+  const auth = await assertCanAccessBrand(brandId);
+  if (!auth.ok) return { success: false, events: null, error: auth.error };
+  return { success: true, events: [], error: null };
+}
 
-  try {
-    const data = await adminFetch("get_recent_lot_events", {
-      method: "POST",
-      body: JSON.stringify({ p_brand_id: effectiveBrandId, p_limit: limit }),
-    });
-    return { success: true, events: data ?? [] };
-  } catch (e: unknown) {
-    return { success: false, error: String(e) };
-  }
+/**
+ * Look up a harvest lot by its public-facing lot number (e.g. "FL-2026-001").
+ * Returns the lot's UUID or `null` if no such lot exists.
+ *
+ * NOTE: the `harvest_lots` table is not in the new Drizzle schema (it's a
+ * niche traceability feature that was retired from the SaaS rebuild). This
+ * stub returns `null` so the public trace page gracefully 404s. If the
+ * feature comes back, re-introduce the table in `db/schema/` and replace
+ * this with a real Drizzle query.
+ */
+export async function getLotIdByNumber(_lotNumber: string): Promise<string | null> {
+  return null;
 }

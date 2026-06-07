@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       return apiError("Failed to redeem referral", 500);
     }
 
-    analytics.referralCompleted(validation.data.referral_code, referral.referred_user_id);
+    analytics.referralCompleted(validation.data.referral_code, referral.referred_user_id ?? "anonymous");
 
     return apiResponse(referral, 201);
   } catch (error) {

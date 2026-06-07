@@ -1,15 +1,24 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { products } from "@/db/schema";
 
 export type ImportProductsResult =
   | { success: true; created: number; updated: number; errors: { product: string; error: string }[] }
   | { success: false; error: string };
 
+/**
+ * Bulk-import products. Replaces the legacy `bulk_upsert_products` SECURITY
+ * DEFINER RPC. The new `products` schema drops the legacy `type`, `is_taxable`,
+ * `pickup_type`, and `image_url` columns; we keep `name`, `description`,
+ * `price_cents`, and `active`. Without an id we always INSERT (no upsert
+ * key for matching — the caller can run an update path separately if
+ * deduplication is needed).
+ */
 export async function importProductsBatch(
   brandId: string,
-  products: Array<{
+  productsToImport: Array<{
     name: string;
     description: string;
     price: number;
@@ -26,19 +35,33 @@ export async function importProductsBatch(
     return { success: false, error: "Not authorized for this brand" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  let created = 0;
+  const errors: { product: string; error: string }[] = [];
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/bulk_upsert_products`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId, p_products: products }),
+  for (const p of productsToImport) {
+    const priceCents = Math.round(Number(p.price) * 100);
+    if (!Number.isFinite(priceCents) || priceCents < 0) {
+      errors.push({ product: p.name, error: "Invalid price" });
+      continue;
     }
-  );
+    try {
+      await withTenant(brandId, (db) =>
+        db.insert(products).values({
+          tenantId: brandId,
+          name: p.name,
+          description: p.description ?? null,
+          priceCents,
+          active: p.active,
+        })
+      );
+      created++;
+    } catch (err) {
+      errors.push({
+        product: p.name,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
-  if (!response.ok) return { success: false, error: "Import failed" };
-  const data = await response.json();
-  return { success: true, created: data.created, updated: data.updated, errors: data.errors ?? [] };
+  return { success: true, created, updated: 0, errors };
 }

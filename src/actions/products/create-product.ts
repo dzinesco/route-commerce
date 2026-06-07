@@ -2,7 +2,8 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getMockTableData } from "@/lib/mock-data";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { products } from "@/db/schema";
 
 const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
@@ -50,37 +51,33 @@ export async function createProduct(
     return { success: true, id: newId };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/bulk_upsert_products`, {
-    method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(10000),
-    body: JSON.stringify({
-      p_brand_id: brandId,
-      p_products: [{
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        type: data.type,
-        active: data.active,
-        image_url: data.image_url ?? null,
-        is_taxable: data.is_taxable,
-        pickup_type: data.pickup_type ?? "scheduled_stop",
-      }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Failed: ${err}` };
+  // The new schema stores products with `price_cents` (integer) and no `type`,
+  // `is_taxable`, `pickup_type`, or `image_url` column. `image_url` is now
+  // attached via the `product_images` table; `type` / `is_taxable` / `pickup_type`
+  // aren't part of the SaaS schema and are dropped. `active` and `description`
+  // exist as `active` and `description` columns.
+  const priceCents = Math.round(Number(data.price) * 100);
+  if (!Number.isFinite(priceCents) || priceCents < 0) {
+    return { success: false, error: "Invalid price" };
   }
 
-  const result = await res.json();
-  if (result.errors && result.errors.length > 0) {
-    return { success: false, error: result.errors[0].error };
+  try {
+    const inserted = await withTenant(brandId, async (db) => {
+      const [row] = await db
+        .insert(products)
+        .values({
+          tenantId: brandId,
+          name: data.name,
+          description: data.description ?? null,
+          priceCents,
+          active: data.active,
+        })
+        .returning({ id: products.id });
+      return row;
+    });
+    if (!inserted) return { success: false, error: "Insert returned no row" };
+    return { success: true, id: inserted.id };
+  } catch (err) {
+    return { success: false, error: `Failed: ${err instanceof Error ? err.message : String(err)}` };
   }
-
-  return { success: true, id: result.created > 0 ? "created" : "updated" };
 }
