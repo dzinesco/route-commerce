@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getWholesalePendingNotifications, markWholesaleNotificationSent } from "@/actions/wholesale";
-import { svcHeaders } from "@/lib/svc-headers";
+import { markWholesaleNotificationSent } from "@/actions/wholesale";
+import { pool } from "@/lib/db";
 import type { NotificationRecipient } from "@/actions/wholesale";
 
 // POST /api/wholesale/notifications/send
@@ -18,23 +18,7 @@ export async function POST() {
     );
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const pendingRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_pending_notifications`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: null, p_limit: 20 }),
-    }
-  );
-
-  if (!pendingRes.ok) {
-    return NextResponse.json({ error: "Failed to fetch pending notifications" }, { status: 500 });
-  }
-
-  const notifications = await pendingRes.json() as Array<{
+  const pendingRes = await pool.query<{
     id: string;
     type: string;
     email_to: string;
@@ -46,11 +30,16 @@ export async function POST() {
     order_id: string | null;
     customer_id: string;
     invoice_business_email: string | null;
-  }>;
+  }>(
+    "SELECT * FROM get_wholesale_pending_notifications($1, $2)",
+    [null, 20]
+  );
 
-  if (notifications.length === 0) {
+  if (pendingRes.rows.length === 0) {
     return NextResponse.json({ message: "No pending notifications.", queued: 0, sent: 0 });
   }
+
+  const notifications = pendingRes.rows;
 
   // Prefetch settings for each unique brand so we can resolve notification_recipients
   const brandIds = [...new Set(notifications.map(n => n.brand_id))];
@@ -62,13 +51,17 @@ export async function POST() {
   }> = {};
 
   await Promise.all(brandIds.map(async (bid) => {
-    const r = await fetch(`${supabaseUrl}/rest/v1/rpc/get_wholesale_settings`, {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: bid }),
-    });
-    if (r.ok) {
-      const data = await r.json();
+    const r = await pool.query<{
+      notification_recipients: NotificationRecipient[];
+      notification_email: string | null;
+      from_email: string | null;
+      invoice_business_email: string | null;
+    }>(
+      "SELECT * FROM get_wholesale_settings($1)",
+      [bid]
+    );
+    if (r.rows.length > 0) {
+      const data = r.rows[0];
       brandSettingsMap[bid] = {
         notification_recipients: data?.notification_recipients ?? [],
         notification_email: data?.notification_email ?? null,
@@ -128,21 +121,20 @@ export async function POST() {
       const ok = await sendOneEmail(resendApiKey, fromEmail, toAddress, undefined, n.subject, n.body_html, n.body_text);
 
       // Log a separate notification entry for audit trail
-      await fetch(`${supabaseUrl}/rest/v1/rpc/enqueue_wholesale_notification`, {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          p_brand_id: n.brand_id,
-          p_customer_id: n.customer_id,
-          p_order_id: n.order_id ?? null,
-          p_type: n.type,
-          p_email_to: recipient.email,
-          p_email_cc: null,
-          p_subject: n.subject,
-          p_body_html: n.body_html,
-          p_body_text: n.body_text,
-        }),
-      });
+      await pool.query(
+        "SELECT enqueue_wholesale_notification($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        [
+          n.brand_id,
+          n.customer_id,
+          n.order_id ?? null,
+          n.type,
+          recipient.email,
+          null,
+          n.subject,
+          n.body_html,
+          n.body_text,
+        ]
+      );
 
       if (ok) sent++; else failed++;
     }
@@ -179,8 +171,12 @@ async function sendOneEmail(
 }
 
 async function triggerPickupReminder() {
+  // Use the same Next.js server — the route is at /api/wholesale/notifications/pickup-reminder
+  // The pickup-reminder route is also exposed as a cron in vercel.json.
   try {
-    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL!}/api/wholesale/notifications/pickup-reminder`, {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL;
+    if (!baseUrl) return;
+    await fetch(`${baseUrl}/api/wholesale/notifications/pickup-reminder`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });

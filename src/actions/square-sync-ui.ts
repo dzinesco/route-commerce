@@ -2,7 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { assertBrandAccess } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type SyncLogEntry = {
   id: string;
@@ -70,20 +70,10 @@ export async function getSyncLog(brandId: string): Promise<{
     return { success: false, logs: [] };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/square_sync_log?brand_id=eq.${brandId}&order=created_at.desc&limit=10`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
+  const { rows: logs } = await pool.query<SyncLogEntry>(
+    "SELECT * FROM square_sync_log WHERE brand_id = $1 ORDER BY created_at DESC LIMIT 10",
+    [brandId]
   );
 
-  if (!response.ok) {
-    return { success: false, logs: [] };
-  }
-
-  const logs: SyncLogEntry[] = await response.json();
   return { success: true, logs };
 }

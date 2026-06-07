@@ -1,6 +1,6 @@
 "use server";
 
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 type LineItem = {
   id: string;
@@ -32,16 +32,13 @@ export async function createRetailStripeCheckoutSession(
   }));
 
   // Get brand name for Stripe metadata
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   let brandName = "Route Commerce";
   try {
-    const brandRes = await fetch(
-      `${supabaseUrl}/rest/v1/brands?id=eq.${brandId}&select=name`,
-      { headers: { ...svcHeaders(supabaseKey) } }
+    const brandRes = await pool.query<{ name: string }>(
+      "SELECT name FROM tenants WHERE id = $1 LIMIT 1",
+      [brandId]
     );
-    const brands = await brandRes.json() as Array<{ name: string }>;
-    if (brands?.[0]?.name) brandName = brands[0].name;
+    if (brandRes.rows[0]?.name) brandName = brandRes.rows[0].name;
   } catch {
     // use default
   }

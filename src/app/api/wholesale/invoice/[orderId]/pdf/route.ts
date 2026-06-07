@@ -2,7 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { formatDate } from "@/lib/format-date";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
+
+type OrderRow = {
+  id: string;
+  invoice_number: string | null;
+  company_name: string;
+  contact_name: string | null;
+  email: string;
+  anticipated_pickup_date: string | null;
+  subtotal: number;
+  deposit_paid: number;
+  balance_due: number;
+  items: Array<{ product_name: string; quantity: number; unit_price: number; line_total: number }>;
+  created_at: string;
+  brand_id: string;
+};
+
+type InvoiceSettings = {
+  invoice_business_name?: string;
+  invoice_business_address?: string;
+  invoice_business_phone?: string;
+  invoice_business_email?: string;
+  invoice_business_website?: string;
+};
 
 export async function GET(
   req: NextRequest,
@@ -11,78 +34,40 @@ export async function GET(
   const { orderId } = await params;
   const token = req.nextUrl.searchParams.get("token");
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   // ── Token-based customer download ────────────────────────────────────────────
   if (token) {
-    // Look up order by ID + token. Falls back to a direct select so the
-    // invoice_token is checked server-side (not exposed to the client).
-    const orderRes = await fetch(
-      `${supabaseUrl}/rest/v1/wholesale_orders?id=eq.${orderId}&invoice_token=eq.${token}&select=id,invoice_number,invoice_token,brand_id,customer_id,created_at`,
-      {
-        headers: svcHeaders(supabaseKey),
-      }
+    // Look up order by ID + token. The invoice_token is checked server-side.
+    const tokenRes = await pool.query<{ brand_id: string }>(
+      "SELECT brand_id FROM wholesale_orders WHERE id = $1 AND invoice_token = $2 LIMIT 1",
+      [orderId, token]
     );
 
-    if (!orderRes.ok) {
-      return new NextResponse("Not found", { status: 404 });
-    }
-
-    const orders = await orderRes.json();
-    if (!orders || orders.length === 0) {
+    if (tokenRes.rows.length === 0) {
       return new NextResponse("Not found", { status: 404 });
     }
 
     // Proceed to generate PDF — order token is verified
-    const brandId = orders[0].brand_id;
+    const brandId = tokenRes.rows[0].brand_id;
 
     // Fetch full order data for PDF
-    const fullRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_wholesale_orders`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_id: brandId }),
-      }
+    const fullRes = await pool.query<OrderRow>(
+      "SELECT * FROM get_wholesale_orders($1)",
+      [brandId]
     );
 
-    if (!fullRes.ok) {
-      return new NextResponse("Failed to fetch order", { status: 500 });
-    }
-
-    const allOrders = await fullRes.json() as Array<{
-      id: string;
-      invoice_number: string | null;
-      company_name: string;
-      contact_name: string | null;
-      email: string;
-      anticipated_pickup_date: string | null;
-      subtotal: number;
-      deposit_paid: number;
-      balance_due: number;
-      items: Array<{ product_name: string; quantity: number; unit_price: number; line_total: number }>;
-      created_at: string;
-      brand_id: string;
-    }>;
-
+    const allOrders = fullRes.rows;
     const order = allOrders.find(o => o.id === orderId);
     if (!order) {
       return new NextResponse("Not found", { status: 404 });
     }
 
     // Fetch brand-specific settings for invoice header
-    const settingsRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_wholesale_settings`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_id: brandId }),
-      }
+    const settingsRes = await pool.query<InvoiceSettings>(
+      "SELECT * FROM get_wholesale_settings($1)",
+      [brandId]
     );
 
-    const settingsData = await settingsRes.json();
-    const settings = settingsData ?? {};
+    const settings = settingsRes.rows[0] ?? {};
 
     const pdfBytes = await buildInvoicePdf(order, settings);
     return new NextResponse(Buffer.from(pdfBytes), {
@@ -103,50 +88,23 @@ export async function GET(
   }
 
   // Fetch the order directly by ID with brand scoping
-  const orderRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_orders`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: adminUser.brand_id ?? undefined }),
-    }
+  const orderRes = await pool.query<OrderRow>(
+    "SELECT * FROM get_wholesale_orders($1)",
+    [adminUser.brand_id ?? null]
   );
 
-  if (!orderRes.ok) {
-    return new NextResponse("Failed to fetch order", { status: 500 });
-  }
-
-  const orders = await orderRes.json() as Array<{
-    id: string;
-    invoice_number: string | null;
-    company_name: string;
-    contact_name: string | null;
-    email: string;
-    anticipated_pickup_date: string | null;
-    subtotal: number;
-    deposit_paid: number;
-    balance_due: number;
-    items: Array<{ product_name: string; quantity: number; unit_price: number; line_total: number }>;
-    created_at: string;
-    brand_id: string;
-  }>;
-
+  const orders = orderRes.rows;
   const order = orders.find(o => o.id === orderId);
   if (!order) {
     return new NextResponse("Order not found", { status: 404 });
   }
 
-  const settingsRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: order.brand_id }),
-    }
+  const settingsRes = await pool.query<InvoiceSettings>(
+    "SELECT * FROM get_wholesale_settings($1)",
+    [order.brand_id]
   );
 
-  const settingsData = await settingsRes.json();
-  const settings = settingsData ?? {};
+  const settings = settingsRes.rows[0] ?? {};
 
   const pdfBytes = await buildInvoicePdf(order, settings);
 
@@ -158,27 +116,7 @@ export async function GET(
   });
 }
 
-async function buildInvoicePdf(
-  order: {
-    invoice_number: string | null;
-    company_name: string;
-    contact_name: string | null;
-    email: string;
-    anticipated_pickup_date: string | null;
-    subtotal: number;
-    deposit_paid: number;
-    balance_due: number;
-    items: Array<{ product_name: string; quantity: number; unit_price: number; line_total: number }>;
-    created_at: string;
-  },
-  settings: {
-    invoice_business_name?: string;
-    invoice_business_address?: string;
-    invoice_business_phone?: string;
-    invoice_business_email?: string;
-    invoice_business_website?: string;
-  }
-) {
+async function buildInvoicePdf(order: OrderRow, settings: InvoiceSettings) {
   const pdfDoc = await PDFDocument.create();
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);

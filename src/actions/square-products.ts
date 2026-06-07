@@ -3,7 +3,7 @@
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getPaymentSettings } from "@/actions/payments";
 import { SquareClient, SquareEnvironment, type BaseClientOptions } from "square";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type SquareCatalogItem = {
   id: string;
@@ -135,25 +135,8 @@ export async function syncProductsToSquare(brandId: string): Promise<SyncResult>
   let synced = 0;
 
   try {
-    // Fetch wholesale products via RPC (avoids rc_product_id bug in direct query)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const rpcRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_wholesale_products`,
-      {
-        method: "POST",
-            headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-            body: JSON.stringify({ p_brand_id: brandId }),
-      }
-    );
-
-    if (!rpcRes.ok) {
-      const errText = await rpcRes.text();
-      return { success: false, synced: 0, errors: [`Failed to fetch wholesale products: ${errText}`] };
-    }
-
-    const products: Array<{
+    // Fetch wholesale products via SECURITY DEFINER RPC
+    const rpcRes = await pool.query<{
       id: string;
       name: string;
       description: string | null;
@@ -163,7 +146,12 @@ export async function syncProductsToSquare(brandId: string): Promise<SyncResult>
       hp_sku: string | null;
       hp_item_id: string | null;
       default_pickup_location: string | null;
-    }> = await rpcRes.json();
+    }>(
+      "SELECT * FROM get_wholesale_products($1)",
+      [brandId]
+    );
+
+    const products = rpcRes.rows;
 
     // Filter to available products only
     const availableProducts = products.filter((p) => p.availability === "available");
@@ -247,8 +235,6 @@ export async function syncProductsFromSquare(brandId: string): Promise<SyncResul
 
   const errors: string[] = [];
   let synced = 0;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   let cursor: string | undefined;
   do {
@@ -263,15 +249,13 @@ export async function syncProductsFromSquare(brandId: string): Promise<SyncResul
         const price = priceMoney ? Number(priceMoney.amount) / 100 : 0;
         const imageUrl = obj.item.image_url ?? null;
 
-        // Sync to RC via bulk_upsert_products RPC
-        const upsertRes = await fetch(
-          `${supabaseUrl}/rest/v1/rpc/bulk_upsert_products`,
-          {
-            method: "POST",
-            headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-            body: JSON.stringify({
-              p_brand_id: brandId,
-              p_products: [
+        // Sync to RC via SECURITY DEFINER RPC bulk_upsert_products
+        try {
+          await pool.query(
+            "SELECT bulk_upsert_products($1, $2::jsonb)",
+            [
+              brandId,
+              JSON.stringify([
                 {
                   name: item.name,
                   description: item.description ?? "",
@@ -280,15 +264,12 @@ export async function syncProductsFromSquare(brandId: string): Promise<SyncResul
                   active: true,
                   image_url: imageUrl,
                 },
-              ],
-            }),
-          }
-        );
-
-        if (upsertRes.ok) {
+              ]),
+            ]
+          );
           synced++;
-        } else {
-          const errText = await upsertRes.text();
+        } catch (e: unknown) {
+          const errText = e instanceof Error ? e.message : String(e);
           errors.push(`Square item "${item.name}": ${errText.slice(0, 100)}`);
         }
       }

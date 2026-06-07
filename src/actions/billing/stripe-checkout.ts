@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 // ── Price ID config ────────────────────────────────────────────────────────────
 // Maps plan/addon keys to Stripe price IDs via environment variables
@@ -43,16 +43,12 @@ export async function createStripeCheckoutSession(
   const priceId = getPriceId(priceKey);
   if (!priceId) return { success: false, error: `No Stripe price configured for "${priceKey}". Set ${priceKey.toUpperCase()}_PRICE in your environment.` };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
   // Get brand's Stripe customer ID
-  const custRes = await fetch(
-    `${supabaseUrl}/rest/v1/brands?id=eq.${brandId}&select=stripe_customer_id,name`,
-    { headers: { ...svcHeaders(supabaseKey) } }
+  const custRes = await pool.query<{ stripe_customer_id: string | null; name: string }>(
+    "SELECT stripe_customer_id, name FROM tenants WHERE id = $1 LIMIT 1",
+    [brandId]
   );
-  const brands = await custRes.json() as Array<{ stripe_customer_id: string | null; name: string }>;
-  const brand = brands[0];
+  const brand = custRes.rows[0];
   if (!brand?.stripe_customer_id) {
     return { success: false, error: "No Stripe customer found. Complete Stripe setup in Payments settings first." };
   }
@@ -123,20 +119,15 @@ export async function cancelAddonSubscription(
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) return { success: false, error: "Stripe not configured" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
   // Get active subscription for this brand
-  const subRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_brand_subscription`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
+  const subRes = await pool.query<{ stripe_subscription_id: string | null }>(
+    "SELECT stripe_subscription_id FROM subscriptions WHERE tenant_id = $1 LIMIT 1",
+    [brandId]
   );
-  if (!subRes.ok) return { success: false, error: "Failed to get subscription" };
-  const subData = await subRes.json() as { stripe_subscription_id?: string };
+  if (subRes.rows.length === 0) {
+    return { success: false, error: "No active subscription found" };
+  }
+  const subData = subRes.rows[0];
   if (!subData?.stripe_subscription_id) {
     return { success: false, error: "No active subscription found" };
   }
@@ -162,14 +153,14 @@ export async function cancelAddonSubscription(
   });
 
   // Disable the feature flag locally
-  await fetch(
-    `${supabaseUrl}/rest/v1/rpc/set_brand_feature`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId, p_feature_key: addonKey, p_enabled: false }),
-    }
-  );
+  try {
+    await pool.query(
+      "SELECT set_brand_feature($1, $2, $3)",
+      [brandId, addonKey, false]
+    );
+  } catch {
+    // best-effort: webhook reconciliation will eventually fix the flag
+  }
 
   return { success: true };
 }

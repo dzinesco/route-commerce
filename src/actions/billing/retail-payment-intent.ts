@@ -1,6 +1,6 @@
 "use server";
 
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 /**
  * Creates a Stripe PaymentIntent for the supplied cart so the browser
@@ -63,17 +63,14 @@ export async function createRetailPaymentIntent(
   }
 
   // Pull the brand name for Stripe receipts + metadata
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   let brandName = "Route Commerce";
-  if (supabaseUrl && supabaseKey && brandId) {
+  if (brandId) {
     try {
-      const brandRes = await fetch(
-        `${supabaseUrl}/rest/v1/brands?id=eq.${brandId}&select=name`,
-        { headers: { ...svcHeaders(supabaseKey) } }
+      const brandRes = await pool.query<{ name: string }>(
+        "SELECT name FROM tenants WHERE id = $1 LIMIT 1",
+        [brandId]
       );
-      const brands = (await brandRes.json()) as Array<{ name: string }>;
-      if (brands?.[0]?.name) brandName = brands[0].name;
+      if (brandRes.rows[0]?.name) brandName = brandRes.rows[0].name;
     } catch {
       // ignore — use default
     }

@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type WholesaleLoginResult =
   | { success: true; token: string; userId: string; customerId: string }
@@ -54,21 +54,17 @@ export async function wholesaleLoginAction(formData: FormData): Promise<Wholesal
     return { success: false, error: "No session returned from auth" };
   }
 
-  // Find the wholesale customer record for this user
-  const customerRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_customer_by_user`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseAnonKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_brand_id: "placeholder", // will use any-brand lookup below
-        p_user_id: data.user.id,
-      }),
-    }
-  );
+  // Find the wholesale customer record for this user (SECURITY DEFINER RPC).
+  // The result is intentionally not consumed here — the portal page resolves
+  // the actual customer on load using the cookie's access_token.
+  try {
+    await pool.query(
+      "SELECT * FROM get_wholesale_customer_by_user($1, $2)",
+      ["00000000-0000-0000-0000-000000000000", data.user.id]
+    );
+  } catch {
+    // Customer may not be linked yet; portal will resolve.
+  }
 
   // If no brand_id known, try all brands — just use first active one found
   // For now, set the cookie with user_id and a placeholder; portal will resolve proper customer

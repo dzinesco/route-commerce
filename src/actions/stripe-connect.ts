@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import Stripe from "stripe";
 
 /**
@@ -19,25 +19,13 @@ export async function getStripeConnectStatus(brandId: string): Promise<{
   const adminUser = await getAdminUser();
   if (!adminUser) return { is_connected: false, error: "Not authenticated" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  // Get brand's payment settings
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_brand_payment_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
+  // Get brand's payment settings via SECURITY DEFINER RPC
+  const { rows } = await pool.query<{ stripe_user_id: string | null }>(
+    "SELECT * FROM get_brand_payment_settings($1)",
+    [brandId]
   );
 
-  if (!res.ok) {
-    return { is_connected: false, error: "Failed to fetch payment settings" };
-  }
-
-  const data = await res.json();
-  const stripeUserId = data?.stripe_user_id;
+  const stripeUserId = rows[0]?.stripe_user_id ?? null;
 
   if (!stripeUserId) {
     return { is_connected: false };
@@ -183,28 +171,17 @@ export async function saveStripeConnectAccount(brandId: string, accountId: strin
   success: boolean;
   error?: string;
 }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  // Save to payment_settings via RPC
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/set_stripe_connect_account`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_brand_id: brandId,
-        p_stripe_user_id: accountId,
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const error = await res.text();
+  try {
+    // Save to payment_settings via SECURITY DEFINER RPC
+    await pool.query(
+      "SELECT set_stripe_connect_account($1, $2)",
+      [brandId, accountId]
+    );
+    return { success: true };
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e.message : String(e);
     return { success: false, error: `Failed to save: ${error}` };
   }
-
-  return { success: true };
 }
 
 /**
@@ -220,23 +197,16 @@ export async function disconnectStripeConnect(brandId: string): Promise<{
     return { success: false, error: "Not authorized" };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/disconnect_stripe_connect`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!res.ok) {
+  try {
+    // SECURITY DEFINER RPC disconnects the Stripe Connect account
+    await pool.query(
+      "SELECT disconnect_stripe_connect($1)",
+      [brandId]
+    );
+    return { success: true };
+  } catch {
     return { success: false, error: "Failed to disconnect Stripe account" };
   }
-
-  return { success: true };
 }
 
 /**

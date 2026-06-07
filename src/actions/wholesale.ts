@@ -2,7 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export type WholesaleOrder = {
   id: string;
@@ -190,23 +190,15 @@ export async function getWholesaleOrders(brandId?: string): Promise<WholesaleOrd
   if (!adminUser) return [];
   const bid = await resolveBrandId(adminUser, brandId);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_orders`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: bid }),
-    }
-  );
-
-  if (!response.ok) return [];
-  return response.json();
+  try {
+    const { rows } = await pool.query<WholesaleOrder>(
+      "SELECT * FROM get_wholesale_orders($1)",
+      [bid]
+    );
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export async function getWholesalePickupOrders(brandId?: string): Promise<WholesaleOrder[]> {
@@ -214,23 +206,15 @@ export async function getWholesalePickupOrders(brandId?: string): Promise<Wholes
   if (!adminUser) return [];
   const bid = await resolveBrandId(adminUser, brandId);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_pickup_orders`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: bid }),
-    }
-  );
-
-  if (!response.ok) return [];
-  return response.json();
+  try {
+    const { rows } = await pool.query<WholesaleOrder>(
+      "SELECT * FROM get_wholesale_pickup_orders($1)",
+      [bid]
+    );
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export async function getWholesaleDashboardStats(brandId?: string): Promise<WholesaleDashboardStats> {
@@ -262,22 +246,17 @@ export async function markWholesaleOrderFulfilled(orderId: string, brandId?: str
   const { brandId: resolved, error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/mark_wholesale_order_fulfilled`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_order_id: orderId, p_by: adminUser.user_id }),
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM mark_wholesale_order_fulfilled($1, $2)",
+      [orderId, adminUser.user_id]
+    );
+    if (!rows || rows.length === 0) {
+      return { success: false, error: "Failed to mark fulfilled" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to mark fulfilled" };
+  } catch {
+    return { success: false, error: "Failed to mark fulfilled" };
+  }
 
   enqueueWholesaleWebhookForOrderFulfilled(orderId, resolved ?? undefined).catch(() => {});
 
@@ -285,18 +264,17 @@ export async function markWholesaleOrderFulfilled(orderId: string, brandId?: str
 }
 
 async function enqueueWholesaleWebhookForOrderFulfilled(orderId: string, brandId?: string) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY!;
-  await fetch(`${supabaseUrl}/rest/v1/rpc/enqueue_wholesale_webhook`, {
-    method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      p_event_type: "order_fulfilled",
-      p_order_id: orderId,
-      p_brand_id: brandId ?? null,
-      p_payload: { order_id: orderId },
-    }),
-  });
+  try {
+    await pool.query(
+      "SELECT enqueue_wholesale_webhook($1, $2, $3, $4::jsonb)",
+      [
+        "order_fulfilled",
+        orderId,
+        brandId ?? null,
+        JSON.stringify({ order_id: orderId }),
+      ]
+    );
+  } catch (_) {}
 }
 
 export async function updateWholesaleOrderStatus(
@@ -311,23 +289,15 @@ export async function updateWholesaleOrderStatus(
   const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/update_wholesale_order_status`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_order_id: orderId, p_status: status }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to update order status" };
-  return { success: true };
+  try {
+    await pool.query(
+      "SELECT * FROM update_wholesale_order_status($1, $2)",
+      [orderId, status]
+    );
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to update order status" };
+  }
 }
 
 export async function deleteWholesaleOrder(orderId: string, brandId?: string): Promise<{ success: boolean; error?: string }> {
@@ -338,23 +308,15 @@ export async function deleteWholesaleOrder(orderId: string, brandId?: string): P
   const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_wholesale_order`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_order_id: orderId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete order" };
-  return { success: true };
+  try {
+    await pool.query(
+      "SELECT * FROM delete_wholesale_order($1)",
+      [orderId]
+    );
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to delete order" };
+  }
 }
 
 export async function deleteWholesaleCustomer(customerId: string, brandId?: string): Promise<{ success: boolean; error?: string }> {
@@ -365,25 +327,19 @@ export async function deleteWholesaleCustomer(customerId: string, brandId?: stri
   const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_wholesale_customer`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_customer_id: customerId }),
+  try {
+    const { rows } = await pool.query<{ success: boolean; error?: string }>(
+      "SELECT * FROM delete_wholesale_customer($1)",
+      [customerId]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    if (!data?.success) {
+      return { success: false, error: data?.error ?? "Delete failed" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete customer" };
-  const data = await response.json();
-  if (!data.success) return { success: false, error: data.error ?? "Delete failed" };
-  return { success: true };
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to delete customer" };
+  }
 }
 
 export async function deleteWholesaleProduct(productId: string, brandId?: string): Promise<{ success: boolean; error?: string }> {
@@ -394,25 +350,19 @@ export async function deleteWholesaleProduct(productId: string, brandId?: string
   const { error } = await enforceBrandScope(adminUser, brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_wholesale_product`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_product_id: productId }),
+  try {
+    const { rows } = await pool.query<{ success: boolean; error?: string }>(
+      "SELECT * FROM delete_wholesale_product($1)",
+      [productId]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    if (!data?.success) {
+      return { success: false, error: data?.error ?? "Delete failed" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to delete product" };
-  const data = await response.json();
-  if (!data.success) return { success: false, error: data.error ?? "Delete failed" };
-  return { success: true };
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to delete product" };
+  }
 }
 
 // ── Customers ────────────────────────────────────────────────────────────────
@@ -422,23 +372,15 @@ export async function getWholesaleCustomers(brandId?: string): Promise<Wholesale
   if (!adminUser) return [];
   const bid = await resolveBrandId(adminUser, brandId);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_customers`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: bid }),
-    }
-  );
-
-  if (!response.ok) return [];
-  return response.json();
+  try {
+    const { rows } = await pool.query<WholesaleCustomer>(
+      "SELECT * FROM get_wholesale_customers($1)",
+      [bid]
+    );
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export async function saveWholesaleCustomer(params: {
@@ -464,39 +406,31 @@ export async function saveWholesaleCustomer(params: {
   const { error } = await enforceBrandScope(adminUser, params.brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_wholesale_customer`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_user_id: params.userId ?? null,
-        p_company_name: params.companyName ?? null,
-        p_contact_name: params.contactName ?? null,
-        p_email: params.email ?? null,
-        p_phone: params.phone ?? null,
-        p_account_status: params.accountStatus ?? "active",
-        p_credit_limit: params.creditLimit ?? 0,
-        p_deposits_enabled: params.depositsEnabled ?? false,
-        p_deposit_threshold: params.depositThreshold ?? null,
-        p_deposit_percentage: params.depositPercentage ?? null,
-        p_order_email: params.orderEmail ?? null,
-        p_invoice_email: params.invoiceEmail ?? null,
-        p_admin_notes: params.adminNotes ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to save customer" };
-  const data = await response.json();
-  return { success: true, id: data.id };
+  try {
+    const { rows } = await pool.query<{ id: string }>(
+      "SELECT * FROM upsert_wholesale_customer($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+      [
+        params.brandId,
+        params.userId ?? null,
+        params.companyName ?? null,
+        params.contactName ?? null,
+        params.email ?? null,
+        params.phone ?? null,
+        params.accountStatus ?? "active",
+        params.creditLimit ?? 0,
+        params.depositsEnabled ?? false,
+        params.depositThreshold ?? null,
+        params.depositPercentage ?? null,
+        params.orderEmail ?? null,
+        params.invoiceEmail ?? null,
+        params.adminNotes ?? null,
+      ]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    return { success: true, id: data?.id };
+  } catch {
+    return { success: false, error: "Failed to save customer" };
+  }
 }
 
 // ── Products ─────────────────────────────────────────────────────────────────
@@ -506,23 +440,15 @@ export async function getWholesaleProducts(brandId?: string): Promise<WholesaleP
   if (!adminUser) return [];
   const bid = await resolveBrandId(adminUser, brandId);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_products`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: bid }),
-    }
-  );
-
-  if (!response.ok) return [];
-  return response.json();
+  try {
+    const { rows } = await pool.query<WholesaleProduct>(
+      "SELECT * FROM get_wholesale_products($1)",
+      [bid]
+    );
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export async function saveWholesaleProduct(params: {
@@ -551,42 +477,34 @@ export async function saveWholesaleProduct(params: {
   const { error } = await enforceBrandScope(adminUser, params.brandId);
   if (error) return { success: false, error };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_wholesale_product`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_id: params.id ?? null,
-        p_name: params.name,
-        p_description: params.description ?? null,
-        p_unit_type: params.unitType ?? "each",
-        p_availability: params.availability ?? "unavailable",
-        p_qty_available: params.qtyAvailable ?? 0,
-        p_price_tiers: JSON.stringify(params.priceTiers ?? []),
-        p_hp_sku: params.hpSku ?? null,
-        p_hp_item_id: params.hpItemId ?? null,
-        p_internal_notes: params.internalNotes ?? null,
-        p_handling_instructions: params.handlingInstructions ?? null,
-        p_storage_warning: params.storageWarning ?? null,
-        p_product_label: params.productLabel ?? null,
-        p_pack_style: params.packStyle ?? null,
-        p_container_type: params.containerType ?? null,
-        p_default_pickup_location: params.defaultPickupLocation ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to save product" };
-  const data = await response.json();
-  return { success: true, id: data.id };
+  try {
+    const { rows } = await pool.query<{ id: string }>(
+      "SELECT * FROM upsert_wholesale_product($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16, $17)",
+      [
+        params.brandId,
+        params.id ?? null,
+        params.name,
+        params.description ?? null,
+        params.unitType ?? "each",
+        params.availability ?? "unavailable",
+        params.qtyAvailable ?? 0,
+        JSON.stringify(params.priceTiers ?? []),
+        params.hpSku ?? null,
+        params.hpItemId ?? null,
+        params.internalNotes ?? null,
+        params.handlingInstructions ?? null,
+        params.storageWarning ?? null,
+        params.productLabel ?? null,
+        params.packStyle ?? null,
+        params.containerType ?? null,
+        params.defaultPickupLocation ?? null,
+      ]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    return { success: true, id: data?.id };
+  } catch {
+    return { success: false, error: "Failed to save product" };
+  }
 }
 
 // ── Settings ─────────────────────────────────────────────────────────────────
@@ -599,24 +517,15 @@ export async function getWholesaleSettings(brandId?: string): Promise<WholesaleS
     return null;
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_settings`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: bid }),
-    }
-  );
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data ?? null;
+  try {
+    const { rows } = await pool.query<WholesaleSettings>(
+      "SELECT * FROM get_wholesale_settings($1)",
+      [bid]
+    );
+    return rows[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function saveWholesaleSettings(params: {
@@ -641,40 +550,32 @@ export async function saveWholesaleSettings(params: {
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_wholesale_settings`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_require_approval: params.requireApproval ?? null,
-        p_min_order_amount: params.minOrderAmount ?? null,
-        p_online_payment_enabled: params.onlinePaymentEnabled ?? null,
-        p_wholesale_enabled: params.wholesaleEnabled ?? null,
-        p_pickup_location: params.pickupLocation ?? null,
-        p_fob_location: params.fobLocation ?? null,
-        p_from_email: params.fromEmail ?? null,
-        p_invoice_business_name: params.invoiceBusinessName ?? null,
-        p_invoice_business_address: params.invoiceBusinessAddress ?? null,
-        p_invoice_business_phone: params.invoiceBusinessPhone ?? null,
-        p_invoice_business_email: params.invoiceBusinessEmail ?? null,
-        p_invoice_business_website: params.invoiceBusinessWebsite ?? null,
-        p_notification_email: params.notificationEmail ?? null,
-        p_notification_recipients: params.notificationRecipients ?? null,
-        p_square_sync_enabled: params.squareSyncEnabled ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to save settings" };
-  return { success: true };
+  try {
+    await pool.query(
+      "SELECT upsert_wholesale_settings($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
+      [
+        params.brandId,
+        params.requireApproval ?? null,
+        params.minOrderAmount ?? null,
+        params.onlinePaymentEnabled ?? null,
+        params.wholesaleEnabled ?? null,
+        params.pickupLocation ?? null,
+        params.fobLocation ?? null,
+        params.fromEmail ?? null,
+        params.invoiceBusinessName ?? null,
+        params.invoiceBusinessAddress ?? null,
+        params.invoiceBusinessPhone ?? null,
+        params.invoiceBusinessEmail ?? null,
+        params.invoiceBusinessWebsite ?? null,
+        params.notificationEmail ?? null,
+        params.notificationRecipients ? JSON.stringify(params.notificationRecipients) : null,
+        params.squareSyncEnabled ?? null,
+      ]
+    );
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to save settings" };
+  }
 }
 
 // ── Deposits ─────────────────────────────────────────────────────────────────
@@ -689,51 +590,39 @@ export async function recordWholesaleDeposit(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/record_wholesale_deposit`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_order_id: orderId,
-        p_amount: amount,
-        p_method: method,
-        p_reference: reference ?? null,
-        p_recorded_by: adminUser.user_id,
-        p_brand_id: await getActiveBrandId(adminUser),
-      }),
+  const activeBrandId = await getActiveBrandId(adminUser);
+  let data: { success?: boolean; error?: string } | null = null;
+  try {
+    const { rows } = await pool.query<{ success: boolean; error?: string }>(
+      "SELECT * FROM record_wholesale_deposit($1, $2, $3, $4, $5, $6)",
+      [orderId, amount, method, reference ?? null, adminUser.user_id, activeBrandId]
+    );
+    data = Array.isArray(rows) ? rows[0] : rows;
+    if (!data?.success) {
+      return { success: false, error: data?.error ?? "Failed to record deposit" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to record deposit" };
-  const data = await response.json();
-  if (!data?.success) return { success: false, error: data?.error ?? "Failed to record deposit" };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to record deposit" };
+  }
 
   // Fire webhook — fire-and-forget
-  enqueueWholesaleWebhookForDepositRecorded(orderId, amount, (await getActiveBrandId(adminUser)) ?? undefined).catch(() => {});
+  enqueueWholesaleWebhookForDepositRecorded(orderId, amount, activeBrandId ?? undefined).catch(() => {});
 
   return { success: true };
 }
 
 async function enqueueWholesaleWebhookForDepositRecorded(orderId: string, amount: number, brandId?: string) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY!;
-  await fetch(`${supabaseUrl}/rest/v1/rpc/enqueue_wholesale_webhook`, {
-    method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      p_event_type: "deposit_recorded",
-      p_order_id: orderId,
-      p_brand_id: brandId ?? null,
-      p_payload: { order_id: orderId, amount },
-    }),
-  });
+  try {
+    await pool.query(
+      "SELECT enqueue_wholesale_webhook($1, $2, $3, $4::jsonb)",
+      [
+        "deposit_recorded",
+        orderId,
+        brandId ?? null,
+        JSON.stringify({ order_id: orderId, amount }),
+      ]
+    );
+  } catch (_) {}
 }
 
 // ── Bulk Actions ──────────────────────────────────────────────────────────────
@@ -745,29 +634,19 @@ export async function bulkFulfillWholesaleOrders(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/bulk_fulfill_wholesale_orders`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_order_ids: orderIds,
-        p_by: adminUser.user_id,
-        p_brand_id: await getActiveBrandId(adminUser),
-      }),
+  try {
+    const { rows } = await pool.query<{ success: boolean; count?: number; error?: string }>(
+      "SELECT * FROM bulk_fulfill_wholesale_orders($1, $2, $3)",
+      [orderIds, adminUser.user_id, await getActiveBrandId(adminUser)]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    if (!data?.success) {
+      return { success: false, error: data?.error ?? "Failed to bulk fulfill orders" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to bulk fulfill orders" };
-  const data = await response.json();
-  if (!data?.success) return { success: false, error: data?.error ?? "Failed to bulk fulfill orders" };
-  return { success: true, count: data.count };
+    return { success: true, count: data.count };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to bulk fulfill orders" };
+  }
 }
 
 export async function bulkRecordWholesaleDeposit(
@@ -780,32 +659,19 @@ export async function bulkRecordWholesaleDeposit(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/bulk_record_wholesale_deposit`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_order_ids: orderIds,
-        p_amount: amount,
-        p_method: method,
-        p_reference: reference ?? null,
-        p_recorded_by: adminUser.user_id,
-        p_brand_id: await getActiveBrandId(adminUser),
-      }),
+  try {
+    const { rows } = await pool.query<{ success: boolean; count?: number; error?: string }>(
+      "SELECT * FROM bulk_record_wholesale_deposit($1, $2, $3, $4, $5, $6)",
+      [orderIds, amount, method, reference ?? null, adminUser.user_id, await getActiveBrandId(adminUser)]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    if (!data?.success) {
+      return { success: false, error: data?.error ?? "Failed to bulk record deposits" };
     }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to bulk record deposits" };
-  const data = await response.json();
-  if (!data?.success) return { success: false, error: data?.error ?? "Failed to bulk record deposits" };
-  return { success: true, count: data.count };
+    return { success: true, count: data.count };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to bulk record deposits" };
+  }
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
@@ -830,23 +696,15 @@ export type WholesaleNotification = {
 export async function getWholesaleNotificationStats(
   brandId: string
 ): Promise<{ pending: number; sent: number; failed: number; total: number }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_notification_stats`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return { pending: 0, sent: 0, failed: 0, total: 0 };
-  return response.json();
+  try {
+    const { rows } = await pool.query<{ pending: number; sent: number; failed: number; total: number }>(
+      "SELECT * FROM get_wholesale_notification_stats($1)",
+      [brandId]
+    );
+    return rows[0] ?? { pending: 0, sent: 0, failed: 0, total: 0 };
+  } catch {
+    return { pending: 0, sent: 0, failed: 0, total: 0 };
+  }
 }
 
 export async function getWholesalePendingNotifications(
@@ -857,23 +715,15 @@ export async function getWholesalePendingNotifications(
   if (!adminUser) return [];
   if (!adminUser.can_manage_orders) return [];
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_pending_notifications`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId, p_limit: limit }),
-    }
-  );
-
-  if (!response.ok) return [];
-  return response.json();
+  try {
+    const { rows } = await pool.query<WholesaleNotification>(
+      "SELECT * FROM get_wholesale_pending_notifications($1, $2)",
+      [brandId, limit]
+    );
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export async function markWholesaleNotificationSent(
@@ -884,22 +734,15 @@ export async function markWholesaleNotificationSent(
   if (!adminUser) return { success: false };
   if (!adminUser.can_manage_orders) return { success: false };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/mark_wholesale_notification_sent`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_notification_id: notificationId, p_error: error ?? null }),
-    }
-  );
-
-  return { success: response.ok };
+  try {
+    await pool.query(
+      "SELECT mark_wholesale_notification_sent($1, $2)",
+      [notificationId, error ?? null]
+    );
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
 }
 
 export async function enqueueWholesaleNotification(params: {
@@ -913,33 +756,25 @@ export async function enqueueWholesaleNotification(params: {
   bodyHtml?: string;
   bodyText?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/enqueue_wholesale_notification`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_brand_id: params.brandId,
-        p_customer_id: params.customerId,
-        p_order_id: params.orderId,
-        p_type: params.type,
-        p_email_to: params.emailTo,
-        p_email_cc: params.emailCc ?? null,
-        p_subject: params.subject,
-        p_body_html: params.bodyHtml ?? null,
-        p_body_text: params.bodyText ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to enqueue notification" };
-  return { success: true };
+  try {
+    await pool.query(
+      "SELECT enqueue_wholesale_notification($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+      [
+        params.brandId,
+        params.customerId,
+        params.orderId,
+        params.type,
+        params.emailTo,
+        params.emailCc ?? null,
+        params.subject,
+        params.bodyHtml ?? null,
+        params.bodyText ?? null,
+      ]
+    );
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to enqueue notification" };
+  }
 }
 
 // ── Webhooks ─────────────────────────────────────────────────────────────────
@@ -955,19 +790,15 @@ export type WebhookSettings = {
 };
 
 export async function getWebhookSettings(brandId: string): Promise<WebhookSettings | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/wholesale_webhook_settings?brand_id=eq.${brandId}&select=*`,
-    {
-      headers: svcHeaders(supabaseKey),
-    }
-  );
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data?.[0] ?? null;
+  try {
+    const { rows } = await pool.query<WebhookSettings>(
+      "SELECT * FROM wholesale_webhook_settings WHERE brand_id = $1 LIMIT 1",
+      [brandId]
+    );
+    return rows[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function saveWebhookSettings(params: {
@@ -980,31 +811,22 @@ export async function saveWebhookSettings(params: {
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (!adminUser.can_manage_orders) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-  const body: Record<string, unknown> = {
-    brand_id: params.brandId,
-    url: params.url ?? "",
-    secret: params.secret ?? "",
-    enabled: params.enabled ?? false,
-  };
-
-  // Upsert using service role key (RLS blocks direct writes)
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_wholesale_webhook_settings`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(serviceKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to save webhook settings" };
-  return { success: true };
+  try {
+    await pool.query(
+      "SELECT upsert_wholesale_webhook_settings($1::jsonb)",
+      [
+        JSON.stringify({
+          brand_id: params.brandId,
+          url: params.url ?? "",
+          secret: params.secret ?? "",
+          enabled: params.enabled ?? false,
+        }),
+      ]
+    );
+    return { success: true };
+  } catch {
+    return { success: false, error: "Failed to save webhook settings" };
+  }
 }
 
 export async function enqueueWholesaleWebhook(
@@ -1013,29 +835,16 @@ export async function enqueueWholesaleWebhook(
   payload: Record<string, unknown> | null = null,
   brandId?: string
 ): Promise<{ success: boolean; logId?: string }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/enqueue_wholesale_webhook`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_event_type: eventType,
-        p_order_id: orderId,
-        p_payload: payload,
-        p_brand_id: brandId ?? null,
-      }),
-    }
-  );
-
-  if (!response.ok) return { success: false };
-  const data = await response.json();
-  return { success: true, logId: data };
+  try {
+    const { rows } = await pool.query<{ id: string }>(
+      "SELECT enqueue_wholesale_webhook($1, $2, $3::jsonb, $4)",
+      [eventType, orderId, payload ? JSON.stringify(payload) : null, brandId ?? null]
+    );
+    const data = Array.isArray(rows) ? rows[0] : rows;
+    return { success: true, logId: data?.id };
+  } catch {
+    return { success: false };
+  }
 }
 
 export async function getRecentWebhookActivity(brandId: string, limit = 10): Promise<Array<{
@@ -1047,15 +856,21 @@ export async function getRecentWebhookActivity(brandId: string, limit = 10): Pro
   created_at: string;
   response: string | null;
 }>> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/wholesale_sync_log?brand_id=eq.${brandId}&order=created_at.desc&limit=${limit}`,
-    {
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    }
-  );
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const { rows } = await pool.query<{
+      id: string;
+      event_type: string;
+      order_id: string | null;
+      status: string;
+      attempts: number;
+      created_at: string;
+      response: string | null;
+    }>(
+      "SELECT * FROM wholesale_sync_log WHERE brand_id = $1 ORDER BY created_at DESC LIMIT $2",
+      [brandId, limit]
+    );
+    return rows;
+  } catch {
+    return [];
+  }
 }

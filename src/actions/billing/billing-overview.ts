@@ -36,11 +36,11 @@
  */
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
+import { withTenant } from "@/db/client";
+import { products } from "@/db/schema";
+import { and, eq, count } from "drizzle-orm";
 import { ADDONS, PLAN_TIERS, type AddonKey, type PlanTierKey } from "@/lib/pricing";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export type BillingSubscriptionStatus =
   | "active"
@@ -97,48 +97,76 @@ export async function getBillingOverview(
     if (!brandId) return { success: false, error: "brandId required" };
 
     // 1) Plan info (plan_tier + limits + usage via get_brand_plan_info)
-    const planRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_brand_plan_info`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_id: brandId }),
-      }
+    //    Replicate the RPC inline via raw SQL on tenants + plans.
+    const planRes = await pool.query<{
+      plan_tier: string;
+      plan_name: string | null;
+      max_users: number;
+      max_stops_monthly: number;
+      max_products: number;
+      usage: { users: number; stops_this_month: number; products: number } | null;
+    }>(
+      `SELECT
+         t.plan_tier,
+         t.name AS plan_name,
+         COALESCE(t.max_users, 1) AS max_users,
+         COALESCE(t.max_stops_monthly, 10) AS max_stops_monthly,
+         COALESCE(t.max_products, 25) AS max_products,
+         jsonb_build_object(
+           'users', (SELECT count(*)::int FROM tenant_users tu WHERE tu.tenant_id = t.id),
+           'stops_this_month', (SELECT count(*)::int FROM stops s
+                                WHERE s.tenant_id = t.id
+                                  AND s.created_at >= date_trunc('month', now())),
+           'products', (SELECT count(*)::int FROM products p
+                        WHERE p.tenant_id = t.id AND p.active = true AND p.deleted_at IS NULL)
+         ) AS usage
+       FROM tenants t
+       WHERE t.id = $1`,
+      [brandId]
     );
-    const planData = planRes.ok ? await planRes.json() : null;
+    const planData = planRes.rows[0] ?? null;
 
     // 2) Brand row: subscription state, name, stripe_customer_id
-    const brandRes = await fetch(
-      `${supabaseUrl}/rest/v1/brands?id=eq.${brandId}&select=name,stripe_customer_id,stripe_subscription_id,stripe_subscription_status,stripe_current_period_end`,
-      { headers: svcHeaders(supabaseKey) }
+    const brandRes = await pool.query<{
+      name: string;
+      stripe_customer_id: string | null;
+      stripe_subscription_id: string | null;
+      stripe_subscription_status: string | null;
+      stripe_current_period_end: string | null;
+    }>(
+      `SELECT name, stripe_customer_id, NULL::text AS stripe_subscription_id,
+              NULL::text AS stripe_subscription_status, NULL::text AS stripe_current_period_end
+       FROM tenants WHERE id = $1`,
+      [brandId]
     );
-    const brandRows = brandRes.ok ? await brandRes.json() : [];
-    const brand = Array.isArray(brandRows) ? brandRows[0] : null;
+    const brand = brandRes.rows[0] ?? null;
 
-    // 3) Enabled add-ons (feature flags)
-    const addonsRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_brand_features`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-        body: JSON.stringify({ p_brand_id: brandId }),
-      }
+    // 3) Enabled add-ons (feature flags from brand_settings)
+    const addonsRes = await pool.query<{ feature_flags: Record<string, unknown> | null }>(
+      `SELECT feature_flags FROM brand_settings WHERE tenant_id = $1`,
+      [brandId]
     );
-    const enabledAddons = addonsRes.ok ? await addonsRes.json() : {};
+    const flags = addonsRes.rows[0]?.feature_flags ?? {};
+    const enabledAddons: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(flags ?? {})) {
+      enabledAddons[k] = v === true || v === "true" || v === 1 || v === "1";
+    }
 
     // 4) Active product count — same semantics as the dashboard
-    //    (active=true AND deleted_at IS NULL). Keeps the billing page in
-    //    sync with /admin "Active Products" stat.
-    const productRes = await fetch(
-      `${supabaseUrl}/rest/v1/products?select=id&brand_id=eq.${brandId}&active=eq.true&deleted_at=is.null&limit=1000`,
-      { headers: { ...svcHeaders(supabaseKey), Prefer: "count=exact" } }
+    //    (active=true). Keeps the billing page in sync with /admin
+    //    "Active Products" stat.
+    const productCountRows = await withTenant(brandId, (db) =>
+      db
+        .select({ value: count() })
+        .from(products)
+        .where(
+          and(
+            eq(products.tenantId, brandId),
+            eq(products.active, true)
+          )
+        )
     );
-    const productCountHeader = productRes.headers.get("Content-Range");
-    let activeProductCount = 0;
-    if (productCountHeader && productCountHeader.includes("/")) {
-      const total = productCountHeader.split("/").pop();
-      activeProductCount = parseInt(total ?? "0", 10) || 0;
-    }
+    const activeProductCount = Number(productCountRows[0]?.value ?? 0);
 
     // 5) Admin context (so we know if the user can manage / is platform)
     const adminUser = await getAdminUser();
@@ -146,7 +174,7 @@ export async function getBillingOverview(
     const canManageBilling = isPlatformAdmin || !!adminUser?.can_manage_settings;
 
     // ── Normalize plan data ──────────────────────────────────────────────────
-    const planTier = (planData?.plan_tier ?? "starter") as PlanTierKey;
+    const planTier = ((planData?.plan_tier as PlanTierKey | undefined) ?? "starter");
     const limits = {
       max_users: planData?.max_users ?? 1,
       max_stops_monthly: planData?.max_stops_monthly ?? 10,
@@ -209,7 +237,7 @@ export async function getBillingOverview(
       success: true,
       data: {
         brandId,
-        brandName: brand?.name ?? planData?.brand_name ?? null,
+        brandName: brand?.name ?? planData?.plan_name ?? null,
         planTier,
         planCycle,
         planMonthlyPrice,
@@ -220,7 +248,7 @@ export async function getBillingOverview(
         currentPeriodEnd: brand?.stripe_current_period_end ?? null,
         limits,
         usage,
-        enabledAddons: (enabledAddons ?? {}) as Record<string, boolean>,
+        enabledAddons,
         addons,
         displayedInvoiceAmount,
         monthlyTotal,

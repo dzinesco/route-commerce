@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
+
+type OrderRow = {
+  id: string;
+  invoice_number: string | null;
+  company_name: string;
+  contact_name: string | null;
+  customer_email: string;
+  customer_phone: string | null;
+  anticipated_pickup_date: string | null;
+  subtotal: number;
+  deposit_paid: number;
+  balance_due: number;
+  items: Array<{ product_name: string; quantity: number; unit_price: number; line_total: number }>;
+  created_at: string;
+  brand_id: string;
+};
 
 export async function GET(
   req: NextRequest,
@@ -9,24 +25,17 @@ export async function GET(
   const { orderId } = await params;
   const token = req.nextUrl.searchParams.get("token");
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  if (!supabaseUrl || !supabaseKey) {
+  if (!process.env.DATABASE_URL) {
     return new NextResponse("Server misconfiguration", { status: 500 });
   }
 
   // ── Token-gated download (customer portal) ──────────────────────────────────
   if (token) {
-    const orderRes = await fetch(
-      `${supabaseUrl}/rest/v1/wholesale_orders?id=eq.${orderId}&invoice_token=eq.${token}&select=id,invoice_number,brand_id`,
-      { headers: svcHeaders(supabaseKey) }
+    const tokenRes = await pool.query<{ id: string }>(
+      "SELECT id FROM wholesale_orders WHERE id = $1 AND invoice_token = $2 LIMIT 1",
+      [orderId, token]
     );
-    if (!orderRes.ok || orderRes.status === 204) {
-      return new NextResponse("Not found", { status: 404 });
-    }
-    const tokenOrders = await orderRes.json();
-    if (!tokenOrders || tokenOrders.length === 0) {
+    if (tokenRes.rows.length === 0) {
       return new NextResponse("Not found", { status: 404 });
     }
   }
@@ -36,64 +45,38 @@ export async function GET(
   let brandId = "00000000-0000-0000-0000-000000000000";
 
   // First try direct order lookup to get brand_id
-  const directRes = await fetch(
-    `${supabaseUrl}/rest/v1/wholesale_orders?id=eq.${orderId}&select=id,brand_id,customer_id`,
-    { headers: svcHeaders(supabaseKey) }
+  const directRes = await pool.query<{ brand_id: string }>(
+    "SELECT brand_id FROM wholesale_orders WHERE id = $1 LIMIT 1",
+    [orderId]
   );
-  if (directRes.ok) {
-    const direct = await directRes.json();
-    if (direct && direct.length > 0) {
-      brandId = direct[0].brand_id;
-    }
+  if (directRes.rows.length > 0) {
+    brandId = directRes.rows[0].brand_id;
   }
 
-  const orderRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_orders`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
+  const orderRes = await pool.query<OrderRow>(
+    "SELECT * FROM get_wholesale_orders($1)",
+    [brandId]
   );
 
-  if (!orderRes.ok) {
-    return new NextResponse("Failed to fetch order", { status: 500 });
-  }
-
-  type OrderRow = {
-    id: string;
-    invoice_number: string | null;
-    company_name: string;
-    contact_name: string | null;
-    customer_email: string;
-    customer_phone: string | null;
-    anticipated_pickup_date: string | null;
-    subtotal: number;
-    deposit_paid: number;
-    balance_due: number;
-    items: Array<{ product_name: string; quantity: number; unit_price: number; line_total: number }>;
-    created_at: string;
-    brand_id: string;
-  };
-
-  const allOrders = await orderRes.json() as OrderRow[];
+  const allOrders = orderRes.rows;
   const order = allOrders.find(o => o.id === orderId);
   if (!order) {
     return new NextResponse("Order not found", { status: 404 });
   }
 
   // Fetch settings for brand header
-  const settingsRes = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_wholesale_settings`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: order.brand_id }),
-    }
+  const settingsRes = await pool.query<{
+    invoice_business_name?: string;
+    invoice_business_address?: string;
+    invoice_business_phone?: string;
+    invoice_business_email?: string;
+    invoice_business_website?: string;
+  }>(
+    "SELECT * FROM get_wholesale_settings($1)",
+    [order.brand_id]
   );
 
-  const settingsData = await settingsRes.json();
-  const settings = settingsData ?? {};
+  const settings = settingsRes.rows[0] ?? {};
 
   const pdfBytes = await buildInvoicePdf(order, settings);
 

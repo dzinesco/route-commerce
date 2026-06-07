@@ -3,7 +3,7 @@ import { getAdminUser } from "@/lib/admin-permissions";
 import { syncProductsToSquare, syncProductsFromSquare } from "@/actions/square-products";
 import { syncOrdersFromSquare } from "@/actions/square-orders";
 import { getPaymentSettings } from "@/actions/payments";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 export async function POST(request: Request) {
   const adminUser = await getAdminUser();
@@ -58,19 +58,22 @@ export async function POST(request: Request) {
   }
 
   // Update square_last_sync_at and square_last_sync_error
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const lastError = syncErrors.length > 0 ? syncErrors.slice(0, 5).join("; ") : null;
 
-  await fetch(`${supabaseUrl}/rest/v1/rpc/upsert_payment_settings`, {
-    method: "POST",
-    headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      p_brand_id: brandId,
-      p_square_sync_enabled: true,
-      p_square_inventory_mode: settings?.square_inventory_mode ?? "none",
-    }),
-  });
+  await pool.query(
+    "SELECT upsert_payment_settings($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    [
+      brandId,
+      null, // provider (not changed)
+      null, // stripe_publishable_key
+      null, // stripe_secret_key
+      null, // stripe_user_id
+      null, // square_access_token
+      null, // square_location_id
+      true, // square_sync_enabled
+      settings?.square_inventory_mode ?? "none",
+    ]
+  );
 
   return NextResponse.json({
     success: syncErrors.length === 0,

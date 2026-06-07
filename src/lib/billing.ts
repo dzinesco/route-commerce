@@ -5,10 +5,7 @@ import "server-only";
 
 import { ADDONS, type PlanTierKey, type AddonKey } from "./pricing";
 
-import { svcHeaders } from "@/lib/svc-headers";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { pool } from "@/lib/db";
 
 // ── Subscription status types ──────────────────────────────────────────────────
 
@@ -29,22 +26,18 @@ export interface BrandSubscription {
   plan_tier: PlanTierKey;
 }
 
-// ── RPC call helper ───────────────────────────────────────────────────────────
+// ── RPC call helper (raw SQL via pg pool) ─────────────────────────────────────
 
-async function rpc<T = unknown>(
+async function rpc<T = Record<string, unknown>>(
   fn: string,
-  body: Record<string, unknown>
+  params: ReadonlyArray<unknown>
 ): Promise<T> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-    method: "POST",
-    headers: { ...svcHeaders(SERVICE_KEY), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`RPC ${fn} failed: ${err}`);
-  }
-  return res.json() as Promise<T>;
+  const placeholders = params.map((_, i) => `$${i + 1}`).join(", ");
+  const { rows } = await pool.query<Record<string, unknown>>(
+    `SELECT * FROM ${fn}(${placeholders})`,
+    params as unknown[]
+  );
+  return rows as unknown as T;
 }
 
 // ── Feature sync ─────────────────────────────────────────────────────────────
@@ -75,7 +68,7 @@ export async function syncSubscriptionFeatures(
   if (tierItem) {
     const newTier = priceToTier[tierItem.priceId];
     if (newTier) {
-      await rpc("update_brand_plan_tier", { p_brand_id: brandId, p_plan_tier: newTier });
+      await rpc("update_brand_plan_tier", [brandId, newTier]);
     }
   }
 
@@ -84,7 +77,7 @@ export async function syncSubscriptionFeatures(
     if (!priceId) continue;
     const item = subscriptionItems.find((i) => i.priceId === priceId);
     const enabled = item?.enabled ?? false;
-    await rpc("set_brand_feature", { p_brand_id: brandId, p_feature_key: addonKey, p_enabled: enabled });
+    await rpc("set_brand_feature", [brandId, addonKey, enabled]);
   }
 }
 
@@ -103,11 +96,11 @@ export async function createOrUpdateSubscription(
   const stripe = new Stripe(stripeKey, { apiVersion: "2026-04-22.dahlia" as any });
 
   // Get brand's Stripe customer
-  const brands = await rpc<Array<{ stripe_customer_id: string | null }>>(
+  const brandRows = await rpc<Array<BrandSubscription>>(
     "get_brand_subscription",
-    { p_brand_id: brandId }
+    [brandId]
   );
-  const brandData = brands[0] as unknown as BrandSubscription | undefined;
+  const brandData = brandRows[0];
   const customerId = brandData?.stripe_customer_id;
 
   if (!customerId) throw new Error("No Stripe customer for brand. Complete Stripe setup first.");
@@ -117,7 +110,7 @@ export async function createOrUpdateSubscription(
   if (!priceId) throw new Error(`No price configured for ${priceKey} (${billingCycle})`);
 
   // Check if brand already has an active subscription — update it instead of creating new
-  const existingSubId = (brandData as unknown as { stripe_subscription_id?: string })?.stripe_subscription_id;
+  const existingSubId = brandData?.stripe_subscription_id;
 
   let subscription;
   if (existingSubId) {
@@ -155,12 +148,12 @@ export async function createOrUpdateSubscription(
 
   // Save subscription ID to brand
   const subData = subscription as unknown as { id: string; status: string; current_period_end: number };
-  await rpc("set_brand_subscription", {
-    p_brand_id: brandId,
-    p_subscription_id: subData.id,
-    p_status: subData.status,
-    p_current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
-  });
+  await rpc("set_brand_subscription", [
+    brandId,
+    subData.id,
+    subData.status,
+    new Date(subData.current_period_end * 1000).toISOString(),
+  ]);
 
   const latestInvoice = subscription.latest_invoice as { payment_intent?: { client_secret?: string } } | null;
   const invoiceOrNull = typeof subscription.latest_invoice !== "string" ? latestInvoice : null;
@@ -179,8 +172,8 @@ export async function cancelBrandSubscription(
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) throw new Error("STRIPE_SECRET_KEY not configured");
 
-  const brandData = await rpc<BrandSubscription[]>("get_brand_subscription", { p_brand_id: brandId });
-  const brand = brandData[0] as unknown as BrandSubscription | undefined;
+  const brandRows = await rpc<BrandSubscription[]>("get_brand_subscription", [brandId]);
+  const brand = brandRows[0];
   if (!brand?.stripe_subscription_id) throw new Error("No active subscription to cancel");
 
   const Stripe = (await import("stripe")).default;
@@ -200,21 +193,21 @@ export async function cancelBrandSubscription(
       // Disable the feature flag
       const addonKey = getAddonKeyFromPriceKey(priceKey);
       if (addonKey) {
-        await rpc("set_brand_feature", { p_brand_id: brandId, p_feature_key: addonKey, p_enabled: false });
+        await rpc("set_brand_feature", [brandId, addonKey, false]);
       }
     }
   } else {
     // Cancel entire subscription
     await stripe.subscriptions.cancel(brand.stripe_subscription_id);
-    await rpc("set_brand_subscription", {
-      p_brand_id: brandId,
-      p_subscription_id: "",
-      p_status: "canceled",
-      p_current_period_end: null,
-    });
+    await rpc("set_brand_subscription", [
+      brandId,
+      "",
+      "canceled",
+      null,
+    ]);
     // Disable all add-on features
     for (const addonKey of Object.keys(ADDONS) as AddonKey[]) {
-      await rpc("set_brand_feature", { p_brand_id: brandId, p_feature_key: addonKey, p_enabled: false });
+      await rpc("set_brand_feature", [brandId, addonKey, false]);
     }
   }
 }
@@ -222,24 +215,24 @@ export async function cancelBrandSubscription(
 // ── Past due notification ─────────────────────────────────────────────────────
 
 export async function sendPastDueNotification(brandId: string): Promise<void> {
-  const brandData = await rpc<Array<{ name: string }>>("get_brand_subscription", { p_brand_id: brandId });
-  const brand = brandData[0] as unknown as { name?: string } | undefined;
+  const brandRows = await rpc<Array<{ name: string }>>("get_brand_subscription", [brandId]);
+  const brand = brandRows[0];
   const brandName = brand?.name ?? "your brand";
 
   const adminEmail = await getAdminEmail(brandId);
 
-  await rpc("enqueue_notification", {
-    p_brand_id: brandId,
-    p_email_to: adminEmail ?? "team@cielohermosa.com",
-    p_subject: `Payment Failed — ${brandName}`,
-    p_body_html: `
+  await rpc("enqueue_notification", [
+    brandId,
+    adminEmail ?? "team@cielohermosa.com",
+    `Payment Failed — ${brandName}`,
+    `
       <h2>Payment Failed</h2>
       <p>We were unable to charge your card for the Cielo Hermosa platform subscription.</p>
       <p>Please update your payment method within 7 days to avoid service interruption.</p>
       <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/settings/billing">Update Payment Method →</a></p>
     `,
-    p_body_text: `Payment failed for ${brandName}. Please update your payment method at ${process.env.NEXT_PUBLIC_SITE_URL}/admin/settings/billing to avoid service interruption.`,
-  });
+    `Payment failed for ${brandName}. Please update your payment method at ${process.env.NEXT_PUBLIC_SITE_URL}/admin/settings/billing to avoid service interruption.`,
+  ]);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -267,9 +260,10 @@ async function getAdminEmail(brandId: string): Promise<string | null> {
   try {
     const data = await rpc<{ notification_email?: string; from_email?: string }>(
       "get_wholesale_settings",
-      { p_brand_id: brandId }
+      [brandId]
     );
-    return data?.notification_email ?? data?.from_email ?? null;
+    const settings = Array.isArray(data) ? data[0] : data;
+    return settings?.notification_email ?? settings?.from_email ?? null;
   } catch {
     return null;
   }

@@ -2,7 +2,7 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getPaymentSettings } from "@/actions/payments";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 
 function getSquareBaseUrl(accessToken: string) {
   return process.env.SQUARE_ENVIRONMENT === "production"
@@ -85,8 +85,6 @@ export async function syncOrdersFromSquare(brandId: string): Promise<SyncResult>
 
   const errors: string[] = [];
   let synced = 0;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   // Determine sync start time — last sync or 30 days ago
   const since = settings.square_last_sync_at
@@ -131,36 +129,48 @@ export async function syncOrdersFromSquare(brandId: string): Promise<SyncResult>
         // Use idempotency key to avoid duplicates
         const idempotencyKey = `square_${payment.id}`;
 
-        const createRes = await fetch(
-          `${supabaseUrl}/rest/v1/rpc/create_order_with_items`,
-          {
-            method: "POST",
-            headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-            body: JSON.stringify({
-              p_idempotency_key: idempotencyKey,
-              p_customer_name: customerName,
-              p_customer_email: customerEmail,
-              p_customer_phone: "",
-              p_stop_id: null, // Square orders don't have RC stop_id
-              p_items: lineItems.map((li: { name: string; quantity: number; price: number }) => ({
-                id: null, // product lookup not available in this flow
-                quantity: li.quantity,
-                fulfillment: "shipping",
-              })),
-              p_subtotal: total,
-              p_payment_processor: "square",
-              p_payment_status: "paid",
-              p_payment_transaction_id: payment.id,
-            }),
+        // Call SECURITY DEFINER RPC create_order_with_items
+        let createOk = false;
+        let errText = "";
+        try {
+          const rpcRes = await pool.query(
+            `SELECT * FROM create_order_with_items(
+              $1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10
+            )`,
+            [
+              idempotencyKey,
+              customerName,
+              customerEmail,
+              "",
+              null, // Square orders don't have RC stop_id
+              JSON.stringify(
+                lineItems.map((li: { name: string; quantity: number; price: number }) => ({
+                  id: null, // product lookup not available in this flow
+                  quantity: li.quantity,
+                  fulfillment: "shipping",
+                }))
+              ),
+              total,
+              "square",
+              "paid",
+              payment.id,
+            ]
+          );
+          createOk = rpcRes.rows.length > 0;
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          // 409 / unique violation = already exists (idempotent)
+          if (/duplicate key|unique constraint|already exists/i.test(msg)) {
+            createOk = true;
+          } else {
+            errText = msg.slice(0, 100);
           }
-        );
+        }
 
-        if (createRes.ok || createRes.status === 409) {
-          // 409 = already exists (idempotent)
+        if (createOk) {
           synced++;
         } else {
-          const errText = await createRes.text();
-          errors.push(`Payment ${payment.id}: ${errText.slice(0, 100)}`);
+          errors.push(`Payment ${payment.id}: ${errText}`);
         }
       } catch (err) {
         errors.push(`Payment ${payment.id}: ${String(err)}`);

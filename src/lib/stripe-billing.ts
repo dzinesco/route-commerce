@@ -2,6 +2,7 @@
 // Supports plans, add-ons, upgrades, cancellations, and customer portal
 
 import Stripe from "stripe";
+import { pool } from "@/lib/db";
 
 // Lazy-initialize Stripe client to avoid build-time errors when env vars aren't set
 let _stripe: Stripe | null = null;
@@ -565,27 +566,17 @@ async function updateBrandSubscription(
   periodEnd: number | null
 ) {
   if (!brandId) return;
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  
+
   try {
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/set_brand_subscription`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_brand_id: brandId,
-          p_subscription_id: subscriptionId,
-          p_subscription_status: status,
-          p_plan_tier: planTier,
-          p_current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-        }),
-      }
+    await pool.query(
+      "SELECT set_brand_subscription($1, $2, $3, $4, $5)",
+      [
+        brandId,
+        subscriptionId,
+        status,
+        planTier ?? null,
+        periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+      ]
     );
   } catch (error) {
     console.error("Failed to update brand subscription:", error);
@@ -594,25 +585,11 @@ async function updateBrandSubscription(
 
 async function enableAddonFeature(brandId: string | undefined, addonKey: string | undefined) {
   if (!brandId || !addonKey) return;
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  
+
   try {
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/set_brand_feature`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_brand_id: brandId,
-          p_feature_key: addonKey,
-          p_enabled: true,
-        }),
-      }
+    await pool.query(
+      "SELECT set_brand_feature($1, $2, $3)",
+      [brandId, addonKey, true]
     );
   } catch (error) {
     console.error("Failed to enable addon feature:", error);
@@ -621,25 +598,11 @@ async function enableAddonFeature(brandId: string | undefined, addonKey: string 
 
 async function disableAddonFeature(brandId: string | undefined, addonKey: string | undefined) {
   if (!brandId || !addonKey) return;
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  
+
   try {
-    await fetch(
-      `${supabaseUrl}/rest/v1/rpc/set_brand_feature`,
-      {
-        method: "POST",
-        headers: {
-          apikey: serviceKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_brand_id: brandId,
-          p_feature_key: addonKey,
-          p_enabled: false,
-        }),
-      }
+    await pool.query(
+      "SELECT set_brand_feature($1, $2, $3)",
+      [brandId, addonKey, false]
     );
   } catch (error) {
     console.error("Failed to disable addon feature:", error);

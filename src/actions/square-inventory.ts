@@ -2,7 +2,9 @@
 
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getPaymentSettings } from "@/actions/payments";
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { products } from "@/db/schema";
+import { inArray } from "drizzle-orm";
 
 function getSquareBaseUrl(accessToken: string) {
   return process.env.SQUARE_ENVIRONMENT === "production"
@@ -110,30 +112,26 @@ export async function syncInventoryToSquare(
   const errors: string[] = [];
   const synced = 0;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
   // Build product name → quantity map
   const itemQtyMap = new Map(items.map((i) => [i.productId, i.quantity]));
 
   try {
     // Fetch product details from RC
     const productIds = items.map((i) => i.productId);
-    const productsRes = await fetch(
-      `${supabaseUrl}/rest/v1/products?id=in.(${productIds.join(",")})&select=id,name`,
-      {
-        headers: { ...svcHeaders(supabaseKey) },
-      }
+    const rows = await withTenant(brandId, (db) =>
+      db
+        .select({ id: products.id, name: products.name })
+        .from(products)
+        .where(inArray(products.id, productIds))
     );
-    if (!productsRes.ok) {
+    if (rows.length === 0 && productIds.length > 0) {
       return { success: false, synced: 0, errors: ["Failed to fetch products from RC"] };
     }
-    const products: Array<{ id: string; name: string }> = await productsRes.json();
 
     // Find Square catalog items matching product names and reduce quantity
     const updates: Array<{ catalogObjectId: string; quantity: number; type: "AVAILABLE" | "ON_HAND" | "SOLD_OUT" }> = [];
 
-    for (const product of products) {
+    for (const product of rows) {
       const qty = itemQtyMap.get(product.id) ?? 0;
       if (qty <= 0) continue;
 
@@ -177,8 +175,6 @@ export async function syncInventoryFromSquare(brandId: string): Promise<SyncResu
 
   const errors: string[] = [];
   const synced = 0;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   try {
     // Fetch Square inventory counts for the location

@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminUser } from "@/lib/admin-permissions";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { DEFAULT_MODELS, type AIProvider as AIProviderType } from "@/lib/ai-provider-models";
 
 // ── Types ────────────────────────────────────────────────────────────────────────
@@ -33,33 +33,31 @@ const MINIMAX_DEFAULT_BASE_URL = "https://api.minimax.io/v1";
 // ── Get AI provider settings ─────────────────────────────────────────────────────
 
 export async function getAIProviderSettings(brandId: string): Promise<AIProviderSettings> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_ai_provider_settings`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey!),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId }),
+  try {
+    const res = await pool.query<{
+      provider: string | null;
+      api_key: string | null;
+      org_id: string | null;
+      model: string | null;
+      custom_endpoint: string | null;
+    }>(
+      "SELECT * FROM get_ai_provider_settings($1)",
+      [brandId]
+    );
+    const data = res.rows[0];
+    if (!data) {
+      return { provider: "openai", apiKey: "", model: "gpt-4o-mini" };
     }
-  );
-
-  if (!response.ok) {
+    return {
+      provider: (data.provider as AIProvider) ?? "openai",
+      apiKey: data.api_key ?? "",
+      orgId: data.org_id ?? undefined,
+      model: data.model ?? "gpt-4o-mini",
+      customEndpoint: data.custom_endpoint ?? undefined,
+    };
+  } catch {
     return { provider: "openai", apiKey: "", model: "gpt-4o-mini" };
   }
-
-  const data = await response.json();
-  return {
-    provider: (data.provider as AIProvider) ?? "openai",
-    apiKey: data.api_key ?? "",
-    orgId: data.org_id,
-    model: data.model ?? "gpt-4o-mini",
-    customEndpoint: data.custom_endpoint,
-  };
 }
 
 // ── Save AI provider settings ───────────────────────────────────────────────────
@@ -75,9 +73,6 @@ export async function setAIProviderSettings(
   const current = await getAIProviderSettings(brandId);
   const merged = { ...current, ...settings };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   const payload = {
     provider: merged.provider,
     api_key: merged.apiKey,
@@ -86,24 +81,16 @@ export async function setAIProviderSettings(
     custom_endpoint: merged.customEndpoint ?? null,
   };
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/set_ai_provider_settings`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey!),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId, p_settings: payload }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok || !data) {
-    return { success: false, error: data?.message ?? "Failed to save" };
+  try {
+    await pool.query(
+      "SELECT set_ai_provider_settings($1, $2::jsonb)",
+      [brandId, JSON.stringify(payload)]
+    );
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to save";
+    return { success: false, error: msg };
   }
-
-  return { success: true };
 }
 
 // ── Dynamic AI client factory ────────────────────────────────────────────────────
@@ -206,24 +193,15 @@ export async function getAIClient(brandId: string): Promise<{
 // ── Custom integrations ─────────────────────────────────────────────────────────
 
 export async function getCustomIntegrations(brandId: string): Promise<CustomIntegration[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_custom_integrations`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey!),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data ?? [];
+  try {
+    const res = await pool.query<CustomIntegration>(
+      "SELECT * FROM get_custom_integrations($1)",
+      [brandId]
+    );
+    return res.rows ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function upsertCustomIntegration(
@@ -234,25 +212,16 @@ export async function upsertCustomIntegration(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (adminUser.brand_id && adminUser.brand_id !== brandId) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_custom_integration`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey!),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId, p_integration: integration }),
-    }
-  );
-
-  const data = await response.json();
-  if (!response.ok) return { success: false, error: data?.message ?? "Failed to save" };
-
-  return { success: true, integrations: data };
+  try {
+    const res = await pool.query<CustomIntegration>(
+      "SELECT * FROM upsert_custom_integration($1, $2::jsonb)",
+      [brandId, JSON.stringify(integration)]
+    );
+    return { success: true, integrations: res.rows };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to save";
+    return { success: false, error: msg };
+  }
 }
 
 export async function deleteCustomIntegration(
@@ -263,25 +232,14 @@ export async function deleteCustomIntegration(
   if (!adminUser) return { success: false, error: "Not authenticated" };
   if (adminUser.brand_id && adminUser.brand_id !== brandId) return { success: false, error: "Not authorized" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/delete_custom_integration`,
-    {
-      method: "POST",
-      headers: {
-        ...svcHeaders(supabaseKey!),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_brand_id: brandId, p_integration_id: integrationId }),
-    }
-  );
-
-  if (!response.ok) {
-    const data = await response.json();
-    return { success: false, error: data?.message ?? "Failed to delete" };
+  try {
+    await pool.query(
+      "SELECT delete_custom_integration($1, $2)",
+      [brandId, integrationId]
+    );
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to delete";
+    return { success: false, error: msg };
   }
-
-  return { success: true };
 }

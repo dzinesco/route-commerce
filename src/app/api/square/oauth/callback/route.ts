@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { svcHeaders } from "@/lib/svc-headers";
+import { pool } from "@/lib/db";
 import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
@@ -97,30 +97,22 @@ export async function GET(request: Request) {
     );
   }
 
-  // Store token + location_id in payment_settings via upsert
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
+  // Store token + location_id in payment_settings via SECURITY DEFINER RPC
   try {
-    const upsertResponse = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/upsert_payment_settings`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json", Prefer: "return=representation" },
-        body: JSON.stringify({
-          p_brand_id: brandId,
-          p_provider: "square",
-          p_square_access_token: accessToken,
-          p_square_location_id: locationId,
-        }),
-      }
+    await pool.query(
+      "SELECT upsert_payment_settings($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+      [
+        brandId,
+        "square",
+        null, // stripe_publishable_key
+        null, // stripe_secret_key
+        null, // stripe_user_id
+        accessToken,
+        locationId,
+        null, // square_sync_enabled (not changed here)
+        null, // square_inventory_mode (not changed here)
+      ]
     );
-
-    if (!upsertResponse.ok) {
-      return NextResponse.redirect(
-        new URL("/admin/settings/payments?error=square_token_save_failed", request.url)
-      );
-    }
   } catch (err) {
     return NextResponse.redirect(
       new URL("/admin/settings/payments?error=square_token_save_error", request.url)

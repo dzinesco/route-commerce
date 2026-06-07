@@ -10,7 +10,9 @@
  * 3. Use isFeatureEnabled(brandId, "key") to gate UI elements
  */
 
-import { svcHeaders } from "@/lib/svc-headers";
+import { withTenant } from "@/db/client";
+import { brandSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export type BrandFeatureKey =
   | "harvest_reach"
@@ -170,25 +172,23 @@ export async function isFeatureEnabled(
 async function fetchBrandFeatures(
   brandId: string
 ): Promise<Record<BrandFeatureKey, boolean> | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) return null;
-
   try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/get_brand_features`,
-      {
-        method: "POST",
-        headers: {
-          ...svcHeaders(supabaseKey),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ p_brand_id: brandId }),
-      }
+    const rows = await withTenant(brandId, (db) =>
+      db
+        .select({ featureFlags: brandSettings.featureFlags })
+        .from(brandSettings)
+        .where(eq(brandSettings.tenantId, brandId))
+        .limit(1)
     );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data ?? null;
+    const flags = rows[0]?.featureFlags as Record<string, unknown> | null | undefined;
+    if (!flags || typeof flags !== "object") return null;
+    // Coerce to boolean (JSONB may store as boolean, string, or number)
+    const result = {} as Record<BrandFeatureKey, boolean>;
+    for (const key of Object.keys(ADDON_CATALOG) as BrandFeatureKey[]) {
+      const v = (flags as Record<string, unknown>)[key];
+      result[key] = v === true || v === "true" || v === 1 || v === "1";
+    }
+    return result;
   } catch {
     return null;
   }
