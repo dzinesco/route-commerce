@@ -1,201 +1,223 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-
-export type AdminUser = {
-  id: string;
-  user_id: string;
-  brand_id: string | null;
-  role: string;
-  active: boolean;
-  can_manage_products: boolean;
-  can_manage_stops: boolean;
-  can_manage_orders: boolean;
-  can_manage_pickup: boolean;
-  can_manage_messages: boolean;
-  can_manage_refunds: boolean;
-  can_manage_users: boolean;
-  can_manage_water_log: boolean;
-  can_manage_reports: boolean;
-  can_manage_settings: boolean;
-  must_change_password: boolean;
-};
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { withPlatformAdmin } from "@/db/client";
+import { users, tenants, tenantUsers } from "@/db/schema";
+import type { AdminRole, AdminUser, TenantContext } from "@/lib/admin-permissions-types";
 
 /**
- * Resolves the current admin user.
+ * Source of truth for the current admin user.
  *
- * Auth source precedence:
- *   1. `NEXT_PUBLIC_USE_MOCK_DATA=true` — return a platform_admin dev shim.
- *   2. `dev_session` cookie — return the matching dev shim
- *      (platform_admin / brand_admin / store_employee).
- *   3. Auth.js v5 session — call the `get_admin_user_for_session` RPC,
- *      which transparently looks up by `user_id` (Supabase UUID) or
- *      `auth_subject` (Google `sub` claim). Falls back to a direct
- *      `user_id` / `email` REST query for the pre-migration schema.
- *      Auto-provisions first-time sign-ins via `upsert_admin_user`
- *      (also handles both provider paths).
+ * Looks up the Auth.js v5 session, then resolves the user + tenant
+ * from the `users` and `tenant_users` tables.
  *
- * Both RPCs are added by supabase/migrations/204_admin_users_email_and_auth_subject.sql.
- * Until that migration is applied, the function degrades to a direct REST
- * query (the same lookup the previous code did) and skips auto-provisioning.
+ * Returns `null` if:
+ *   - No Auth.js session (caller not signed in)
+ *   - The session email doesn't match any `users.email`
+ *   - The user has no `tenant_users` row (not provisioned yet)
  *
- * Errors from the auth library or the network are caught and return `null`
- * — the admin layout's existing `try/catch` then renders `AdminAccessDenied`
- * with a generic message instead of crashing the server render.
+ * Provisioning: an admin must run
+ *   INSERT INTO users (email, ...) VALUES (...)
+ *   INSERT INTO tenant_users (tenant_id, user_id, role) VALUES (...)
+ * to grant a Google-sign-in user admin access. Until provisioned, the
+ * layout shows "Access Denied" — correct behavior.
+ *
+ * The previous `dev_session` cookie bypass has been removed. The only
+ * way into the admin is through real Auth.js (Google in production;
+ * for local dev, configure `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`).
  */
 export async function getAdminUser(): Promise<AdminUser | null> {
-  let cookieStore;
+  let sessionEmail: string | null = null;
   try {
-    cookieStore = await cookies();
-  } catch {
+    const session = await auth();
+    sessionEmail = session?.user?.email ?? null;
+  } catch (err) {
+    console.error("[admin-permissions] auth() failed:", err);
     return null;
   }
 
-  // ── Mock data mode for UI review ─────────────────────────────────
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") {
-    return buildDevAdmin("platform_admin");
-  }
+  if (!sessionEmail) return null;
 
-  // ── Dev session bypass (enabled for testing on all envs) ────────
-  const dev = cookieStore.get("dev_session")?.value;
-  if (dev === "platform_admin" || dev === "brand_admin" || dev === "store_employee") {
-    return buildDevAdmin(dev);
-  }
+  return await withPlatformAdmin(async (db) => {
+    const userRows = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, sessionEmail))
+      .limit(1);
+    const user = userRows[0];
+    if (!user) return null;
 
-  // ── Auth.js v5 session ──────────────────────────────────────────
-  let session;
-  try {
-    session = await auth();
-  } catch {
-    return null;
-  }
-  const sessionId = session?.user?.id;
-  const email = session?.user?.email?.toLowerCase() ?? null;
-  if (!sessionId) return null;
+    const membershipRows = await db
+      .select({
+        tenantId: tenants.id,
+        tenantName: tenants.name,
+        tenantSlug: tenants.slug,
+        tenantStatus: tenants.status,
+        role: tenantUsers.role,
+      })
+      .from(tenantUsers)
+      .innerJoin(tenants, eq(tenants.id, tenantUsers.tenantId))
+      .where(eq(tenantUsers.userId, user.id))
+      .limit(1);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) return null;
+    if (membershipRows.length === 0) {
+      // Signed in but not provisioned for any tenant.
+      return null;
+    }
 
-  const adminHeaders = { apikey: serviceKey, "Content-Type": "application/json" } as const;
-  let admin: Record<string, unknown> | null = null;
-
-  // 1. Try the new `get_admin_user_for_session` RPC (handles both UUID
-  //    and Google-subject lookups in one call). 404 = function doesn't
-  //    exist yet (migration 204 not applied) — fall through to legacy.
-  try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_admin_user_for_session`, {
-      method: "POST",
-      headers: { ...adminHeaders, Prefer: "return=representation" },
-      body: JSON.stringify({ p_session_id: sessionId }),
+    const m = membershipRows[0];
+    const role = m.role as AdminRole;
+    return buildAdminUser({
+      id: user.id,
+      email: user.email,
+      displayName: user.name,
+      authProvider: user.authProvider,
+      tenantId: m.tenantId,
+      tenantSlug: m.tenantSlug,
+      tenantName: m.tenantName,
+      role,
+      active: true,
     });
-    if (res.ok) {
-      admin = await parseRpcSingle(res);
-    }
-    // 404 / 5xx → fall through to legacy
-  } catch {
-    // network error — fall through
-  }
-
-  // 2. Legacy fallback: direct REST query. UUIDs match `user_id`,
-  //    non-UUIDs (Google subjects) match `email`.
-  if (!admin) {
-    try {
-      const filter = UUID_REGEX.test(sessionId)
-        ? `user_id=eq.${sessionId}&limit=1`
-        : `email=ilike.${encodeURIComponent(email ?? "")}&limit=1`;
-      const res = await fetch(`${supabaseUrl}/rest/v1/admin_users?${filter}`, {
-        headers: adminHeaders,
-      });
-      if (res.ok) admin = await parseFirstRow(res);
-    } catch {
-      // fetch failed silently
-    }
-  }
-
-  if (admin) {
-    if (!admin.active) return null;
-    return buildAdminUser(admin);
-  }
-
-  // 3. First-time sign-in: auto-provision via the new RPC. Only runs
-  //    once the migration is applied (404 on the RPC = no-op, fall
-  //    through to `null`).
-  try {
-    const isUuid = UUID_REGEX.test(sessionId);
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/upsert_admin_user`, {
-      method: "POST",
-      headers: { ...adminHeaders, Prefer: "return=representation" },
-      body: JSON.stringify({
-        p_user_id: isUuid ? sessionId : null,
-        p_email: email,
-        p_auth_provider: isUuid ? "supabase" : "google",
-        p_auth_subject: isUuid ? null : sessionId,
-      }),
-    });
-    if (res.ok) {
-      const row = await parseRpcSingle(res);
-      if (row) return buildAdminUser(row);
-    }
-  } catch {
-    // RPC failed silently
-  }
-
-  return null;
-}
-
-async function parseRpcSingle(res: Response): Promise<Record<string, unknown> | null> {
-  const data = await res.json().catch(() => null);
-  if (Array.isArray(data) && data.length > 0) return data[0] as Record<string, unknown>;
-  if (data && typeof data === "object" && "id" in (data as Record<string, unknown>)) {
-    return data as Record<string, unknown>;
-  }
-  return null;
-}
-
-async function parseFirstRow(res: Response): Promise<Record<string, unknown> | null> {
-  const data = (await res.json().catch(() => [])) as unknown;
-  if (Array.isArray(data) && data.length > 0) return data[0] as Record<string, unknown>;
-  return null;
+  });
 }
 
 /**
- * Builds an `AdminUser` for a `dev_session` cookie holder. Exported so
- * unit tests can verify the dev shim is the source of truth for the
- * demo flow.
+ * Resolves the current admin user AND their tenant. Returns `null` if
+ * the user is not signed in or has no tenant. For platform_admin (no
+ * tenant), `tenant` is `null` and callers should use `withPlatformAdmin`
+ * to query across all tenants.
  */
-export function buildDevAdmin(role: string): AdminUser {
-  const base = { id: "dev", user_id: "dev", brand_id: null, role, active: true, must_change_password: false };
-  if (role === "store_employee") {
-    return { ...base, can_manage_products: false, can_manage_stops: false, can_manage_orders: true,
-      can_manage_pickup: true, can_manage_messages: false, can_manage_refunds: false,
-      can_manage_users: false, can_manage_water_log: false, can_manage_reports: false, can_manage_settings: false };
+export async function getCurrentTenant(): Promise<TenantContext | null> {
+  const user = await getAdminUser();
+  if (!user) return null;
+  if (!user.tenant_id) {
+    // platform_admin — no specific tenant
+    return null;
   }
-  return { ...base, can_manage_products: true, can_manage_stops: true, can_manage_orders: true,
-    can_manage_pickup: true, can_manage_messages: true, can_manage_refunds: true,
-    can_manage_users: true, can_manage_water_log: true, can_manage_reports: true, can_manage_settings: true };
+  return {
+    user,
+    tenant: {
+      id: user.tenant_id,
+      name: user.display_name ?? user.tenant_slug ?? "Unknown",
+      slug: user.tenant_slug ?? "unknown",
+      status: "active",
+    },
+  };
 }
 
-function buildAdminUser(r: Record<string, unknown>): AdminUser {
-  const role = r.role as string;
-  const base = { id: r.id as string, user_id: r.user_id as string, brand_id: r.brand_id as string | null,
-    role, active: r.active as boolean, must_change_password: Boolean(r.must_change_password) };
+// ────────────────────────────────────────────────────────────────────────
+// Re-exports for backward compat
+// ────────────────────────────────────────────────────────────────────────
+
+export type { AdminUser, AdminRole, TenantContext } from "@/lib/admin-permissions-types";
+
+/**
+ * @deprecated Kept for unit tests that exercise the dev shim path.
+ * Production code should never call this — `getAdminUser()` only reads
+ * the Auth.js session now.
+ */
+export function buildDevAdmin(role: AdminRole): AdminUser {
+  const isPlatform = role === "platform_admin";
+  const tenantId = isPlatform ? null : "dev-tenant";
+  return {
+    id: "dev",
+    user_id: "dev",
+    email: null,
+    display_name: "Demo Admin",
+    tenant_id: tenantId,
+    brand_id: tenantId, // legacy alias
+    tenant_slug: isPlatform ? null : "tuxedo",
+    role,
+    active: true,
+    auth_provider: "dev",
+    ...permissionsForRole(role),
+    must_change_password: false,
+  };
+}
+
+function buildAdminUser(input: {
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  authProvider: "dev" | "google" | "email" | null;
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  role: AdminRole;
+  active: boolean;
+}): AdminUser {
+  return {
+    id: input.id,
+    user_id: input.id,
+    email: input.email,
+    display_name: input.displayName,
+    tenant_id: input.tenantId,
+    brand_id: input.tenantId, // legacy alias
+    tenant_slug: input.tenantSlug,
+    role: input.role,
+    active: input.active,
+    auth_provider: input.authProvider,
+    ...permissionsForRole(input.role),
+  };
+}
+
+/**
+ * Single source of truth for "what can a role do". Used by both the
+ * dev shim and the real user lookup so the demo and the real thing
+ * behave identically.
+ */
+export function permissionsForRole(role: AdminRole) {
   if (role === "platform_admin") {
-    return { ...base, can_manage_products: true, can_manage_stops: true, can_manage_orders: true,
-      can_manage_pickup: true, can_manage_messages: true, can_manage_refunds: true,
-      can_manage_users: true, can_manage_water_log: true, can_manage_reports: true, can_manage_settings: true };
+    return {
+      can_manage_products: true,
+      can_manage_stops: true,
+      can_manage_orders: true,
+      can_manage_pickup: true,
+      can_manage_messages: true,
+      can_manage_refunds: true,
+      can_manage_users: true,
+      can_manage_water_log: true,
+      can_manage_reports: true,
+      can_manage_settings: true,
+      can_manage_billing: true,
+      can_manage_branding: true,
+      can_manage_marketing: true,
+      can_manage_team: true,
+    };
   }
-  if (role === "store_employee") {
-    return { ...base, can_manage_products: false, can_manage_stops: false, can_manage_orders: true,
-      can_manage_pickup: true, can_manage_messages: false, can_manage_refunds: false,
-      can_manage_users: false, can_manage_water_log: false, can_manage_reports: false, can_manage_settings: false };
+  if (role === "brand_admin") {
+    return {
+      can_manage_products: true,
+      can_manage_stops: true,
+      can_manage_orders: true,
+      can_manage_pickup: true,
+      can_manage_messages: true,
+      can_manage_refunds: true,
+      can_manage_users: false,
+      can_manage_water_log: true,
+      can_manage_reports: true,
+      can_manage_settings: true,
+      can_manage_billing: true,
+      can_manage_branding: true,
+      can_manage_marketing: true,
+      can_manage_team: true,
+    };
   }
-  return { ...base, can_manage_products: Boolean(r.can_manage_products), can_manage_stops: Boolean(r.can_manage_stops),
-    can_manage_orders: Boolean(r.can_manage_orders), can_manage_pickup: Boolean(r.can_manage_pickup),
-    can_manage_messages: Boolean(r.can_manage_messages), can_manage_refunds: Boolean(r.can_manage_refunds),
-    can_manage_users: Boolean(r.can_manage_users), can_manage_water_log: Boolean(r.can_manage_water_log),
-    can_manage_reports: Boolean(r.can_manage_reports), can_manage_settings: Boolean(r.can_manage_settings) };
+  // store_employee
+  return {
+    can_manage_products: false,
+    can_manage_stops: false,
+    can_manage_orders: true,
+    can_manage_pickup: true,
+    can_manage_messages: false,
+    can_manage_refunds: false,
+    can_manage_users: false,
+    can_manage_water_log: false,
+    can_manage_reports: false,
+    can_manage_settings: false,
+    can_manage_billing: false,
+    can_manage_branding: false,
+    can_manage_marketing: false,
+    can_manage_team: false,
+  };
 }

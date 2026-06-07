@@ -22,5 +22,9 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  return <LoginClient />;
+  // The Google provider is only added to the Auth.js config when these
+  // two env vars are set. Pass the flag down so the client can hide the
+  // button (and surface a helpful message) when Google is unavailable.
+  const hasGoogle = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+  return <LoginClient hasGoogle={hasGoogle} />;
 }

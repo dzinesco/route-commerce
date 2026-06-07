@@ -1,18 +1,15 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { supabase as publicSupabase } from "@/lib/supabase";
+import "server-only";
+import { cookies } from "next/headers";
+import { pool, query } from "@/lib/db";
 import { getMockTableData, mockBrands } from "@/lib/mock-data";
 
 const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
 export type AdminUserRow = {
   id: string;
-  user_id: string;
+  user_id: string | null;
   display_name: string | null;
   email: string;
   phone_number: string | null;
@@ -75,165 +72,17 @@ export type UpdateAdminUserInput = {
   phone_number?: string | null;
 };
 
-// ─── SSR client for authenticated requests ─────────────────────────────────
-
-async function getAuthClient() {
-  const cookieStore = await cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const request = new NextRequest("http://localhost/admin", { headers: new Headers() });
-  const response = NextResponse.next({ request });
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() { return cookieStore.getAll(); },
-      setAll(cookiesToSet, headers) {
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-        Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
-      },
-    },
-  });
-  const devSession = cookieStore.get("dev_session")?.value;
-  return { supabase, response, devSession };
-}
-
-async function callRpcWithAuth<T>(fn: string, params: Record<string, unknown>): Promise<{ data: T | null; error: string | null }> {
-  const { supabase, devSession } = await getAuthClient();
-
-  // Dev mode bypass — let the action proceed without Supabase auth.
-  // (Pre-Auth.js this was gated on the legacy `rc_auth_uid === DEV_FORCE_UID`
-  // cookie that the now-deleted `/api/force-admin` route set. With Auth.js v5
-  // in place, the `dev_session` cookie is the single source of truth for the
-  // demo flow.)
-  if (process.env.NODE_ENV !== "production" && devSession) {
-    return { data: null, error: null };
-  }
-
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { data: null, error: "Not authenticated" };
-  }
-  const { data, error } = await supabase.rpc(fn, params as Record<string, unknown>);
-  if (error) { /* RPC error handled silently */ }
-  return { data: data as T, error: error ? error.message : null };
-}
-
-// ─── Service role client (server-only, never exposed to browser) ───────────
-
-function getServiceClient() {
-  const roleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!roleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set. Cannot use service role in dev path.");
-  }
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    roleKey,
-  );
-}
-
-// ─── Dev-only path — uses service role to create auth user + admin_users ──
-
-async function devCreateAdminUser(input: CreateAdminUserInput): Promise<{ user: AdminUserRow | null; error: string | null }> {
-  if (process.env.NODE_ENV === "production") {
-    return { user: null, error: "Dev path not available in production" };
-  }
-  const cookieStore = await cookies();
-  const devSession = cookieStore.get("dev_session")?.value;
-  if (!devSession || devSession !== "platform_admin") {
-    return { user: null, error: "Not authenticated" };
-  }
-
-  const service = getServiceClient();
-
-  // Create auth user with the provided password
-  const { data: authUser, error: authError } = await service.auth.admin.createUser({
-    email: input.email,
-    password: input.password,
-    email_confirm: true,
-    user_metadata: {
-      display_name: input.display_name || input.email.split("@")[0],
-      phone_number: input.phone_number ?? null,
-    },
-  });
-  if (authError || !authUser.user) {
-    return { user: null, error: authError?.message ?? "Failed to create auth user" };
-  }
-
-  // Insert into admin_users
-  const { data: inserted, error: insertError } = await service
-    .from("admin_users")
-    .insert({
-      user_id: authUser.user.id,
-      role: input.role,
-      brand_id: input.brand_id,
-      display_name: input.display_name || input.email.split("@")[0],
-      phone_number: input.phone_number ?? null,
-      can_manage_products: input.flags.can_manage_products ?? false,
-      can_manage_stops: input.flags.can_manage_stops ?? false,
-      can_manage_orders: input.flags.can_manage_orders ?? false,
-      can_manage_pickup: input.flags.can_manage_pickup ?? false,
-      can_manage_messages: input.flags.can_manage_messages ?? false,
-      can_manage_refunds: input.flags.can_manage_refunds ?? false,
-      can_manage_users: input.flags.can_manage_users ?? false,
-      can_manage_water_log: input.flags.can_manage_water_log ?? false,
-      can_manage_reports: input.flags.can_manage_reports ?? false,
-      active: true,
-      must_change_password: input.mustChangePassword ?? true,
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    return { user: null, error: insertError.message };
-  }
-
-  // Send welcome email
-  try {
-    const { sendWelcomeEmail } = await import("@/lib/email-service");
-    const emailRole = input.role === "platform_admin" ? "brand_admin" : input.role;
-    await sendWelcomeEmail({
-      to: input.email,
-      name: input.display_name || input.email.split("@")[0],
-      role: emailRole as "brand_admin" | "wholesale_buyer" | "store_employee",
-      brandName: "Tuxedo Corn",
-      tempPassword: input.password,
-    });
-  } catch (e) {
-    // welcome email failed silently
-  }
-
-  return {
-    user: {
-      id: inserted.id,
-      user_id: inserted.user_id,
-      display_name: inserted.display_name ?? input.display_name ?? input.email.split("@")[0],
-      email: input.email,
-      phone_number: inserted.phone_number ?? input.phone_number ?? null,
-      role: inserted.role,
-      brand_id: inserted.brand_id,
-      brand_name: null,
-      can_manage_products: inserted.can_manage_products,
-      can_manage_stops: inserted.can_manage_stops,
-      can_manage_orders: inserted.can_manage_orders,
-      can_manage_pickup: inserted.can_manage_pickup,
-      can_manage_messages: inserted.can_manage_messages,
-      can_manage_refunds: inserted.can_manage_refunds,
-      can_manage_users: inserted.can_manage_users,
-      can_manage_water_log: inserted.can_manage_water_log,
-      can_manage_reports: inserted.can_manage_reports,
-      active: inserted.active,
-      must_change_password: inserted.must_change_password ?? true,
-      created_at: inserted.created_at,
-      last_login: null,
-    },
-    error: null,
-  };
-}
+// ─── Row mapping ────────────────────────────────────────────────────────────
+//
+// `admin_users` schema (after migration 204 + 034 + 037):
+//   id, user_id, display_name, email, phone_number, role, brand_id,
+//   can_manage_<X> (BOOLEAN each), active, must_change_password,
+//   created_at, last_login, raw_user_meta_data, auth_provider, auth_subject
 
 function mapUserRow(row: Record<string, unknown>): AdminUserRow {
   return {
     id: String(row.id ?? ""),
-    user_id: String(row.user_id ?? ""),
+    user_id: (row.user_id as string | null) ?? null,
     display_name: (row.display_name as string | null) ?? null,
     email: String(row.email ?? ""),
     phone_number: (row.phone_number as string | null) ?? null,
@@ -256,419 +105,272 @@ function mapUserRow(row: Record<string, unknown>): AdminUserRow {
   };
 }
 
-// ─── Dev path helpers (service role, local only) ───────────────────────────
+// ─── Welcome email (best-effort) ────────────────────────────────────────────
 
-async function devListAdminUsers(callerUid?: string): Promise<{ users: AdminUserRow[]; error: string | null }> {
-  const service = getServiceClient();
-
-  // Ensure caller has an admin_users record
-  if (callerUid) {
-    const { data: existing } = await service
-      .from("admin_users")
-      .select("id")
-      .eq("user_id", callerUid)
-      .maybeSingle();
-
-    if (!existing) {
-      // auto-creating admin_users for uid
-      const { data: authData } = await service.auth.admin.listUsers();
-      const authUser = authData?.users?.find((u) => u.id === callerUid);
-      const meta = (authUser as { user_metadata?: Record<string, unknown> })?.user_metadata;
-      await service.from("admin_users").insert({
-        user_id: callerUid,
-        role: "platform_admin",
-        brand_id: null,
-        display_name: (meta?.display_name as string | null) ?? authUser?.email?.split("@")[0] ?? "Admin",
-        phone_number: (meta?.phone_number as string | null) ?? null,
-        can_manage_products: true,
-        can_manage_stops: true,
-        can_manage_orders: true,
-        can_manage_pickup: true,
-        can_manage_messages: true,
-        can_manage_refunds: true,
-        can_manage_users: true,
-        can_manage_water_log: true,
-        can_manage_reports: true,
-        active: true,
-        must_change_password: false,
-      });
-    }
+async function sendWelcomeEmailSafe(input: {
+  to: string;
+  name: string;
+  role: "platform_admin" | "brand_admin" | "store_employee";
+  password: string;
+}): Promise<void> {
+  try {
+    const { sendWelcomeEmail } = await import("@/lib/email-service");
+    const emailRole = input.role === "platform_admin" ? "brand_admin" : input.role;
+    await sendWelcomeEmail({
+      to: input.to,
+      name: input.name,
+      role: emailRole as "brand_admin" | "wholesale_buyer" | "store_employee",
+      brandName: "Tuxedo Corn",
+      tempPassword: input.password,
+    });
+  } catch {
+    // welcome email is best-effort; never block user creation
   }
-
-  // Fetch all admin_users rows (no RLS for service role)
-  const { data: adminRows, error: adminError } = await service
-    .from("admin_users")
-    .select(`
-      id, user_id, role, brand_id, active, must_change_password, created_at, last_login,
-      can_manage_products, can_manage_stops, can_manage_orders, can_manage_pickup,
-      can_manage_messages, can_manage_refunds, can_manage_users, can_manage_water_log, can_manage_reports,
-      brands (name)
-    `)
-    .order("created_at", { ascending: false });
-
-  if (adminError) return { users: [], error: adminError.message };
-
-  // Fetch auth user details via service role admin API
-  const { data: authData, error: authError } = await service.auth.admin.listUsers();
-  if (authError) return { users: [], error: authError.message };
-
-  const authMap: Record<string, { email: string; display_name: string | null; phone_number: string | null }> = {};
-  (authData?.users ?? []).forEach((u) => {
-    const user = u as { id: string; email?: string; user_metadata?: Record<string, unknown> };
-    authMap[user.id] = {
-      email: user.email ?? "",
-      display_name: (user.user_metadata?.display_name as string | null) ?? (user.user_metadata?.full_name as string | null) ?? null,
-      phone_number: (user.user_metadata?.phone_number as string | null) ?? null,
-    };
-  });
-
-  const users: AdminUserRow[] = (adminRows ?? []).map((row) => {
-    const r = row as Record<string, unknown> & { brands?: { name?: string } };
-    const authInfo = authMap[String(r.user_id ?? "")] ?? { email: "", display_name: null, phone_number: null };
-    return {
-      ...mapUserRow(r),
-      email: authInfo.email || "No Email",
-      display_name: authInfo.display_name ?? null,
-      phone_number: authInfo.phone_number ?? (r.phone_number as string | null) ?? null,
-      brand_name: r.brands?.name ?? null,
-    };
-  });
-
-  return { users, error: null };
 }
 
-function buildUsersFromRows(adminRows: Record<string, unknown>[], authUsers: { id: string; email?: string; user_metadata?: Record<string, unknown> }[]): { users: AdminUserRow[]; error: string | null } {
-  const authMap: Record<string, { email: string; display_name: string | null; phone_number: string | null }> = {};
-  (authUsers ?? []).forEach((u) => {
-    authMap[u.id] = {
-      email: u.email ?? "",
-      display_name: (u.user_metadata?.display_name as string | null) ?? (u.user_metadata?.full_name as string | null) ?? null,
-      phone_number: (u.user_metadata?.phone_number as string | null) ?? null,
-    };
-  });
-
-  const users: AdminUserRow[] = adminRows.map((row) => {
-    const r = row as Record<string, unknown> & { brands?: { name?: string } };
-    const authInfo = authMap[String(r.user_id ?? "")] ?? { email: "", display_name: null, phone_number: null };
-    return {
-      ...mapUserRow(r),
-      email: authInfo.email || "No Email",
-      display_name: authInfo.display_name ?? null,
-      phone_number: authInfo.phone_number ?? (r.phone_number as string | null) ?? null,
-      brand_name: r.brands?.name ?? null,
-    };
-  });
-
-  return { users, error: null };
-}
-
-// ─── Production admin actions (require real Supabase auth) ─────────────────
+// ─── Public actions ─────────────────────────────────────────────────────────
 
 export async function getAdminUsers(brandId?: string): Promise<{ users: AdminUserRow[]; error: string | null }> {
   if (useMockData) {
     const mockUsers = getMockTableData("users") as AdminUserRow[];
-    let filteredUsers = mockUsers;
-    if (brandId) {
-      filteredUsers = mockUsers.filter(u => u.brand_id === brandId);
-    }
-    return { users: filteredUsers, error: null };
-  }
-
-  const cookieStore = await cookies();
-  const headerStore = await headers();
-  const devSession = cookieStore.get("dev_session")?.value;
-
-  // Read rc_auth_uid for force-login check
-  const cookieHeader = headerStore.get("cookie") || "";
-  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
-    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
-
-  // In development mode: dev_session cookie holders use the dev/service path.
-  // (The previous code also accepted a legacy `rc_auth_uid` cookie set by
-  // `/api/dev-login` — `/api/dev-login` still sets both cookies, so existing
-  // dev sessions keep working. The legacy DEV_FORCE_UID check is removed
-  // because the only route that set that specific UID was deleted.)
-  if (process.env.NODE_ENV !== "production" && devSession) {
-    return devListAdminUsers(devSession);
-  }
-
-  // Dev session cookie (platform_admin/brand_admin) — always use service role path
-  const isDevAdmin = process.env.NODE_ENV !== "production" && (
-    devSession === "platform_admin" || devSession === "brand_admin"
-  );
-  if (isDevAdmin) {
-    return devListAdminUsers(rcAuthUid ?? undefined);
-  }
-
-  // Production path: try authenticated RPC first, fall back to service role if not authenticated
-  const result = await callRpcWithAuth<AdminUserRow[]>("get_admin_users", { p_brand_id: brandId ?? null });
-  if (result.error === "Not authenticated" && rcAuthUid) {
-    // No Supabase session token in browser — use service role with rc_auth_uid
-    const service = getServiceClient();
-    const { data: adminRows, error: adminError } = await service
-      .from("admin_users")
-      .select(`id, user_id, role, brand_id, active, must_change_password, created_at, last_login,
-        can_manage_products, can_manage_stops, can_manage_orders, can_manage_pickup,
-        can_manage_messages, can_manage_refunds, can_manage_users, can_manage_water_log, can_manage_reports,
-        brands (name)`)
-      .order("created_at", { ascending: false });
-    if (adminError) return { users: [], error: adminError.message };
-    const { data: authData } = await service.auth.admin.listUsers();
-    const authMap: Record<string, { email: string; display_name: string | null; phone_number: string | null }> = {};
-    (authData?.users ?? []).forEach((u) => {
-      const user = u as { id: string; email?: string; user_metadata?: Record<string, unknown> };
-      authMap[user.id] = {
-        email: user.email ?? "",
-        display_name: (user.user_metadata?.display_name as string | null) ?? null,
-        phone_number: (user.user_metadata?.phone_number as string | null) ?? null,
-      };
-    });
-    const users: AdminUserRow[] = (adminRows ?? []).map((row) => {
-      const r = row as Record<string, unknown> & { brands?: { name?: string } };
-      const authInfo = authMap[String(r.user_id ?? "")] ?? { email: "", display_name: null, phone_number: null };
-      return {
-        ...mapUserRow(r),
-        email: authInfo.email || "No Email",
-        display_name: authInfo.display_name ?? null,
-        phone_number: authInfo.phone_number ?? (r.phone_number as string | null) ?? null,
-        brand_name: r.brands?.name ?? null,
-      };
-    });
-    return { users, error: null };
-  }
-  return { users: result.data ?? [], error: result.error };
-}
-
-export async function createAdminUser(input: CreateAdminUserInput): Promise<{ user: AdminUserRow | null; error: string | null }> {
-  // Read auth context
-  const cookieStore = await cookies();
-  const devSession = cookieStore.get("dev_session")?.value;
-
-  // TODO: when the Auth.js v5 migration lands everywhere, replace this
-  // cookie-based check with a session check via `await auth()` from `@/lib/auth`.
-
-  const isDevAdmin = process.env.NODE_ENV !== "production" && devSession === "platform_admin";
-
-  // Dev path: use service role to create user without Supabase auth session
-  if (isDevAdmin) {
-    return devCreateAdminUser(input);
-  }
-
-  // Production path — service role creates the account. The caller is
-  // expected to be an authenticated admin (gated by the admin layout /
-  // getAdminUser() check on the page).
-  // Keep reading the legacy `rc_auth_uid` cookie for backward compat with
-  // pre-Auth.js sessions — TODO: drop this branch once all clients are on
-  // Auth.js.
-  const headerStore = await headers();
-  const cookieHeader = headerStore.get("cookie") || "";
-  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
-    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
-
-  if (rcAuthUid) {
-    const service = getServiceClient();
-
-    // Create auth user
-    const { data: authUser, error: authError } = await service.auth.admin.createUser({
-      email: input.email,
-      password: input.password,
-      email_confirm: true,
-      user_metadata: {
-        display_name: input.display_name || input.email.split("@")[0],
-        phone_number: input.phone_number ?? null,
-      },
-    });
-    if (authError || !authUser.user) {
-      return { user: null, error: authError?.message ?? "Failed to create auth user" };
-    }
-
-    // Insert into admin_users
-    const { data: inserted, error: insertError } = await service
-      .from("admin_users")
-      .insert({
-        user_id: authUser.user.id,
-        role: input.role,
-        brand_id: input.brand_id,
-        display_name: input.display_name || input.email.split("@")[0],
-        phone_number: input.phone_number ?? null,
-        can_manage_products: input.flags.can_manage_products ?? false,
-        can_manage_stops: input.flags.can_manage_stops ?? false,
-        can_manage_orders: input.flags.can_manage_orders ?? false,
-        can_manage_pickup: input.flags.can_manage_pickup ?? false,
-        can_manage_messages: input.flags.can_manage_messages ?? false,
-        can_manage_refunds: input.flags.can_manage_refunds ?? false,
-        can_manage_users: input.flags.can_manage_users ?? false,
-        can_manage_water_log: input.flags.can_manage_water_log ?? false,
-        can_manage_reports: input.flags.can_manage_reports ?? false,
-        active: true,
-        must_change_password: input.mustChangePassword ?? true,
-      })
-      .select()
-      .single();
-
-    if (insertError) return { user: null, error: insertError.message };
-
-    // Send welcome email
-    try {
-      const { sendWelcomeEmail } = await import("@/lib/email-service");
-      const emailRole = input.role === "platform_admin" ? "brand_admin" : input.role;
-      await sendWelcomeEmail({
-        to: input.email,
-        name: input.display_name || input.email.split("@")[0],
-        role: emailRole as "brand_admin" | "wholesale_buyer" | "store_employee",
-        brandName: "Tuxedo Corn",
-        tempPassword: input.password,
-      });
-    } catch (e) {
-      // welcome email failed silently
-    }
-
     return {
-      user: {
-        id: inserted.id,
-        user_id: inserted.user_id,
-        display_name: inserted.display_name ?? input.display_name ?? input.email.split("@")[0],
-        email: input.email,
-        phone_number: inserted.phone_number ?? input.phone_number ?? null,
-        role: inserted.role,
-        brand_id: inserted.brand_id,
-        brand_name: null,
-        can_manage_products: inserted.can_manage_products,
-        can_manage_stops: inserted.can_manage_stops,
-        can_manage_orders: inserted.can_manage_orders,
-        can_manage_pickup: inserted.can_manage_pickup,
-        can_manage_messages: inserted.can_manage_messages,
-        can_manage_refunds: inserted.can_manage_refunds,
-        can_manage_users: inserted.can_manage_users,
-        can_manage_water_log: inserted.can_manage_water_log,
-        can_manage_reports: inserted.can_manage_reports,
-        active: inserted.active,
-        must_change_password: inserted.must_change_password ?? true,
-        created_at: inserted.created_at,
-        last_login: null,
-      },
+      users: brandId ? mockUsers.filter((u) => u.brand_id === brandId) : mockUsers,
       error: null,
     };
   }
 
-  return { user: null, error: "Not authenticated" };
+  try {
+    const sql = brandId
+      ? `SELECT au.id, au.user_id, au.display_name, au.email, au.phone_number,
+               au.role, au.brand_id, b.name AS brand_name,
+               au.can_manage_products, au.can_manage_stops, au.can_manage_orders,
+               au.can_manage_pickup, au.can_manage_messages, au.can_manage_refunds,
+               au.can_manage_users, au.can_manage_water_log, au.can_manage_reports,
+               au.active, au.must_change_password, au.created_at, au.last_login
+           FROM admin_users au
+           LEFT JOIN brands b ON b.id = au.brand_id
+           WHERE au.brand_id = $1
+           ORDER BY au.created_at DESC`
+      : `SELECT au.id, au.user_id, au.display_name, au.email, au.phone_number,
+               au.role, au.brand_id, b.name AS brand_name,
+               au.can_manage_products, au.can_manage_stops, au.can_manage_orders,
+               au.can_manage_pickup, au.can_manage_messages, au.can_manage_refunds,
+               au.can_manage_users, au.can_manage_water_log, au.can_manage_reports,
+               au.active, au.must_change_password, au.created_at, au.last_login
+           FROM admin_users au
+           LEFT JOIN brands b ON b.id = au.brand_id
+           ORDER BY au.created_at DESC`;
+    const { rows } = await query<Record<string, unknown>>(sql, brandId ? [brandId] : []);
+    return { users: rows.map(mapUserRow), error: null };
+  } catch (err) {
+    return { users: [], error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function createAdminUser(input: CreateAdminUserInput): Promise<{ user: AdminUserRow | null; error: string | null }> {
+  if (useMockData) {
+    const mockUsers = getMockTableData("users") as AdminUserRow[];
+    const newRow: AdminUserRow = {
+      id: `mock-${Date.now()}`,
+      user_id: null,
+      display_name: input.display_name ?? input.email.split("@")[0],
+      email: input.email,
+      phone_number: input.phone_number ?? null,
+      role: input.role,
+      brand_id: input.brand_id,
+      brand_name: null,
+      can_manage_products: input.flags.can_manage_products ?? false,
+      can_manage_stops: input.flags.can_manage_stops ?? false,
+      can_manage_orders: input.flags.can_manage_orders ?? false,
+      can_manage_pickup: input.flags.can_manage_pickup ?? false,
+      can_manage_messages: input.flags.can_manage_messages ?? false,
+      can_manage_refunds: input.flags.can_manage_refunds ?? false,
+      can_manage_users: input.flags.can_manage_users ?? false,
+      can_manage_water_log: input.flags.can_manage_water_log ?? false,
+      can_manage_reports: input.flags.can_manage_reports ?? false,
+      active: true,
+      must_change_password: input.mustChangePassword ?? true,
+      created_at: new Date().toISOString(),
+      last_login: null,
+    };
+    mockUsers.push(newRow);
+    return { user: newRow, error: null };
+  }
+
+  try {
+    // No Supabase Auth — `user_id` stays NULL until the user signs in
+    // via Auth.js and `get_admin_user_for_session` matches them by
+    // `auth_subject` / `email`. We just insert the row.
+    const f = input.flags;
+    const { rows } = await query<Record<string, unknown>>(
+      `INSERT INTO admin_users
+         (user_id, display_name, email, phone_number, role, brand_id,
+          can_manage_products, can_manage_stops, can_manage_orders,
+          can_manage_pickup, can_manage_messages, can_manage_refunds,
+          can_manage_users, can_manage_water_log, can_manage_reports,
+          active, must_change_password, auth_provider, auth_subject)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,true,$16,'pending',$17)
+       RETURNING id, user_id, display_name, email, phone_number, role, brand_id,
+                 can_manage_products, can_manage_stops, can_manage_orders,
+                 can_manage_pickup, can_manage_messages, can_manage_refunds,
+                 can_manage_users, can_manage_water_log, can_manage_reports,
+                 active, must_change_password, created_at, last_login`,
+      [
+        null,
+        input.display_name ?? input.email.split("@")[0],
+        input.email.toLowerCase(),
+        input.phone_number ?? null,
+        input.role,
+        input.brand_id,
+        f.can_manage_products ?? false,
+        f.can_manage_stops ?? false,
+        f.can_manage_orders ?? false,
+        f.can_manage_pickup ?? false,
+        f.can_manage_messages ?? false,
+        f.can_manage_refunds ?? false,
+        f.can_manage_users ?? false,
+        f.can_manage_water_log ?? false,
+        f.can_manage_reports ?? false,
+        input.mustChangePassword ?? true,
+        input.email.toLowerCase(),
+      ],
+    );
+    if (!rows[0]) return { user: null, error: "Insert returned no row" };
+
+    await sendWelcomeEmailSafe({
+      to: input.email,
+      name: input.display_name ?? input.email.split("@")[0],
+      role: input.role,
+      password: input.password,
+    });
+
+    return { user: mapUserRow(rows[0]), error: null };
+  } catch (err) {
+    return { user: null, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function updateAdminUser(input: UpdateAdminUserInput): Promise<{ user: AdminUserRow | null; error: string | null }> {
-  // Dev bypass check
-  const cookieStore = await cookies();
-  const devSession = cookieStore.get("dev_session")?.value;
-  // Dev mode — let the action proceed with the service role.
-  // (The previous code also accepted a legacy `rc_auth_uid === DEV_FORCE_UID`
-  // cookie set by the now-deleted Emergency Force Login page. With Auth.js v5
-  // and the demo buttons in /login, the `dev_session` cookie is sufficient.)
-  if (process.env.NODE_ENV !== "production" && devSession) {
-    const service = getServiceClient();
-    const { data, error } = await service
-      .from("admin_users")
-      .update({
-        role: input.role ?? undefined,
-        brand_id: input.brand_id ?? undefined,
-        can_manage_products: input.flags?.can_manage_products ?? undefined,
-        can_manage_stops: input.flags?.can_manage_stops ?? undefined,
-        can_manage_orders: input.flags?.can_manage_orders ?? undefined,
-        can_manage_pickup: input.flags?.can_manage_pickup ?? undefined,
-        can_manage_messages: input.flags?.can_manage_messages ?? undefined,
-        can_manage_refunds: input.flags?.can_manage_refunds ?? undefined,
-        can_manage_users: input.flags?.can_manage_users ?? undefined,
-        can_manage_water_log: input.flags?.can_manage_water_log ?? undefined,
-        can_manage_reports: input.flags?.can_manage_reports ?? undefined,
-        active: input.active ?? undefined,
-        display_name: input.display_name ?? null,
-        phone_number: input.phone_number ?? null,
-      })
-      .eq("id", input.id)
-      .select()
-      .single();
-    if (error) return { user: null, error: error.message };
-    return { user: mapUserRow(data), error: null };
+  if (useMockData) {
+    const mockUsers = getMockTableData("users") as AdminUserRow[];
+    const idx = mockUsers.findIndex((u) => u.id === input.id);
+    if (idx === -1) return { user: null, error: "User not found" };
+    const merged: AdminUserRow = { ...mockUsers[idx] };
+    if (input.role !== undefined) merged.role = input.role;
+    if (input.brand_id !== undefined) merged.brand_id = input.brand_id;
+    if (input.active !== undefined) merged.active = input.active;
+    if (input.display_name !== undefined) merged.display_name = input.display_name;
+    if (input.phone_number !== undefined) merged.phone_number = input.phone_number;
+    if (input.flags) {
+      for (const [k, v] of Object.entries(input.flags)) {
+        if (v !== undefined) (merged as Record<string, unknown>)[k] = v;
+      }
+    }
+    mockUsers[idx] = merged;
+    return { user: merged, error: null };
   }
 
-  const result = await callRpcWithAuth<AdminUserRow[]>("update_admin_user", {
-    p_id: input.id,
-    p_role: input.role ?? null,
-    p_brand_id: input.brand_id ?? null,
-    p_flags: input.flags ?? null,
-    p_active: input.active ?? null,
-    p_display_name: input.display_name ?? null,
-    p_phone_number: input.phone_number ?? null,
-  });
-  const rows = result.data as AdminUserRow[] | null;
-  return { user: rows?.[0] ?? null, error: result.error };
+  try {
+    // Build a partial SET clause. Each `can_manage_*` column is set
+    // individually — the input's `flags` partial is spread across them.
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    const push = (col: string, val: unknown) => { params.push(val); sets.push(`${col} = $${params.length}`); };
+
+    if (input.role !== undefined) push("role", input.role);
+    if (input.brand_id !== undefined) push("brand_id", input.brand_id);
+    if (input.active !== undefined) push("active", input.active);
+    if (input.display_name !== undefined) push("display_name", input.display_name);
+    if (input.phone_number !== undefined) push("phone_number", input.phone_number);
+    if (input.flags) {
+      for (const [key, val] of Object.entries(input.flags)) {
+        if (val !== undefined) push(key, val);
+      }
+    }
+    if (sets.length === 0) return { user: null, error: "Nothing to update" };
+
+    params.push(input.id);
+    const sql = `UPDATE admin_users SET ${sets.join(", ")}
+                 WHERE id = $${params.length}
+                 RETURNING id, user_id, display_name, email, phone_number, role, brand_id,
+                           can_manage_products, can_manage_stops, can_manage_orders,
+                           can_manage_pickup, can_manage_messages, can_manage_refunds,
+                           can_manage_users, can_manage_water_log, can_manage_reports,
+                           active, must_change_password, created_at, last_login`;
+    const { rows } = await query<Record<string, unknown>>(sql, params);
+    if (!rows[0]) return { user: null, error: "User not found" };
+    return { user: mapUserRow(rows[0]), error: null };
+  } catch (err) {
+    return { user: null, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function deleteAdminUser(id: string): Promise<{ success: boolean; error: string | null }> {
-  // Dev bypass check
-  const cookieStore = await cookies();
-  const devSession = cookieStore.get("dev_session")?.value;
-  // Dev mode — let the action proceed with the service role.
-  // (The previous code gated on `rc_auth_uid === DEV_FORCE_UID`, a magic
-  // cookie value the now-deleted Emergency Force Login page set. With
-  // Auth.js v5 and the demo buttons in /login, the `dev_session` cookie is
-  // the source of truth for the dev path.)
-  if (process.env.NODE_ENV !== "production" && devSession) {
-    const service = getServiceClient();
-    // Get user_id first
-    const { data: adminRow, error: fetchError } = await service
-      .from("admin_users")
-      .select("user_id")
-      .eq("id", id)
-      .single();
-    if (fetchError) return { success: false, error: fetchError.message };
-    // Delete from admin_users
-    const { error: deleteError } = await service.from("admin_users").delete().eq("id", id);
-    if (deleteError) return { success: false, error: deleteError.message };
-    // Delete auth user
-    if (adminRow?.user_id) {
-      await service.auth.admin.deleteUser(adminRow.user_id);
-    }
+  if (useMockData) {
+    const mockUsers = getMockTableData("users") as AdminUserRow[];
+    const idx = mockUsers.findIndex((u) => u.id === id);
+    if (idx === -1) return { success: false, error: "User not found" };
+    mockUsers.splice(idx, 1);
     return { success: true, error: null };
   }
 
-  const result = await callRpcWithAuth<boolean>("delete_admin_user", { p_id: id });
-  return { success: result.data ?? false, error: result.error };
+  try {
+    // No Supabase Auth — nothing to delete from the auth service.
+    const { rowCount } = await query(`DELETE FROM admin_users WHERE id = $1`, [id]);
+    return { success: (rowCount ?? 0) > 0, error: null };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function setMustChangePassword(userId: string): Promise<{ success: boolean; error: string | null }> {
-  const cookieStore = await cookies();
-  const headerStore = await headers();
-  const cookieHeader = headerStore.get("cookie") || "";
-  const rcAuthUid = cookieHeader.split(";").map(c => c.trim())
-    .find(c => c.startsWith("rc_auth_uid="))?.split("=")[1] ?? null;
-
-  // Dev path or legacy rc_auth_uid cookie — use service role directly.
-  // TODO: when Auth.js v5 is the only auth path, drop the rcAuthUid branch
-  // and require `await auth()` to be present.
-  if (process.env.NODE_ENV !== "production" || rcAuthUid) {
-    const service = getServiceClient();
-    const { error } = await service.from("admin_users").update({ must_change_password: true }).eq("id", userId);
-    return { success: !error, error: error?.message ?? null };
+  if (useMockData) {
+    const mockUsers = getMockTableData("users") as AdminUserRow[];
+    const u = mockUsers.find((m) => m.id === userId);
+    if (!u) return { success: false, error: "User not found" };
+    u.must_change_password = true;
+    return { success: true, error: null };
   }
 
-  // Production path — use service role via direct update
-  const service = getServiceClient();
-  const { error } = await service.from("admin_users").update({ must_change_password: true }).eq("id", userId);
-  return { success: !error, error: error?.message ?? null };
+  try {
+    const { rowCount } = await query(
+      `UPDATE admin_users SET must_change_password = true WHERE id = $1`,
+      [userId],
+    );
+    return { success: (rowCount ?? 0) > 0, error: null };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
-export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean; error: string | null }> {
-  const { error } = await publicSupabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/change-password`,
-  });
-  return { success: !error, error: error?.message ?? null };
+/**
+ * No auth service anymore (no Supabase, no Auth.js password-reset
+ * endpoint). A platform admin can reset access by deleting +
+ * re-creating the user, or by toggling `must_change_password` via the
+ * UI — the function is preserved as a no-op so call sites keep
+ * compiling.
+ */
+export async function sendPasswordResetEmail(_email: string): Promise<{ success: boolean; error: string | null }> {
+  return {
+    success: false,
+    error: "Password reset is handled by a platform admin. Contact them to reset your access.",
+  };
 }
 
 export async function getBrands(): Promise<{ brands: { id: string; name: string }[]; error: string | null }> {
   if (useMockData) {
-    const brands = mockBrands.map(b => ({ id: b.id, name: b.name }));
-    return { brands, error: null };
+    return { brands: mockBrands.map((b) => ({ id: b.id, name: b.name })), error: null };
   }
-
-  const { data, error } = await publicSupabase.from("brands").select("id, name").order("name");
-  return { brands: data ?? [], error: error?.message ?? null };
+  try {
+    const { rows } = await query<{ id: string; name: string }>(
+      `SELECT id, name FROM brands ORDER BY name`,
+    );
+    return { brands: rows, error: null };
+  } catch (err) {
+    return { brands: [], error: err instanceof Error ? err.message : String(err) };
+  }
 }
+
+// Keep `pool` reachable so bundlers don't tree-shake the import — the
+// import is for the `server-only` side effect.
+void pool;

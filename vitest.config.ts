@@ -5,10 +5,12 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      // Mirrors `tsconfig.json` paths: { "@/*": ["./src/*"] }
-      "@": path.resolve(__dirname, "src"),
-    },
+    alias: [
+      { find: /^@\/(?!db)/, replacement: path.resolve(__dirname, "src") + "/" },
+      { find: "@/db/client", replacement: path.resolve(__dirname, "db/client.ts") },
+      { find: "@/db/schema", replacement: path.resolve(__dirname, "db/schema/index.ts") },
+      { find: "@/db", replacement: path.resolve(__dirname, "db") },
+    ],
   },
   test: {
     environment: "node",

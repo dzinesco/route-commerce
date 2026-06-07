@@ -21,9 +21,7 @@ type AuditResult =
 /**
  * Logs an audit event to the audit_logs table.
  *
- * In dev mode (dev_session cookie), uses the dev user identity.
- * In production (Supabase auth), resolves the admin user from admin_users.
- *
+ * Resolves the admin user from the Auth.js session via getAdminUser().
  * Audit writes bypass RLS via the SECURITY DEFINER log_audit_event RPC function.
  */
 export async function logAuditEvent(payload: AuditPayload): Promise<AuditResult> {

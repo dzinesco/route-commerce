@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, KeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { signOutAction } from "@/actions/auth-actions";
 
 // Elegant warm sidebar design
 // Colors: parchment 100 bg, soft linen text, powder petal accent
@@ -296,10 +296,7 @@ export default function AdminSidebar({ userRole }: SidebarProps) {
   }, [router, mobileOpen, closeMobileMenu]);
 
   async function handleLogout() {
-    document.cookie = "dev_session=;path=/;max-age=0";
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutAction();
   }
 
   return (
