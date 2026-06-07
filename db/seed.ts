@@ -16,6 +16,7 @@
  */
 import "dotenv/config";
 import { Pool } from "pg";
+import { hashPassword } from "../src/lib/passwords";
 
 // Seed needs elevated privileges (inserts into plans, add_ons, tenants —
 // tables that are intentionally not RLS-scoped but the runtime app user
@@ -258,13 +259,41 @@ async function main() {
     }
     console.log(`Seeded ${tenantsData.length} tenants with sample data`);
 
-    // ── Platform admin user (not tied to any single tenant) ──────────────
-    await client.query(
-      `INSERT INTO users (email, name, auth_provider, auth_subject)
-       VALUES ('platform@route-commerce.example', 'Platform Admin', 'dev', 'dev-platform-admin')
-       ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name`,
+    // ── Platform admin (seeded for dev sign-in via Credentials provider) ─
+    //   email:    admin@route-commerce.local
+    //   password: admin (override with SEED_ADMIN_PASSWORD)
+    //
+    // The user is attached to the Tuxedo tenant with the `platform_admin`
+    // role so `getAdminUser()` resolves it and grants cross-tenant
+    // visibility. To rotate the password, re-run `npm run db:seed`
+    // (the UPSERT updates `password_hash`).
+    const tuxedoRes = await client.query<{ id: string }>(
+      `SELECT id FROM tenants WHERE slug = 'tuxedo'`,
     );
-    console.log("Seeded platform admin user");
+    const tuxedoId = tuxedoRes.rows[0]?.id;
+    if (tuxedoId) {
+      const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "admin";
+      const passwordHash = hashPassword(adminPassword);
+      const adminRes = await client.query<{ id: string }>(
+        `INSERT INTO users (email, name, auth_provider, auth_subject, password_hash)
+         VALUES ($1, 'Platform Admin', 'dev', 'dev-platform-admin', $2)
+         ON CONFLICT (email) DO UPDATE SET
+           name = EXCLUDED.name,
+           password_hash = EXCLUDED.password_hash
+         RETURNING id`,
+        ["admin@route-commerce.local", passwordHash],
+      );
+      const adminId = adminRes.rows[0].id;
+      await client.query(
+        `INSERT INTO tenant_users (tenant_id, user_id, role)
+         VALUES ($1, $2, 'platform_admin')
+         ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+        [tuxedoId, adminId],
+      );
+      console.log(
+        `Seeded platform admin: admin@route-commerce.local / ${adminPassword === "admin" ? "admin" : "(SEED_ADMIN_PASSWORD)"}`,
+      );
+    }
 
     await client.query("COMMIT");
     console.log("✅ Seed complete");
