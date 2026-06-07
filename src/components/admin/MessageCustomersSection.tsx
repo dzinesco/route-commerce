@@ -2,23 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { sendStopBlast } from "@/actions/communications/stop-blast";
-
-type Order = {
-  id: string;
-  customer_name: string;
-  customer_email: string | null;
-  customer_phone: string | null;
-  pickup_complete: boolean;
-};
-
-type BlastMessage = {
-  id: string;
-  type: string;
-  subject: string | null;
-  body: string;
-  created_at: string;
-  message_recipients: { id: string }[];
-};
+import {
+  getStopMessagingData,
+  type StopOrder,
+  type StopBlastMessage,
+} from "@/actions/communications/stop-messaging";
 
 type MessageCustomersSectionProps = {
   stopId: string;
@@ -29,8 +17,8 @@ export default function MessageCustomersSection({
   stopId,
   brandId,
 }: MessageCustomersSectionProps) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [messages, setMessages] = useState<BlastMessage[]>([]);
+  const [orders, setOrders] = useState<StopOrder[]>([]);
+  const [messages, setMessages] = useState<StopBlastMessage[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(true);
 
@@ -43,64 +31,27 @@ export default function MessageCustomersSection({
   const [confirm, setConfirm] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchOrders();
-    fetchMessages();
-  }, []);
-
-  async function fetchOrders() {
-    setLoadingOrders(true);
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/orders?stop_id=eq.${stopId}&select=customer_name,customer_email,customer_phone,pickup_complete`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-      }
-    );
-    const data = await res.json();
-    if (res.ok) setOrders(data);
-    setLoadingOrders(false);
-  }
-
-  async function fetchMessages() {
-    // Legacy messages
-    const [msgRes, campaignRes] = await Promise.all([
-      fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/messages?stop_id=eq.${stopId}&select=*,message_recipients(id)&order=created_at.desc&limit=10`,
-        { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! } }
-      ),
-      // Campaign-based blast logs for this stop
-      brandId
-        ? fetch(
-            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/communication_campaigns?brand_id=eq.${brandId}&audience_rules->>'stop_id'=eq.${stopId}&order=created_at.desc&limit=5`,
-            { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! } }
-          )
-        : Promise.resolve({ ok: false, json: async () => [] } as Response),
-    ]);
-
-    const legacyData = msgRes.ok ? await msgRes.json() : [];
-    const campaignData = campaignRes.ok ? await campaignRes.json() : [];
-
-    // Normalize campaign logs into BlastMessage shape
-    const campaignMessages: BlastMessage[] = (campaignData as Array<{
-      id: string; subject: string | null; body_text: string | null;
-      sent_at: string; created_at: string; status: string;
-    }>).map((c) => ({
-      id: c.id,
-      type: "campaign",
-      subject: c.subject,
-      body: c.body_text ?? "",
-      created_at: c.sent_at,
-      message_recipients: [],
-    }));
-
-    // Interleave: legacy first, then campaign-based
-    const merged = [...legacyData, ...campaignMessages].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-    setMessages(merged.slice(0, 10));
-    setLoadingMessages(false);
-  }
+    let cancelled = false;
+    getStopMessagingData({ stopId, brandId })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.success) {
+          setOrders(res.orders);
+          setMessages(res.messages);
+        } else {
+          setError(res.error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingOrders(false);
+          setLoadingMessages(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [stopId, brandId]);
 
   const allOrders = orders;
   const pendingOrders = orders.filter((o) => !o.pickup_complete);
@@ -153,7 +104,12 @@ export default function MessageCustomersSection({
     setConfirm(`Blast sent — ${result.messages_logged} message${result.messages_logged !== 1 ? "s" : ""} logged via campaign.`);
     setBody("");
     setSubject("");
-    fetchMessages();
+
+    // Refresh the message log
+    setLoadingMessages(true);
+    const res = await getStopMessagingData({ stopId, brandId });
+    setLoadingMessages(false);
+    if (res.success) setMessages(res.messages);
   }
 
   return (

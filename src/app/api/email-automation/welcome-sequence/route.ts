@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { svcHeaders } from "@/lib/svc-headers";
-import { sendWelcomeEmail, type WelcomeSequenceEntry } from "@/actions/email-automation/welcome-sequence";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import {
+  getWelcomeSequence,
+  sendWelcomeEmail,
+  type WelcomeSequenceEntry,
+} from "@/actions/email-automation/welcome-sequence";
 
 const BRAND_IDS = [
   { id: "64294306-5f42-463d-a5e8-2ad6c81a96de", name: "Tuxedo Corn" },
@@ -13,28 +13,19 @@ const BRAND_IDS = [
 async function processWelcomeSequencesForBrand(brandId: string): Promise<{ sent: number; failed: number; skipped: number }> {
   let sent = 0, failed = 0, skipped = 0;
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_active_welcome_sequence`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: brandId }),
-    }
-  );
-  if (!res.ok) {
+  const result = await getWelcomeSequence(brandId);
+  if (!result.success) {
     return { sent: 0, failed: 0, skipped: 0 };
   }
-  const data = await res.json();
-  const row = Array.isArray(data) ? data[0] : data;
-  const entries: WelcomeSequenceEntry[] = row?.entries ?? [];
+  const entries: WelcomeSequenceEntry[] = result.entries;
 
   for (const entry of entries) {
     const nextStep = entry.sequence_step + 1;
     if (nextStep > 4) { skipped++; continue; }
     if (entry.status === "unsubscribed" || entry.status === "bounced") { skipped++; continue; }
 
-    const result = await sendWelcomeEmail(entry, nextStep);
-    if (result.success) {
+    const r = await sendWelcomeEmail(entry, nextStep);
+    if (r.success) {
       sent++;
     } else {
       failed++;

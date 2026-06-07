@@ -1,23 +1,32 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
 import { getAdminUser } from "@/lib/admin-permissions";
 import { getActiveBrandId } from "@/lib/brand-scope";
-import { svcHeaders } from "@/lib/svc-headers";
-import type { AudienceRules } from "./campaigns";
+import { withTenant, withPlatformAdmin } from "@/db/client";
+import { emailTemplates } from "@/db/schema";
 
 export type TemplateType = "email_template" | "sms_template" | "internal_note";
 export type CampaignType = "marketing" | "operational" | "transactional";
 
+/**
+ * The new `email_templates` table stores `name`, `subject`, and
+ * `body_html`. Legacy `communication_templates` rows also tracked
+ * `body_text`, `template_type`, `campaign_type`, and `created_by`.
+ * The fields below mirror the new columns. `body_text` is
+ * intentionally absent — clients that need a plain-text version can
+ * strip HTML. `template_type` and `campaign_type` are not stored; the
+ * UI surfaces "email" as the only type until further schema work.
+ */
 export type Template = {
   id: string;
-  brand_id: string;
+  tenant_id: string;
   name: string;
   subject: string;
   body_text: string;
-  body_html: string | null;
+  body_html: string;
   template_type: TemplateType;
   campaign_type: CampaignType | null;
-  created_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -30,6 +39,31 @@ export type UpsertTemplateResult = {
   error: string;
 };
 
+function rowToTemplate(row: typeof emailTemplates.$inferSelect): Template {
+  return {
+    id: row.id,
+    tenant_id: row.tenantId,
+    name: row.name,
+    subject: row.subject,
+    body_text: stripHtml(row.bodyHtml),
+    body_html: row.bodyHtml,
+    template_type: "email_template",
+    campaign_type: null,
+    created_at: row.createdAt.toISOString(),
+    updated_at: row.updatedAt.toISOString(),
+  };
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function getCommunicationTemplates(brandId?: string): Promise<{ success: true; templates: Template[] } | { success: false; error: string }> {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
@@ -38,28 +72,33 @@ export async function getCommunicationTemplates(brandId?: string): Promise<{ suc
   if (!activeBrandId && adminUser.role !== "platform_admin") {
     return { success: false, error: "Brand access required" };
   }
-  const effectiveBrandId = activeBrandId;
 
-  // Brand scoping: brand_admin can only see their own brand's templates
-  if (adminUser.role === "brand_admin" && effectiveBrandId && effectiveBrandId !== adminUser.brand_id) {
+  if (adminUser.role === "brand_admin" && activeBrandId && activeBrandId !== adminUser.brand_id) {
     return { success: true, templates: [] };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  try {
+    const rows = activeBrandId
+      ? await withTenant(activeBrandId, (db) =>
+          db
+            .select()
+            .from(emailTemplates)
+            .orderBy(emailTemplates.updatedAt),
+        )
+      : await withPlatformAdmin((db) =>
+          db
+            .select()
+            .from(emailTemplates)
+            .orderBy(emailTemplates.updatedAt),
+        );
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_templates`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: effectiveBrandId }),
-    }
-  );
-
-  if (!response.ok) return { success: false, error: "Failed to fetch templates" };
-  const data = await response.json();
-  return { success: true, templates: data?.templates ?? [] };
+    return { success: true, templates: rows.map(rowToTemplate) };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to fetch templates",
+    };
+  }
 }
 
 export async function upsertTemplate(params: {
@@ -75,61 +114,101 @@ export async function upsertTemplate(params: {
   const adminUser = await getAdminUser();
   if (!adminUser) return { success: false, error: "Not authenticated" };
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const bodyHtml =
+    params.body_html && params.body_html.length > 0
+      ? params.body_html
+      : `<p style="white-space:pre-wrap">${escapeHtml(params.body_text)}</p>`;
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/upsert_communication_template`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_id: params.id ?? null,
-        p_brand_id: params.brand_id,
-        p_name: params.name,
-        p_subject: params.subject,
-        p_body_text: params.body_text,
-        p_body_html: params.body_html ?? null,
-        p_template_type: params.template_type,
-        p_campaign_type: params.campaign_type ?? null,
-        p_created_by: adminUser.user_id,
-      }),
-    }
-  );
+  try {
+    const row = params.id
+      ? await withTenant(params.brand_id, async (db) => {
+          const updated = await db
+            .update(emailTemplates)
+            .set({
+              name: params.name,
+              subject: params.subject,
+              bodyHtml,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(emailTemplates.id, params.id!),
+                eq(emailTemplates.tenantId, params.brand_id),
+              ),
+            )
+            .returning();
+          return updated[0] ?? null;
+        })
+      : await withTenant(params.brand_id, async (db) => {
+          const inserted = await db
+            .insert(emailTemplates)
+            .values({
+              tenantId: params.brand_id,
+              name: params.name,
+              subject: params.subject,
+              bodyHtml,
+            })
+            .returning();
+          return inserted[0] ?? null;
+        });
 
-  const data = await response.json();
-  if (!response.ok || !data?.id) {
-    return { success: false, error: data?.message ?? "Failed to save template" };
+    if (!row) return { success: false, error: "Failed to save template" };
+    return { success: true, template: rowToTemplate(row) };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save template",
+    };
   }
-
-  return { success: true, template: data };
 }
 
 export async function getTemplateById(templateId: string): Promise<Template | null> {
   const adminUser = await getAdminUser();
   if (!adminUser) return null;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const activeBrandId = await getActiveBrandId(adminUser);
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/get_communication_templates`,
-    {
-      method: "POST",
-      headers: { ...svcHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ p_brand_id: (await getActiveBrandId(adminUser)) ?? null }),
+  try {
+    const row = activeBrandId
+      ? await withTenant(activeBrandId, (db) =>
+          db
+            .select()
+            .from(emailTemplates)
+            .where(
+              and(
+                eq(emailTemplates.id, templateId),
+                eq(emailTemplates.tenantId, activeBrandId),
+              ),
+            )
+            .limit(1)
+            .then((r) => r[0] ?? null),
+        )
+      : await withPlatformAdmin((db) =>
+          db
+            .select()
+            .from(emailTemplates)
+            .where(eq(emailTemplates.id, templateId))
+            .limit(1)
+            .then((r) => r[0] ?? null),
+        );
+
+    if (!row) return null;
+
+    if (adminUser.role === "brand_admin" && row.tenantId !== adminUser.brand_id) {
+      return null;
     }
-  );
 
-  if (!response.ok) return null;
-  const data = await response.json();
-  const templates: Template[] = data?.templates ?? [];
-  const template = templates.find((t) => t.id === templateId) ?? null;
-
-  // Brand scoping: brand_admin can only see their own brand's templates
-  if (template && adminUser.role === "brand_admin" && template.brand_id !== adminUser.brand_id) {
+    return rowToTemplate(row);
+  } catch {
     return null;
   }
+}
 
-  return template;
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
